@@ -12,10 +12,10 @@ import hashlib
 import threading # Importar threading para processamento em segundo plano
 
 # Inicialização do Flask
-app = Flask(__name__, static_folder=\'static\')
+app = Flask(__name__, static_folder='static')
 
 # Configuração de CORS
-CORS(app, origins=\'*\')
+CORS(app, origins='*')
 
 # Configuração do Banco de Dados
 db_url = os.environ.get("DATABASE_URL", "sqlite:///cobrancas.db")
@@ -81,7 +81,7 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
         <!DOCTYPE html>
         <html>
         <head>
-            <meta charset=\"UTF-8\">
+            <meta charset="UTF-8">
             <style>
                 body {{
                     font-family: Arial, sans-serif;
@@ -125,30 +125,30 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
             </style>
         </head>
         <body>
-            <div class=\"container\">
-                <div class=\"header\">
+            <div class="container">
+                <div class="header">
                     <h1>✅ Pagamento Confirmado!</h1>
                 </div>
-                <div class=\"content\">
+                <div class="content">
                     <p>Olá, <strong>{nome_cliente}</strong>!</p>
                     
                     <p>Temos uma ótima notícia! Seu pagamento no valor de <strong>R$ {valor:.2f}</strong> foi confirmado com sucesso.</p>
                     
                     <p>Agora você já pode acessar seu e-book clicando no botão abaixo:</p>
                     
-                    <div style=\"text-align: center;\">
-                        <a href=\"{link_produto}\" class=\"button\">📥 BAIXAR MEU E-BOOK</a>
+                    <div style="text-align: center;">
+                        <a href="{link_produto}" class="button">📥 BAIXAR MEU E-BOOK</a>
                     </div>
                     
                     <p><strong>Link direto:</strong><br>
-                    <a href=\"{link_produto}\">{link_produto}</a></p>
+                    <a href="{link_produto}">{link_produto}</a></p>
                     
                     <p>Aproveite sua leitura e qualquer dúvida, estamos à disposição!</p>
                     
                     <p>Atenciosamente,<br>
                     <strong>Equipe Lab Leal</strong></p>
                 </div>
-                <div class=\"footer\">
+                <div class="footer">
                     <p>Este é um e-mail automático. Por favor, não responda.</p>
                 </div>
             </div>
@@ -303,17 +303,13 @@ def processar_webhook_background(dados_webhook, app_context):
 
 @app.route("/")
 def index():
-    """
-    Serve a página principal
-    """
-    return send_from_directory(\'static\', \'index.html\')
+    """Serve a página principal"""
+    return send_from_directory('static', 'index.html')
 
 @app.route("/<path:path>")
 def serve_static(path):
-    """
-    Serve arquivos estáticos
-    """
-    return send_from_directory(\'static\', path)
+    """Serve arquivos estáticos"""
+    return send_from_directory('static', path)
 
 @app.route("/api/webhook", methods=["POST"])
 def webhook_mercadopago():
@@ -336,7 +332,7 @@ def webhook_mercadopago():
         dados = request.get_json()
         
         if dados.get("type") != "payment":
-            print(f"Tipo de notificação ignorado: {dados.get(\'type\')}")
+            print(f"Tipo de notificação ignorado: {dados.get('type')}")
             return jsonify({"status": "success", "message": "Notificação ignorada"}), 200
         
         # Iniciar o processamento em segundo plano e retornar imediatamente
@@ -353,9 +349,7 @@ def webhook_mercadopago():
 
 @app.route("/api/cobrancas", methods=["GET"])
 def get_cobrancas():
-    """
-    Lista todas as cobranças
-    """
+    """Lista todas as cobranças"""
     try:
         cobrancas_db = Cobranca.query.order_by(Cobranca.data_criacao.desc()).all()
         cobrancas_list = [cobranca.to_dict() for cobranca in cobrancas_db]
@@ -369,9 +363,7 @@ def get_cobrancas():
 
 @app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
-    """
-    Cria uma nova cobrança PIX
-    """
+    """Cria uma nova cobrança PIX"""
     try:
         dados = request.get_json()
         print(f"Dados recebidos: {dados}")
@@ -442,9 +434,7 @@ def create_cobranca():
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    """
-    Endpoint de health check para o Render
-    """
+    """Endpoint de health check para o Render"""
     return jsonify({"status": "healthy", "service": "mercadopago-api"}), 200
 
 if __name__ == "__main__":
