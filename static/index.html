@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Cobrança - Mercado Pago</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="fas fa-credit-card"></i>
+                    Sistema de Cobrança
+                </h1>
+                <nav class="nav">
+                    <button class="nav-btn active" data-tab="criar">
+                        <i class="fas fa-plus"></i>
+                        Nova Cobrança
+                    </button>
+                    <button class="nav-btn" data-tab="listar">
+                        <i class="fas fa-list"></i>
+                        Cobranças
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Tab: Nova Cobrança -->
+            <section id="tab-criar" class="tab-content active">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-plus-circle"></i>
+                            Criar Nova Cobrança
+                        </h2>
+                        <p>Preencha os dados abaixo para gerar uma nova cobrança via Mercado Pago</p>
+                    </div>
+                    
+                    <form id="form-cobranca" class="form">
+                        <div class="form-section">
+                            <h3>
+                                <i class="fas fa-user"></i>
+                                Dados do Cliente
+                            </h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="cliente_nome">Nome Completo *</label>
+                                    <input type="text" id="cliente_nome" name="cliente_nome" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="cliente_email">Email *</label>
+                                    <input type="email" id="cliente_email" name="cliente_email" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="cliente_telefone">Telefone</label>
+                                    <input type="tel" id="cliente_telefone" name="cliente_telefone" placeholder="(11) 99999-9999">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="cliente_documento">CPF/CNPJ</label>
+                                    <input type="text" id="cliente_documento" name="cliente_documento" placeholder="000.000.000-00">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>
+                                <i class="fas fa-shopping-cart"></i>
+                                Dados da Cobrança
+                            </h3>
+                            
+                            <div class="form-group">
+                                <label for="titulo">Título/Produto *</label>
+                                <input type="text" id="titulo" name="titulo" required placeholder="Ex: Consultoria em Marketing Digital" value="E-book Incrível">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="descricao">Descrição</label>
+                                <textarea id="descricao" name="descricao" rows="3" placeholder="Descrição detalhada do produto ou serviço">Um e-book completo com estratégias incríveis para seu negócio.</textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="valor">Valor (R$) *</label>
+                                <input type="number" id="valor" name="valor" step="0.01" min="0.01" required placeholder="0,00" value="1.00">
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                                Criar Cobrança
+                            </button>
+                            <button type="reset" class="btn btn-secondary">
+                                <i class="fas fa-undo"></i>
+                                Limpar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Tab: Listar Cobranças -->
+            <section id="tab-listar" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-list"></i>
+                            Cobranças Criadas
+                        </h2>
+                        <div class="filters">
+                            <select id="filter-status" class="filter-select">
+                                <option value="">Todos os Status</option>
+                                <option value="pending">Pendente</option>
+                                <option value="approved">Aprovado</option>
+                                <option value="rejected">Rejeitado</option>
+                                <option value="cancelled">Cancelado</option>
+                            </select>
+                            <button id="btn-refresh" class="btn btn-secondary">
+                                <i class="fas fa-sync-alt"></i>
+                                Atualizar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="loading" class="loading" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Carregando...
+                    </div>
+                    
+                    <div id="cobrancas-container" class="cobrancas-container">
+                        <!-- Cobranças serão carregadas aqui via JavaScript -->
+                    </div>
+                    
+                    <div id="pagination" class="pagination">
+                        <!-- Paginação será gerada aqui -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal para detalhes da cobrança -->
+    <div id="modal-detalhes" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Detalhes da Cobrança</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Conteúdo será preenchido via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast para notificações -->
+    <div id="toast" class="toast">
+        <div class="toast-content">
+            <span class="toast-icon"></span>
+            <span class="toast-message"></span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
