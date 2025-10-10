@@ -9,12 +9,13 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import hmac
 import hashlib
+import threading # Importar threading para processamento em segundo plano
 
 # Inicialização do Flask
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__, static_folder=\'static\')
 
 # Configuração de CORS
-CORS(app, origins="*")
+CORS(app, origins=\'*\')
 
 # Configuração do Banco de Dados
 db_url = os.environ.get("DATABASE_URL", "sqlite:///cobrancas.db")
@@ -80,7 +81,7 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
         <!DOCTYPE html>
         <html>
         <head>
-            <meta charset="UTF-8">
+            <meta charset=\"UTF-8\">
             <style>
                 body {{
                     font-family: Arial, sans-serif;
@@ -124,30 +125,30 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
             </style>
         </head>
         <body>
-            <div class="container">
-                <div class="header">
+            <div class=\"container\">
+                <div class=\"header\">
                     <h1>✅ Pagamento Confirmado!</h1>
                 </div>
-                <div class="content">
+                <div class=\"content\">
                     <p>Olá, <strong>{nome_cliente}</strong>!</p>
                     
                     <p>Temos uma ótima notícia! Seu pagamento no valor de <strong>R$ {valor:.2f}</strong> foi confirmado com sucesso.</p>
                     
                     <p>Agora você já pode acessar seu e-book clicando no botão abaixo:</p>
                     
-                    <div style="text-align: center;">
-                        <a href="{link_produto}" class="button">📥 BAIXAR MEU E-BOOK</a>
+                    <div style=\"text-align: center;\">
+                        <a href=\"{link_produto}\" class=\"button\">📥 BAIXAR MEU E-BOOK</a>
                     </div>
                     
                     <p><strong>Link direto:</strong><br>
-                    <a href="{link_produto}">{link_produto}</a></p>
+                    <a href=\"{link_produto}\">{link_produto}</a></p>
                     
                     <p>Aproveite sua leitura e qualquer dúvida, estamos à disposição!</p>
                     
                     <p>Atenciosamente,<br>
                     <strong>Equipe Lab Leal</strong></p>
                 </div>
-                <div class="footer">
+                <div class=\"footer\">
                     <p>Este é um e-mail automático. Por favor, não responda.</p>
                 </div>
             </div>
@@ -241,17 +242,78 @@ def validar_assinatura_webhook(request):
         print(f"Erro ao validar assinatura: {str(e)}")
         return False
 
+# Função para processar o webhook em segundo plano
+def processar_webhook_background(dados_webhook, app_context):
+    with app_context:
+        try:
+            payment_id = dados_webhook.get("data", {}).get("id")
+            if not payment_id:
+                print("ID do pagamento não encontrado na notificação de background")
+                return
+            
+            access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
+            if not access_token:
+                print("Token do Mercado Pago não configurado para processamento em background")
+                return
+            
+            sdk = mercadopago.SDK(access_token)
+            payment_info = sdk.payment().get(payment_id)
+            
+            if payment_info["status"] != 200:
+                print(f"Erro ao consultar pagamento em background: {payment_info}")
+                return
+            
+            payment = payment_info["response"]
+            payment_status = payment.get("status")
+            
+            print(f"[BACKGROUND] Status do pagamento {payment_id}: {payment_status}")
+            
+            cobranca = Cobranca.query.filter_by(external_reference=str(payment_id)).first()
+            
+            if not cobranca:
+                print(f"[BACKGROUND] Cobrança não encontrada para o payment_id: {payment_id}")
+                return
+            
+            cobranca.status = payment_status
+            db.session.commit()
+            
+            print(f"[BACKGROUND] Status da cobrança atualizado para: {payment_status}")
+            
+            if payment_status == "approved":
+                print(f"[BACKGROUND] Pagamento aprovado! Enviando e-mail para {cobranca.cliente_email}")
+                
+                link_produto = os.environ.get("LINK_PRODUTO", "https://drive.google.com/file/d/1HlMExRRjV5Wn5SUNZktc46ragh8Zj8uQ/view?usp=sharing")
+                
+                email_enviado = enviar_email_confirmacao(
+                    destinatario=cobranca.cliente_email,
+                    nome_cliente=cobranca.cliente_nome,
+                    valor=cobranca.valor,
+                    link_produto=link_produto
+                )
+                
+                if email_enviado:
+                    print("[BACKGROUND] E-mail de confirmação enviado com sucesso!")
+                else:
+                    print("[BACKGROUND] Falha ao enviar e-mail de confirmação")
+            
+        except Exception as e:
+            print(f"[BACKGROUND] Erro ao processar webhook em background: {str(e)}")
+
 # ROTAS DA API
 
 @app.route("/")
 def index():
-    """Serve a página principal"""
-    return send_from_directory('static', 'index.html')
+    """
+    Serve a página principal
+    """
+    return send_from_directory(\'static\', \'index.html\')
 
 @app.route("/<path:path>")
 def serve_static(path):
-    """Serve arquivos estáticos"""
-    return send_from_directory('static', path)
+    """
+    Serve arquivos estáticos
+    """
+    return send_from_directory(\'static\', path)
 
 @app.route("/api/webhook", methods=["POST"])
 def webhook_mercadopago():
@@ -274,68 +336,26 @@ def webhook_mercadopago():
         dados = request.get_json()
         
         if dados.get("type") != "payment":
-            print(f"Tipo de notificação ignorado: {dados.get('type')}")
+            print(f"Tipo de notificação ignorado: {dados.get(\'type\')}")
             return jsonify({"status": "success", "message": "Notificação ignorada"}), 200
         
-        payment_id = dados.get("data", {}).get("id")
-        if not payment_id:
-            print("ID do pagamento não encontrado na notificação")
-            return jsonify({"status": "error", "message": "ID do pagamento ausente"}), 400
+        # Iniciar o processamento em segundo plano e retornar imediatamente
+        thread = threading.Thread(target=processar_webhook_background, args=(dados, app.app_context()))
+        thread.start()
         
-        access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
-        if not access_token:
-            print("Token do Mercado Pago não configurado")
-            return jsonify({"status": "error", "message": "Token não configurado"}), 500
-        
-        sdk = mercadopago.SDK(access_token)
-        payment_info = sdk.payment().get(payment_id)
-        
-        if payment_info["status"] != 200:
-            print(f"Erro ao consultar pagamento: {payment_info}")
-            return jsonify({"status": "error", "message": "Erro ao consultar pagamento"}), 500
-        
-        payment = payment_info["response"]
-        payment_status = payment.get("status")
-        
-        print(f"Status do pagamento {payment_id}: {payment_status}")
-        
-        cobranca = Cobranca.query.filter_by(external_reference=str(payment_id)).first()
-        
-        if not cobranca:
-            print(f"Cobrança não encontrada para o payment_id: {payment_id}")
-            return jsonify({"status": "error", "message": "Cobrança não encontrada"}), 404
-        
-        cobranca.status = payment_status
-        db.session.commit()
-        
-        print(f"Status da cobrança atualizado para: {payment_status}")
-        
-        if payment_status == "approved":
-            print(f"Pagamento aprovado! Enviando e-mail para {cobranca.cliente_email}")
-            
-            link_produto = os.environ.get("LINK_PRODUTO", "https://drive.google.com/file/d/1HlMExRRjV5Wn5SUNZktc46ragh8Zj8uQ/view?usp=sharing")
-            
-            email_enviado = enviar_email_confirmacao(
-                destinatario=cobranca.cliente_email,
-                nome_cliente=cobranca.cliente_nome,
-                valor=cobranca.valor,
-                link_produto=link_produto
-            )
-            
-            if email_enviado:
-                print("E-mail de confirmação enviado com sucesso!")
-            else:
-                print("Falha ao enviar e-mail de confirmação")
-        
-        return jsonify({"status": "success", "message": "Webhook processado com sucesso"}), 200
+        return jsonify({"status": "success", "message": "Webhook recebido e processamento iniciado em segundo plano"}), 200
         
     except Exception as e:
         print(f"Erro ao processar webhook: {str(e)}")
-        return jsonify({"status": "error", "message": f"Erro ao processar webhook: {str(e)}"}), 500
+        # Em caso de erro na recepção ou validação, ainda é melhor retornar 200 OK
+        # para evitar reenvios excessivos e tratar o erro internamente.
+        return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 200
 
 @app.route("/api/cobrancas", methods=["GET"])
 def get_cobrancas():
-    """Lista todas as cobranças"""
+    """
+    Lista todas as cobranças
+    """
     try:
         cobrancas_db = Cobranca.query.order_by(Cobranca.data_criacao.desc()).all()
         cobrancas_list = [cobranca.to_dict() for cobranca in cobrancas_db]
@@ -349,7 +369,9 @@ def get_cobrancas():
 
 @app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
-    """Cria uma nova cobrança PIX"""
+    """
+    Cria uma nova cobrança PIX
+    """
     try:
         dados = request.get_json()
         print(f"Dados recebidos: {dados}")
@@ -420,7 +442,9 @@ def create_cobranca():
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    """Endpoint de health check para o Render"""
+    """
+    Endpoint de health check para o Render
+    """
     return jsonify({"status": "healthy", "service": "mercadopago-api"}), 200
 
 if __name__ == "__main__":
