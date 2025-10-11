@@ -9,7 +9,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import hmac
 import hashlib
-import threading # Importar threading para processamento em segundo plano
+
+import redis
+from rq import Queue
 
 # Inicialização do Flask
 app = Flask(__name__, static_folder='static')
@@ -30,6 +32,11 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "asdf#FGSgvasgf$5$WGT")
 
 # Inicialização do SQLAlchemy
 db = SQLAlchemy(app)
+
+# Configuração do Redis e RQ
+redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+redis_conn = redis.from_url(redis_url)
+q = Queue(connection=redis_conn)
 
 # Modelo de Dados
 class Cobranca(db.Model):
@@ -57,7 +64,7 @@ class Cobranca(db.Model):
 with app.app_context():
     db.create_all()
 
-# Função para enviar e-mail de confirmação
+# Função para enviar e-mail de confirmação (agora será chamada pelo worker)
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     """
     Envia e-mail de confirmação de pagamento com link do produto
@@ -242,62 +249,9 @@ def validar_assinatura_webhook(request):
         print(f"Erro ao validar assinatura: {str(e)}")
         return False
 
-# Função para processar o webhook em segundo plano
-def processar_webhook_background(dados_webhook, app_context):
-    with app_context:
-        try:
-            payment_id = dados_webhook.get("data", {}).get("id")
-            if not payment_id:
-                print("ID do pagamento não encontrado na notificação de background")
-                return
-            
-            access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
-            if not access_token:
-                print("Token do Mercado Pago não configurado para processamento em background")
-                return
-            
-            sdk = mercadopago.SDK(access_token)
-            payment_info = sdk.payment().get(payment_id)
-            
-            if payment_info["status"] != 200:
-                print(f"Erro ao consultar pagamento em background: {payment_info}")
-                return
-            
-            payment = payment_info["response"]
-            payment_status = payment.get("status")
-            
-            print(f"[BACKGROUND] Status do pagamento {payment_id}: {payment_status}")
-            
-            cobranca = Cobranca.query.filter_by(external_reference=str(payment_id)).first()
-            
-            if not cobranca:
-                print(f"[BACKGROUND] Cobrança não encontrada para o payment_id: {payment_id}")
-                return
-            
-            cobranca.status = payment_status
-            db.session.commit()
-            
-            print(f"[BACKGROUND] Status da cobrança atualizado para: {payment_status}")
-            
-            if payment_status == "approved":
-                print(f"[BACKGROUND] Pagamento aprovado! Enviando e-mail para {cobranca.cliente_email}")
-                
-                link_produto = os.environ.get("LINK_PRODUTO", "https://drive.google.com/file/d/1HlMExRRjV5Wn5SUNZktc46ragh8Zj8uQ/view?usp=sharing")
-                
-                email_enviado = enviar_email_confirmacao(
-                    destinatario=cobranca.cliente_email,
-                    nome_cliente=cobranca.cliente_nome,
-                    valor=cobranca.valor,
-                    link_produto=link_produto
-                )
-                
-                if email_enviado:
-                    print("[BACKGROUND] E-mail de confirmação enviado com sucesso!")
-                else:
-                    print("[BACKGROUND] Falha ao enviar e-mail de confirmação")
-            
-        except Exception as e:
-            print(f"[BACKGROUND] Erro ao processar webhook em background: {str(e)}")
+# A função processar_webhook_background será movida para um worker separado
+# e adaptada para ser executada de forma assíncrona pelo RQ.
+# Por enquanto, vamos manter uma versão simplificada para o worker.py
 
 # ROTAS DA API
 
@@ -335,16 +289,19 @@ def webhook_mercadopago():
             print(f"Tipo de notificação ignorado: {dados.get('type')}")
             return jsonify({"status": "success", "message": "Notificação ignorada"}), 200
         
-        # Iniciar o processamento em segundo plano e retornar imediatamente
-        thread = threading.Thread(target=processar_webhook_background, args=(dados, app.app_context()))
-        thread.start()
-        
-        return jsonify({"status": "success", "message": "Webhook recebido e processamento iniciado em segundo plano"}), 200
+        # Enfileirar o job para processamento assíncrono
+        # Passamos o payment_id para o worker buscar os detalhes do pagamento
+        payment_id = dados.get("data", {}).get("id")
+        if payment_id:
+            q.enqueue('worker.process_mercado_pago_webhook', payment_id)
+            print(f"Job para payment_id {payment_id} enfileirado com sucesso.")
+        else:
+            print("ID do pagamento não encontrado na notificação. Não foi possível enfileirar.")
+
+        return jsonify({"status": "success", "message": "Webhook recebido e processamento enfileirado"}), 200
         
     except Exception as e:
         print(f"Erro ao processar webhook: {str(e)}")
-        # Em caso de erro na recepção ou validação, ainda é melhor retornar 200 OK
-        # para evitar reenvios excessivos e tratar o erro internamente.
         return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 200
 
 @app.route("/api/cobrancas", methods=["GET"])
@@ -352,7 +309,7 @@ def get_cobrancas():
     """Lista todas as cobranças"""
     try:
         cobrancas_db = Cobranca.query.order_by(Cobranca.data_criacao.desc()).all()
-        cobrancas_list = [cobranca.to_dict() for cobranca in cobrancas_db]
+        cobrancas_list = [cobranca.to_dict() for cobrancas in cobrancas_db]
         return jsonify({
             "status": "success",
             "message": "Cobranças recuperadas com sucesso!",
