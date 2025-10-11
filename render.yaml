@@ -29,8 +29,45 @@ services:
         fromDatabase:
           name: mercadopago-db
           property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: mercadopago-redis
+          property: connectionString
     healthCheckPath: /health
-    
+
+  - type: worker
+    name: mercadopago-worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python worker.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: MERCADOPAGO_ACCESS_TOKEN
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: SMTP_SERVER
+        value: smtp.zoho.com
+      - key: SMTP_PORT
+        value: 465
+      - key: LINK_PRODUTO
+        value: https://drive.google.com/file/d/1HlMExRRjV5Wn5SUNZktc46ragh8Zj8uQ/view?usp=sharing
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mercadopago-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: mercadopago-redis
+          property: connectionString
+
+  - type: redis
+    name: mercadopago-redis
+    plan: free
+
   - type: pserv
     name: mercadopago-db
     env: postgresql
