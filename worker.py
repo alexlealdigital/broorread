@@ -159,12 +159,19 @@ def process_mercado_pago_webhook(payment_id):
             print(f"[WORKER] Erro ao processar webhook: {str(e)}")
 
 # --- CORREÇÃO 2: Bloco de inicialização do worker ---
+# --- BLOCO CORRIGIDO ---
 if __name__ == '__main__':
     listen = ['default']
     redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
     conn = redis.from_url(redis_url)
 
     print(f"Iniciando worker para as filas: {listen}")
+
+    # Cria uma lista de objetos Queue, passando a conexão para cada um
+    queues = [Queue(name, connection=conn) for name in listen]
     
-    worker = Worker(list(map(Queue, listen)), connection=conn)
+    # Passa a lista de filas e a conexão para o Worker
+    worker = Worker(queues, connection=conn)
+    
     worker.work()
+
