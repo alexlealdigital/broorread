@@ -4,7 +4,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import redis
-from rq import Worker, Queue, Connection
+from rq import Worker, Queue, Connection as RedisConnection
 
 # Importar app e db do app.py para ter acesso ao contexto do Flask e ao modelo Cobranca
 # No entanto, para um worker RQ, é melhor inicializar o DB e o app dentro do worker
@@ -223,4 +223,5 @@ if __name__ == '__main__':
     redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
     with Connection(redis.from_url(redis_url)):
         worker = Worker(list(map(Queue, ['default'])))
+
         worker.work()
