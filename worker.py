@@ -4,15 +4,10 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import redis
-from rq import Worker, Queue, Connection as RedisConnection
+from rq import Worker, Queue
+from datetime import datetime  # <--- CORREÇÃO 1: Importação adicionada
 
-# Importar app e db do app.py para ter acesso ao contexto do Flask e ao modelo Cobranca
-# No entanto, para um worker RQ, é melhor inicializar o DB e o app dentro do worker
-# para evitar problemas de contexto e dependências circulares.
-# Vamos redefinir o essencial aqui ou passar os dados necessários.
-
-# Configuração do Banco de Dados (duplicado para o worker, mas necessário para o contexto)
-# Em um projeto maior, isso seria abstraído para um módulo comum.
+# Configuração do Banco de Dados (sem alterações)
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
@@ -24,6 +19,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
+# Modelo Cobranca (sem alterações)
 class Cobranca(db.Model):
     __tablename__ = "cobrancas"
     id = db.Column(db.Integer, primary_key=True)
@@ -34,7 +30,7 @@ class Cobranca(db.Model):
     status = db.Column(db.String(50), default="pending", nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-# Função para enviar e-mail de confirmação (copiada de app.py)
+# Função para enviar e-mail (sem alterações)
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     """
     Envia e-mail de confirmação de pagamento com link do produto
@@ -54,98 +50,41 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
         msg["From"] = email_user
         msg["To"] = destinatario
         
+        # ... (corpo do e-mail sem alterações) ...
         html_body = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
             <style>
-                body {{
-                    font-family: Arial, sans-serif;
-                    line-height: 1.6;
-                    color: #333;
-                }}
-                .container {{
-                    max-width: 600px;
-                    margin: 0 auto;
-                    padding: 20px;
-                    background-color: #f9f9f9;
-                }}
-                .header {{
-                    background-color: #27ae60;
-                    color: white;
-                    padding: 20px;
-                    text-align: center;
-                    border-radius: 5px 5px 0 0;
-                }}
-                .content {{
-                    background-color: white;
-                    padding: 30px;
-                    border-radius: 0 0 5px 5px;
-                }}
-                .button {{
-                    display: inline-block;
-                    padding: 15px 30px;
-                    background-color: #27ae60;
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 5px;
-                    margin: 20px 0;
-                    font-weight: bold;
-                }}
-                .footer {{
-                    text-align: center;
-                    margin-top: 20px;
-                    color: #666;
-                    font-size: 12px;
-                }}
+                body {{ font-family: Arial, sans-serif; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }}
+                .header {{ background-color: #27ae60; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                .content {{ background-color: white; padding: 30px; border-radius: 0 0 5px 5px; }}
+                .button {{ display: inline-block; padding: 15px 30px; background-color: #27ae60; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }}
+                .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 12px; }}
             </style>
         </head>
         <body>
             <div class="container">
-                <div class="header">
-                    <h1>✅ Pagamento Confirmado!</h1>
-                </div>
+                <div class="header"><h1>✅ Pagamento Confirmado!</h1></div>
                 <div class="content">
                     <p>Olá, <strong>{nome_cliente}</strong>!</p>
-                    
                     <p>Temos uma ótima notícia! Seu pagamento no valor de <strong>R$ {valor:.2f}</strong> foi confirmado com sucesso.</p>
-                    
                     <p>Agora você já pode acessar seu e-book clicando no botão abaixo:</p>
-                    
-                    <div style="text-align: center;">
-                        <a href="{link_produto}" class="button">📥 BAIXAR MEU E-BOOK</a>
-                    </div>
-                    
-                    <p><strong>Link direto:</strong><br>
-                    <a href="{link_produto}">{link_produto}</a></p>
-                    
+                    <div style="text-align: center;"><a href="{link_produto}" class="button">📥 BAIXAR MEU E-BOOK</a></div>
+                    <p><strong>Link direto:</strong>  
+<a href="{link_produto}">{link_produto}</a></p>
                     <p>Aproveite sua leitura e qualquer dúvida, estamos à disposição!</p>
-                    
-                    <p>Atenciosamente,<br>
-                    <strong>Equipe Lab Leal</strong></p>
+                    <p>Atenciosamente,  
+<strong>Equipe Lab Leal</strong></p>
                 </div>
-                <div class="footer">
-                    <p>Este é um e-mail automático. Por favor, não responda.</p>
-                </div>
+                <div class="footer"><p>Este é um e-mail automático. Por favor, não responda.</p></div>
             </div>
         </body>
         </html>
         """
-        
-        text_body = f"""
-        Pagamento Confirmado!
-        
-        Olá, {nome_cliente}!
-        
-        Seu pagamento no valor de R$ {valor:.2f} foi confirmado com sucesso.
-        
-        Acesse seu e-book através do link abaixo:
-        {link_produto}
-        
-        Atenciosamente,
-        Equipe Lab Leal
-        """
+        text_body = f"Pagamento Confirmado!\n\nOlá, {nome_cliente}!\n\nSeu pagamento no valor de R$ {valor:.2f} foi confirmado com sucesso.\n\nAcesse seu e-book através do link abaixo:\n{link_produto}\n\nAtenciosamente,\nEquipe Lab Leal"
         
         part1 = MIMEText(text_body, "plain")
         part2 = MIMEText(html_body, "html")
@@ -160,12 +99,12 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
         return True
         
     except Exception as e:
-        print(f"Erro ao enviar e-mail: {str(e)}")
+        print(f"Erro ao enviar e--mail: {str(e)}")
         return False
 
-# Função que será executada pelo worker RQ
+# Função do worker (sem alterações)
 def process_mercado_pago_webhook(payment_id):
-    with app.app_context(): # Garante que o contexto do Flask esteja ativo para operações de DB
+    with app.app_context():
         try:
             if not payment_id:
                 print("ID do pagamento não encontrado na notificação de background")
@@ -202,7 +141,7 @@ def process_mercado_pago_webhook(payment_id):
             if payment_status == "approved":
                 print(f"[WORKER] Pagamento aprovado! Enviando e-mail para {cobranca.cliente_email}")
                 
-                link_produto = os.environ.get("LINK_PRODUTO", "https://drive.google.com/file/d/1HlMExRRjV5Wn5SUNZktc46ragh8Zj8uQ/view?usp=sharing")
+                link_produto = os.environ.get("LINK_PRODUTO", "https://drive.google.com/file/d/1HlMExRRjV5Wn5SUNZktc46ragh8Zj8uQ/view?usp=sharing" )
                 
                 email_enviado = enviar_email_confirmacao(
                     destinatario=cobranca.cliente_email,
@@ -219,9 +158,13 @@ def process_mercado_pago_webhook(payment_id):
         except Exception as e:
             print(f"[WORKER] Erro ao processar webhook: {str(e)}")
 
+# --- CORREÇÃO 2: Bloco de inicialização do worker ---
 if __name__ == '__main__':
+    listen = ['default']
     redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
-    with Connection(redis.from_url(redis_url)):
-        worker = Worker(list(map(Queue, ['default'])))
+    conn = redis.from_url(redis_url)
 
-        worker.work()
+    print(f"Iniciando worker para as filas: {listen}")
+    
+    worker = Worker(list(map(Queue, listen)), connection=conn)
+    worker.work()
