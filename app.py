@@ -21,7 +21,9 @@ CORS(app, origins='*')
 
 # Configuração do Banco de Dados
 db_url = os.environ.get("DATABASE_URL", "sqlite:///cobrancas.db")
-
+if db_url and db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
+    
 # Fix para PostgreSQL URL (Render usa postgresql://)
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
