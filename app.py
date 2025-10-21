@@ -643,48 +643,92 @@ def get_cobrancas():
 
 
 @app.route("/api/cobrancas", methods=["POST"])
-
 def create_cobranca():
-
-    """Cria uma nova cobrança PIX"""
-
+    """Cria uma nova cobrança PIX no MP e salva o registro no DB."""
     try:
-
         dados = request.get_json()
-
         print(f"Dados recebidos: {dados}")
-
         
-
         if not dados:
-
             return jsonify({"status": "error", "message": "Nenhum dado foi enviado."}), 400
-
             
-
         email_cliente = dados.get("email")
-
         nome_cliente = dados.get("nome", "Cliente do E-book")
-
         
-
         if not email_cliente:
-
             return jsonify({"status": "error", "message": "O email é obrigatório."}), 400
 
-
-
         if "@" not in email_cliente or "." not in email_cliente:
-
             return jsonify({"status": "error", "message": "Por favor, insira um email válido."}), 400
 
-
-
         access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
-
         if not access_token:
-
             return jsonify({"status": "error", "message": "Token do Mercado Pago não configurado."}), 500
+            
+        sdk = mercadopago.SDK(access_token)
+
+        valor_ebook = float(dados.get("valor", 1.00))
+        descricao_ebook = dados.get("titulo", "Seu E-book Incrível")
+
+        payment_data = {
+            "transaction_amount": valor_ebook,
+            "description": descricao_ebook,
+            "payment_method_id": "pix",
+            "payer": {
+                "email": email_cliente
+            }
+        }
+
+        payment_response = sdk.payment().create(payment_data)
+        
+        if payment_response["status"] != 201:
+            error_msg = payment_response.get("response", {}).get("message", "Erro desconhecido do Mercado Pago")
+            return jsonify({"status": "error", "message": f"Erro do Mercado Pago: {error_msg}"}), 500
+            
+        payment = payment_response["response"]
+
+        qr_code_base64 = payment["point_of_interaction"]["transaction_data"]["qr_code_base64"]
+        qr_code_text = payment["point_of_interaction"]["transaction_data"]["qr_code"]
+
+        # ---------- CRIAÇÃO E PERSISTÊNCIA NO DB ----------
+        nova_cobranca = Cobranca(
+            external_reference=str(payment["id"]),
+            cliente_nome=nome_cliente,
+            cliente_email=email_cliente,
+            valor=valor_ebook,
+            status=payment["status"]
+        )
+        
+        try:
+            db.session.add(nova_cobranca)
+            db.session.commit()
+            
+            # ⚠️ CORREÇÃO CRÍTICA: Força a liberação do dado para o Worker
+            db.session.expire_all() 
+            
+            print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
+        
+        except Exception as db_error:
+            # Em caso de falha de DB (ex: unique constraint), faz rollback
+            db.session.rollback() 
+            print(f"!!! ERRO CRÍTICO DB: FALHA AO SALVAR COBRANÇA: {str(db_error)}")
+            return jsonify({"status": "error", "message": "Falha interna ao registrar a cobrança (DB)."}, 500)
+        
+        # O retorno 201 ocorre somente após a persistência bem-sucedida
+        return jsonify({
+            "status": "success",
+            "message": "Cobrança PIX criada com sucesso!",
+            "qr_code_base64": qr_code_base64,
+            "qr_code_text": qr_code_text,
+            "payment_id": payment["id"],
+            "cobranca": nova_cobranca.to_dict()
+        }), 201
+        
+    except Exception as e:
+        # ⚠️ Garante que qualquer falha geral faça o rollback e limpe a sessão
+        db.session.rollback() 
+        print(f"Erro ao criar cobrança: {str(e)}")
+        return jsonify({"status": "error", "message": f"Erro ao criar cobrança: {str(e)}"}), 500
 
             
 
