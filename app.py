@@ -178,7 +178,6 @@ def get_cobrancas():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Erro ao acessar o banco de dados: {str(e)}"}), 500
 
-@app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
     """Cria uma nova cobrança PIX no MP e salva o registro no DB."""
     try:
@@ -218,6 +217,60 @@ def create_cobranca():
         if payment_response["status"] != 201:
             error_msg = payment_response.get("response", {}).get("message", "Erro desconhecido do Mercado Pago")
             return jsonify({"status": "error", "message": f"Erro do Mercado Pago: {error_msg}"}), 500
+            
+        payment = payment_response["response"]
+
+        qr_code_base64 = payment["point_of_interaction"]["transaction_data"]["qr_code_base64"]
+        qr_code_text = payment["point_of_interaction"]["transaction_data"]["qr_code"]
+
+        # ---------- CRIAÇÃO E PERSISTÊNCIA NO DB ----------
+        nova_cobranca = Cobranca(
+            external_reference=str(payment["id"]),
+            cliente_nome=nome_cliente,
+            cliente_email=email_cliente,
+            valor=valor_ebook,
+            status=payment["status"]
+        )
+        
+        try:
+            db.session.add(nova_cobranca)
+            db.session.commit()
+            
+            # 🔑 PASSO CRÍTICO: Serializa o objeto para Dicionário *ANTES* de invalidar a sessão.
+            cobranca_dict = nova_cobranca.to_dict() 
+            
+            # 1. CORREÇÃO DE VISIBILIDADE: Força a liberação do dado para o Worker
+            db.session.expire_all()
+            
+            # 2. CORREÇÃO DE SEGURANÇA: Remove a sessão do pool para evitar o erro de 'not bound'
+            db.session.remove() 
+            
+            print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
+        
+        except Exception as db_error:
+            # Em caso de falha de DB, faz rollback e remove a sessão
+            db.session.rollback()
+            db.session.remove() 
+            print(f"!!! ERRO CRÍTICO DB: FALHA AO SALVAR COBRANÇA: {str(db_error)}")
+            return jsonify({"status": "error", "message": "Falha interna ao registrar a cobrança (DB)."}, 500)
+        
+        # O retorno 201 agora usa o dicionário serializado (cobranca_dict),
+        # que é independente da sessão do DB.
+        return jsonify({
+            "status": "success",
+            "message": "Cobrança PIX criada com sucesso!",
+            "qr_code_base64": qr_code_base64,
+            "qr_code_text": qr_code_text,
+            "payment_id": payment["id"],
+            "cobranca": cobranca_dict # <--- Usa o dicionário seguro
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        db.session.remove()
+        print(f"Erro ao criar cobrança: {str(e)}")
+        return jsonify({"status": "error", "message": f"Erro ao criar cobrança: {str(e)}"}), 500
+
             
         payment = payment_response["response"]
 
