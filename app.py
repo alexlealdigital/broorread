@@ -211,7 +211,6 @@ def get_cobrancas():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Erro ao acessar o banco de dados: {str(e)}"}), 500
 
-@app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
     """Cria uma nova cobrança PIX no MP e salva o registro no DB."""
     try:
@@ -273,14 +272,18 @@ def create_cobranca():
             db.session.add(nova_cobranca)
             db.session.commit()
             
-            # 🔑 CORREÇÃO CRÍTICA: Força a liberação do dado para o Worker (Resolve visibilidade)
-            db.session.expire_all() 
+            # 1. 🔑 CORREÇÃO CRÍTICA: Força a liberação do dado para o Worker (Resolve visibilidade)
+            db.session.expire_all()
+            
+            # 2. 🔑 CORREÇÃO DE SEGURANÇA: Remove a sessão do pool para garantir o fim da transação.
+            db.session.remove() 
             
             print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
         
         except Exception as db_error:
-            # Em caso de falha de DB (ex: unique constraint), faz rollback
-            db.session.rollback() 
+            # Em caso de falha de DB, faz rollback e remove a sessão
+            db.session.rollback()
+            db.session.remove() 
             print(f"!!! ERRO CRÍTICO DB: FALHA AO SALVAR COBRANÇA: {str(db_error)}")
             return jsonify({"status": "error", "message": "Falha interna ao registrar a cobrança (DB)."}, 500)
         
@@ -296,7 +299,8 @@ def create_cobranca():
         
     except Exception as e:
         # Garante que qualquer falha geral faça o rollback e limpe a sessão
-        db.session.rollback() 
+        db.session.rollback()
+        db.session.remove()
         print(f"Erro ao criar cobrança: {str(e)}")
         return jsonify({"status": "error", "message": f"Erro ao criar cobrança: {str(e)}"}), 500
 
