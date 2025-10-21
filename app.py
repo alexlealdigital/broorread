@@ -66,9 +66,9 @@ class Cobranca(db.Model):
 with app.app_context():
     db.create_all()
 
-# --- FUNÇÕES AUXILIARES (Definições simplificadas para integridade) ---
+# --- FUNÇÕES AUXILIARES ---
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
-    # Conteúdo da função omitido. O código completo deve estar no worker.py
+    """Placeholder: O envio real é feito pelo worker.py"""
     pass 
 
 def validar_assinatura_webhook(request):
@@ -169,6 +169,7 @@ def get_cobrancas():
     """Lista todas as cobranças salvas no DB"""
     try:
         cobrancas_db = Cobranca.query.order_by(Cobranca.data_criacao.desc()).all()
+        # Garante que o loop usa o objeto correto
         cobrancas_list = [cobranca.to_dict() for cobranca in cobrancas_db]
         return jsonify({
             "status": "success",
@@ -178,6 +179,7 @@ def get_cobrancas():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Erro ao acessar o banco de dados: {str(e)}"}), 500
 
+@app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
     """Cria uma nova cobrança PIX no MP e salva o registro no DB."""
     try:
@@ -266,58 +268,6 @@ def create_cobranca():
         }), 201
         
     except Exception as e:
-        db.session.rollback()
-        db.session.remove()
-        print(f"Erro ao criar cobrança: {str(e)}")
-        return jsonify({"status": "error", "message": f"Erro ao criar cobrança: {str(e)}"}), 500
-
-            
-        payment = payment_response["response"]
-
-        qr_code_base64 = payment["point_of_interaction"]["transaction_data"]["qr_code_base64"]
-        qr_code_text = payment["point_of_interaction"]["transaction_data"]["qr_code"]
-
-        # ---------- CRIAÇÃO E PERSISTÊNCIA NO DB ----------
-        nova_cobranca = Cobranca(
-            external_reference=str(payment["id"]),
-            cliente_nome=nome_cliente,
-            cliente_email=email_cliente,
-            valor=valor_ebook,
-            status=payment["status"]
-        )
-        
-        # Bloco aninhado para tratar falhas no commit
-        try:
-            db.session.add(nova_cobranca)
-            db.session.commit()
-            
-            # 🔑 CORREÇÃO CRÍTICA: Força a liberação do dado para o Worker (Resolve visibilidade)
-            db.session.expire_all()
-            
-            # 🔑 CORREÇÃO DE SEGURANÇA: Remove a sessão do pool para garantir o fim da transação.
-            db.session.remove() 
-            
-            print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
-        
-        except Exception as db_error:
-            # Em caso de falha de DB, faz rollback e remove a sessão
-            db.session.rollback()
-            db.session.remove() 
-            print(f"!!! ERRO CRÍTICO DB: FALHA AO SALVAR COBRANÇA: {str(db_error)}")
-            return jsonify({"status": "error", "message": "Falha interna ao registrar a cobrança (DB)."}, 500)
-        
-        # O retorno 201 ocorre somente após a persistência bem-sucedida
-        return jsonify({
-            "status": "success",
-            "message": "Cobrança PIX criada com sucesso!",
-            "qr_code_base64": qr_code_base64,
-            "qr_code_text": qr_code_text,
-            "payment_id": payment["id"],
-            "cobranca": nova_cobranca.to_dict()
-        }), 201
-        
-    except Exception as e:
-        # Garante que qualquer falha geral faça o rollback e limpe a sessão
         db.session.rollback()
         db.session.remove()
         print(f"Erro ao criar cobrança: {str(e)}")
