@@ -28,9 +28,11 @@ if db_url and db_url.startswith("postgres://"):
 elif db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
+# Assegura que o pool de conexões seja resiliente
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "asdf#FGSgvasgf$5$WGT")
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 3600}
 
 # Inicialização do SQLAlchemy
 db = SQLAlchemy(app)
@@ -169,7 +171,6 @@ def get_cobrancas():
     """Lista todas as cobranças salvas no DB"""
     try:
         cobrancas_db = Cobranca.query.order_by(Cobranca.data_criacao.desc()).all()
-        # Garante que o loop usa o objeto correto
         cobrancas_list = [cobranca.to_dict() for cobranca in cobrancas_db]
         return jsonify({
             "status": "success",
@@ -238,7 +239,7 @@ def create_cobranca():
             db.session.add(nova_cobranca)
             db.session.commit()
             
-            # 🔑 PASSO CRÍTICO: Serializa o objeto para Dicionário *ANTES* de invalidar a sessão.
+            # 🔑 PASSO CRÍTICO: Serializa o objeto ANTES de limpar a sessão.
             cobranca_dict = nova_cobranca.to_dict() 
             
             # 1. CORREÇÃO DE VISIBILIDADE: Força a liberação do dado para o Worker
@@ -250,7 +251,6 @@ def create_cobranca():
             print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
         
         except Exception as db_error:
-            # Em caso de falha de DB, faz rollback e remove a sessão
             db.session.rollback()
             db.session.remove() 
             print(f"!!! ERRO CRÍTICO DB: FALHA AO SALVAR COBRANÇA: {str(db_error)}")
