@@ -97,9 +97,14 @@ def process_mercado_pago_webhook(payment_id):
     Executado pelo RQ. Re-lança exceções para que o RQ re-tente automaticamente.
     """
     with app.app_context():
-    time.sleep(1) # Pausa de 1 segundo para garantir a visibilidade da transação
+        # AQUI É ONDE O CÓDIGO ESTAVA ERRADO. AGORA CORRIGIDO COM MAIS UM RECUO
+        time.sleep(1) # Pausa de 1 segundo para garantir a visibilidade da transação 
+        
         if not payment_id:
             raise ValueError("payment_id vazio")
+
+        access_token = os.environ["MERCADOPAGO_ACCESS_TOKEN"]
+        # ... e assim por diante. Todo o restante da função deve estar recuado.
 
         access_token = os.environ["MERCADOPAGO_ACCESS_TOKEN"]
         sdk          = mercadopago.SDK(access_token)
@@ -150,5 +155,6 @@ if __name__ == "__main__":
     # ENVOLVA worker.work() NO CONTEXTO DA APLICAÇÃO
     with app.app_context(): 
         worker.work()
+
 
 
