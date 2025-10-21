@@ -137,6 +137,15 @@ if __name__ == "__main__":
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
     conn      = redis.from_url(redis_url)
     queues    = [Queue("default", connection=conn)]
+    
+    # CRIA AS TABELAS SE NECESSÁRIO (boa prática para workers)
+    with app.app_context():
+        db.create_all()
+
     worker    = Worker(queues, connection=conn)
     print("[WORKER] Iniciando worker RQ...")
-    worker.work()
+    
+    # ENVOLVA worker.work() NO CONTEXTO DA APLICAÇÃO
+    with app.app_context(): 
+        worker.work()
+
