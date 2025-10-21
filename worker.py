@@ -98,7 +98,7 @@ def process_mercado_pago_webhook(payment_id):
     """
     with app.app_context():
         # AQUI É ONDE O CÓDIGO ESTAVA ERRADO. AGORA CORRIGIDO COM MAIS UM RECUO
-        time.sleep(1) # Pausa de 1 segundo para garantir a visibilidade da transação 
+        time.sleep(3) # Pausa de 1 segundo para garantir a visibilidade da transação 
         
         if not payment_id:
             raise ValueError("payment_id vazio")
@@ -155,6 +155,7 @@ if __name__ == "__main__":
     # ENVOLVA worker.work() NO CONTEXTO DA APLICAÇÃO
     with app.app_context(): 
         worker.work()
+
 
 
 
