@@ -20,7 +20,7 @@ import hmac
 
 import hashlib
 
-
+import time
 
 import redis
 
@@ -782,6 +782,55 @@ def create_cobranca():
 
         return jsonify({"status": "error", "message": f"Erro ao criar cobrança: {str(e)}"}), 500
 
+# NO SEU app.py (Web Service)
+
+@app.route("/api/debug_db", methods=["POST"])
+def debug_db_route():
+    """
+    TESTE DE COMUNICAÇÃO DB (ESCRITA E LEITURA ISOLADA)
+    Simula o fluxo de escrita do app.py e leitura imediata do worker.py para
+    testar a visibilidade da transação.
+    """
+    test_id = "TEST_FLAG_" + datetime.now().strftime("%H%M%S")
+    
+    try:
+        # --- 1. ESCRITA (Simula o Commit do Web Service) ---
+        cobranca_teste = Cobranca(
+            external_reference=test_id,
+            cliente_nome="DEBUG TEST",
+            cliente_email="debug@test.com",
+            valor=0.01
+        )
+        db.session.add(cobranca_teste)
+        db.session.commit()
+        
+        print(f"DEBUG: Escrita/Commit SUCESSO para ID: {test_id}")
+        
+        # --- 2. FORÇA NOVA SESSÃO, PAUSA E LEITURA (Simula o Worker) ---
+        db.session.close() # Fecha a sessão atual
+        time.sleep(1)      # Pausa de 1s para latência de concorrência
+        
+        cobranca_lida = Cobranca.query.filter_by(external_reference=test_id).first()
+        
+        # --- 3. VERIFICAÇÃO E LIMPEZA ---
+        if cobranca_lida:
+            # SUCESSO: Os dados são visíveis!
+            db.session.delete(cobranca_lida)
+            db.session.commit()
+            db.session.close()
+            
+            print(f"DEBUG: Escrita/Leitura SUCESSO. Dado {test_id} visível e deletado.")
+            return jsonify({"success": True, "message": "Comunicação DB Write/Read OK."}), 200
+        else:
+            # FALHA: O dado não foi lido (problema de transação/visibilidade)
+            db.session.rollback()
+            print(f"DEBUG: Escrita/Leitura FALHA. Dado {test_id} não encontrado.")
+            return jsonify({"success": False, "message": "Dado não visível na nova sessão após commit."}), 500
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"DEBUG: ERRO CRÍTICO NA CONEXÃO: {str(e)}")
+        return jsonify({"success": False, "message": f"Erro fatal de DB: {str(e)}"}), 500
 
 
 @app.route("/health", methods=["GET"])
