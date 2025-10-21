@@ -66,41 +66,10 @@ class Cobranca(db.Model):
 with app.app_context():
     db.create_all()
 
-# --- FUNÇÕES AUXILIARES ---
-
+# --- FUNÇÕES AUXILIARES (Definições simplificadas para integridade) ---
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
-    """
-    Envia e-mail de confirmação de pagamento (o corpo do código é omitido, mas deve estar completo no seu Worker)
-    """
-    # Seu código de envio de e-mail aqui
-    try:
-        smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
-        smtp_port = int(os.environ.get("SMTP_PORT", 465))
-        email_user = os.environ.get("EMAIL_USER")
-        email_password = os.environ.get("EMAIL_PASSWORD")
-        
-        if not email_user or not email_password:
-            print("Erro: Credenciais de e-mail não configuradas")
-            return False
-            
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Pagamento Confirmado - Seu E-book está pronto!"
-        msg["From"] = email_user
-        msg["To"] = destinatario
-        
-        # Conteúdo do e-mail (HTML/TEXT) omitido para brevidade
-        
-        # Simulação de envio
-        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
-            server.login(email_user, email_password)
-            # server.send_message(msg) # Linha de envio real
-            print(f"E-mail de confirmação simulado para {destinatario}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"Erro ao enviar e-mail: {str(e)}")
-        return False
+    # Conteúdo da função omitido. O código completo deve estar no worker.py
+    pass 
 
 def validar_assinatura_webhook(request):
     """
@@ -145,6 +114,7 @@ def validar_assinatura_webhook(request):
         print(f"Erro ao validar assinatura: {str(e)}")
         return False
 
+
 # ---------- ROTAS DA API ----------
 
 @app.route("/")
@@ -187,8 +157,6 @@ def webhook_mercadopago():
             # Enfileira a tarefa para o worker.py
             q.enqueue('worker.process_mercado_pago_webhook', payment_id)
             print(f"Job para payment_id {payment_id} enfileirado com sucesso.")
-        else:
-            print("ID do pagamento não encontrado na notificação. Não foi possível enfileirar.")
 
         return jsonify({"status": "success", "message": "Webhook recebido e processamento enfileirado"}), 200
         
@@ -201,7 +169,6 @@ def get_cobrancas():
     """Lista todas as cobranças salvas no DB"""
     try:
         cobrancas_db = Cobranca.query.order_by(Cobranca.data_criacao.desc()).all()
-        # Corrigido: Usar 'cobranca' singular no loop para evitar erros de escopo
         cobrancas_list = [cobranca.to_dict() for cobranca in cobrancas_db]
         return jsonify({
             "status": "success",
@@ -211,6 +178,7 @@ def get_cobrancas():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Erro ao acessar o banco de dados: {str(e)}"}), 500
 
+@app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
     """Cria uma nova cobrança PIX no MP e salva o registro no DB."""
     try:
@@ -242,9 +210,7 @@ def create_cobranca():
             "transaction_amount": valor_ebook,
             "description": descricao_ebook,
             "payment_method_id": "pix",
-            "payer": {
-                "email": email_cliente
-            }
+            "payer": {"email": email_cliente}
         }
 
         payment_response = sdk.payment().create(payment_data)
@@ -272,10 +238,10 @@ def create_cobranca():
             db.session.add(nova_cobranca)
             db.session.commit()
             
-            # 1. 🔑 CORREÇÃO CRÍTICA: Força a liberação do dado para o Worker (Resolve visibilidade)
+            # 🔑 CORREÇÃO CRÍTICA: Força a liberação do dado para o Worker (Resolve visibilidade)
             db.session.expire_all()
             
-            # 2. 🔑 CORREÇÃO DE SEGURANÇA: Remove a sessão do pool para garantir o fim da transação.
+            # 🔑 CORREÇÃO DE SEGURANÇA: Remove a sessão do pool para garantir o fim da transação.
             db.session.remove() 
             
             print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
@@ -303,6 +269,7 @@ def create_cobranca():
         db.session.remove()
         print(f"Erro ao criar cobrança: {str(e)}")
         return jsonify({"status": "error", "message": f"Erro ao criar cobrança: {str(e)}"}), 500
+
 
 @app.route("/health", methods=["GET"])
 def health_check():
