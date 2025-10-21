@@ -63,7 +63,7 @@ def process_mercado_pago_webhook(payment_id):
         # --- LÓGICA DE RE-TENTATIVA (RETRY LOOP) ---
         cobranca = None
         MAX_TRIES = 5     # Tenta ler o DB no máximo 5 vezes
-        WAIT_SECONDS = 1  # Espera 1 segundo entre as tentativas
+        WAIT_SECONDS = 5  # Espera 5 segundo entre as tentativas
         
         for attempt in range(MAX_TRIES):
             # Tenta ler o dado do DB
@@ -128,3 +128,4 @@ if __name__ == "__main__":
     # ENVOLVE worker.work() NO CONTEXTO DA APLICAÇÃO
     with app.app_context(): 
         worker.work()
+
