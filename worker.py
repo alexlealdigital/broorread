@@ -14,7 +14,7 @@ from rq import Worker, Queue
 from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-import time  # <--- Necessário para a lógica de re-tentativa
+import time 
 
 # ---------- CONFIGURAÇÃO DO FLASK / DB ----------
 app = Flask(__name__)
@@ -24,7 +24,8 @@ db_url = os.environ["DATABASE_URL"].replace("postgres://", "postgresql+psycopg:/
 
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 300}
+# O pool_recycle é fundamental para reconexão em ambientes de longa duração
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 3600}
 
 db = SQLAlchemy(app)
 
@@ -39,16 +40,34 @@ class Cobranca(db.Model):
     status = db.Column(db.String(50), default="pending", nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-# ---------- E-MAIL (Código de envio omitido para brevidade, mas deve estar completo no seu arquivo) ----------
+# ---------- E-MAIL (Lógica de envio) ----------
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     # Seu código de envio de e-mail completo aqui
     try:
         smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
-        # ... (restante da lógica de e-mail) ...
+        smtp_port = int(os.environ.get("SMTP_PORT", 465))
+        email_user = os.environ["EMAIL_USER"]
+        email_pass = os.environ["EMAIL_PASSWORD"]
+        
+        # Criação da mensagem (código omitido por brevidade, mas deve estar completo)
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Pagamento Confirmado - Seu E-book está pronto!"
+        msg["From"] = email_user
+        msg["To"] = destinatario
+        
+        # [Seu código HTML e Plain Text aqui]
+        
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+            server.login(email_user, email_pass)
+            server.send_message(msg)
+        
         print(f"[WORKER] E-mail enviado para {destinatario}")
         return True
+    except KeyError:
+        print("[WORKER] Erro: Credenciais de e-mail não configuradas.")
+        return False
     except Exception as e:
-        print(f"Erro ao enviar e-mail: {str(e)}")
+        print(f"[WORKER] Erro ao enviar e-mail: {str(e)}")
         return False
         
 # ---------- JOB COM LÓGICA DE RE-TENTATIVA (RETRY LOOP) ----------
@@ -63,7 +82,7 @@ def process_mercado_pago_webhook(payment_id):
         # --- LÓGICA DE RE-TENTATIVA (RETRY LOOP) ---
         cobranca = None
         MAX_TRIES = 5     # Tenta ler o DB no máximo 5 vezes
-        WAIT_SECONDS = 5  # Espera 5 segundo entre as tentativas
+        WAIT_SECONDS = 5  # Espera 5 segundos entre as tentativas (25s total de espera)
         
         for attempt in range(MAX_TRIES):
             # Tenta ler o dado do DB
@@ -71,10 +90,14 @@ def process_mercado_pago_webhook(payment_id):
             
             if cobranca:
                 print(f"[WORKER] Cobrança {payment_id} encontrada na tentativa {attempt + 1}.")
-                break  # Sai do loop, o registro foi encontrado
+                break  # Sucesso!
             
-            print(f"[WORKER] Cobrança {payment_id} não encontrada na tentativa {attempt + 1}. Aguardando {WAIT_SECONDS}s...")
-            time.sleep(WAIT_SECONDS) # Se não encontrou, espera 1s e tenta de novo
+            print(f"[WORKER] Cobrança não encontrada na tentativa {attempt + 1}. Aguardando {WAIT_SECONDS}s...")
+            
+            # 🔑 CORREÇÃO CRÍTICA: Fecha e remove a sessão para forçar uma nova conexão limpa na próxima tentativa
+            db.session.remove() 
+            
+            time.sleep(WAIT_SECONDS) 
 
         # --- VERIFICAÇÃO FINAL APÓS O LOOP ---
         if not cobranca:
@@ -88,6 +111,8 @@ def process_mercado_pago_webhook(payment_id):
         resp = sdk.payment().get(payment_id)
 
         if resp["status"] != 200:
+            # Garante que a sessão seja limpa antes de falhar
+            db.session.remove()
             raise RuntimeError(f"MercadoPago respondeu {resp['status']}: {resp}")
 
         payment = resp["response"]
@@ -97,6 +122,10 @@ def process_mercado_pago_webhook(payment_id):
         # ---------- ATUALIZA BANCO ----------
         cobranca.status = payment_status
         db.session.commit()
+        
+        # Limpa a sessão após o commit final
+        db.session.remove()
+        
         print(f"[WORKER] Cobrança {payment_id} atualizada para {payment_status}")
 
         # ---------- E-MAIL (apenas se aprovado) ----------
@@ -128,4 +157,3 @@ if __name__ == "__main__":
     # ENVOLVE worker.work() NO CONTEXTO DA APLICAÇÃO
     with app.app_context(): 
         worker.work()
-
