@@ -14,6 +14,7 @@ from rq import Worker, Queue
 from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+import time
 
 # ---------- CONFIGURAÇÃO DO FLASK / DB ----------
 app = Flask(__name__)
@@ -96,6 +97,7 @@ def process_mercado_pago_webhook(payment_id):
     Executado pelo RQ. Re-lança exceções para que o RQ re-tente automaticamente.
     """
     with app.app_context():
+    time.sleep(1) # Pausa de 1 segundo para garantir a visibilidade da transação
         if not payment_id:
             raise ValueError("payment_id vazio")
 
@@ -148,4 +150,5 @@ if __name__ == "__main__":
     # ENVOLVA worker.work() NO CONTEXTO DA APLICAÇÃO
     with app.app_context(): 
         worker.work()
+
 
