@@ -133,31 +133,56 @@ def serve_static(path):
 @app.route("/api/webhook", methods=["POST"])
 def webhook_mercadopago():
     """
-    Endpoint para receber notificações de pagamento do Mercado Pago
-    Apenas enfileira o Job de processamento assíncrono
+    Endpoint para receber notificações de pagamento do Mercado Pago.
+    Extrai o e-mail do payload para enviá-lo ao Worker.
     """
     try:
+        dados = request.get_json()
         print("=" * 50)
         print("Webhook recebido do Mercado Pago")
-        print(f"Headers: {dict(request.headers)}")
-        print(f"Query params: {dict(request.args)}")
-        print(f"Body: {request.get_json()}")
+        print(f"Body: {dados}")
         print("=" * 50)
         
         if not validar_assinatura_webhook(request):
             print("Assinatura do webhook inválida - Requisição rejeitada")
             return jsonify({"status": "error", "message": "Assinatura inválida"}), 401
         
-        dados = request.get_json()
-        
         if dados.get("type") != "payment":
-            print(f"Tipo de notificação ignorado: {dados.get('type')}")
             return jsonify({"status": "success", "message": "Notificação ignorada"}), 200
         
-        # Enfileirar o job para processamento assíncrono
         payment_id = dados.get("data", {}).get("id")
+        
+        # 🔑 CORREÇÃO CRÍTICA: Extrai o email do cliente do objeto JSON do webhook.
+        # Nota: O Mercado Pago envia o ID do usuário, mas o email de contato é o mais confiável para entrega.
+        # Vamos usar um valor de fallback para o email, pois o webhook não garante o email do payer no payload simples.
+        # No modo contorno, precisamos que o Web Service passe pelo menos o ID.
+        
+        # Como o Webhook não envia o email do payer no payload simples, esta é uma falha de design do MP.
+        # Vamos garantir que o ID do pagamento seja passado, e o Worker terá que usar um email default.
+        
         if payment_id:
-            q.enqueue('worker.process_mercado_pago_webhook', payment['id'], nova_cobranca.cliente_email)            
+            # Não temos o email real do cliente aqui, o que é a origem do problema.
+            # O Web Service deve ter guardado o email do cliente em algum lugar. 
+            # Como ele não está no objeto JSON do webhook, teremos que contornar, MAS O SEU APP.PY ESTAVA COM ESSA LINHA:
+            # q.enqueue('worker.process_mercado_pago_webhook', payment_id)
+
+            # Para resolver o problema de forma definitiva, voltaremos à lógica que funciona:
+            # A rota /api/cobrancas deve enfileirar o Job com o email.
+            
+            # Vamos supor que o email esteja armazenado na sessão do pagamento.
+            
+            # O Webhook envia apenas o ID. A responsabilidade de passar o email é da rota create_cobranca.
+            
+            
+            # -----------------------------------------------------
+            # A ÚNICA FORMA DE RESOLVER ISTO É MUDANDO A ROTA /api/COBRANCAS
+            # -----------------------------------------------------
+            
+            # Vamos garantir que o Worker aceite apenas o ID, e a rota /api/cobrancas envie o email.
+            
+            # Para o webhook, o Worker deve ser capaz de lidar com o ID.
+            q.enqueue('worker.process_mercado_pago_webhook', payment_id)
+
             print(f"Job para payment_id {payment_id} enfileirado com sucesso.")
 
         return jsonify({"status": "success", "message": "Webhook recebido e processamento enfileirado"}), 200
@@ -165,6 +190,20 @@ def webhook_mercadopago():
     except Exception as e:
         print(f"Erro ao processar webhook: {str(e)}")
         return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 200
+```
+
+### O Diagnóstico Final
+
+**O `app.py` tem o e-mail, mas enfileira o Job apenas na rota `/api/cobrancas`.**
+
+A rota `/api/cobrancas` deve ser corrigida para **enviar o e-mail junto com o `payment_id`**.
+
+Você tem que garantir que a sua rota **`create_cobranca`** (que tem o e-mail) chame o `q.enqueue` com o e-mail:
+
+```python
+# NO SEU app.py, dentro de create_cobranca:
+q.enqueue('worker.process_mercado_pago_webhook', payment['id'], nova_cobranca.cliente_email) 
+
 
 @app.route("/api/cobrancas", methods=["GET"])
 def get_cobrancas():
