@@ -169,23 +169,9 @@ def webhook_mercadopago():
         return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 200
 
 
-@app.route("/api/cobrancas", methods=["GET"])
-def get_cobrancas():
-    
-    try:
-        cobrancas_db = Cobranca.query.order_by(Cobranca.data_criacao.desc()).all()
-        cobrancas_list = [cobranca.to_dict() for cobranca in cobrancas_db]
-        return jsonify({
-            "status": "success",
-            "message": "Cobranças recuperadas com sucesso!",
-            "data": cobrancas_list
-        }), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": f"Erro ao acessar o banco de dados: {str(e)}"}), 500
-
 @app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
-   
+    """Cria uma nova cobrança PIX no MP e salva o registro no DB."""
     
     # IMPORTANTE: Desativa o gerenciamento automático da sessão para controle manual
     db.session.autoflush = False
@@ -248,15 +234,16 @@ def create_cobranca():
         db.session.add(nova_cobranca)
         db.session.commit()
         
-        # 2. LIBERAÇÃO MÁXIMA da sessão (prática recomendada em ambientes com pool de conexões)
+        # 2. LIBERAÇÃO MÁXIMA
         db.session.expire_all()
-        db.session.remove() 
+        db.session.remove() # Força a desconexão do pool
         
         print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
         
-        # ✅ Enfileira o job para o Worker enviar as instruções PIX (e-mail de pagamento pendente).
-        q.enqueue('worker.send_pix_instruction_email', payment["id"], nova_cobranca.cliente_email) 
-        
+        # 🔑 CORREÇÃO CRÍTICA FINAL: Enfileira o Job com o e-mail do cliente real
+        q.enqueue('worker.process_mercado_pago_webhook', payment['id'], nova_cobranca.cliente_email)
+        print(f"Job para pagamento {payment['id']} enfileirado com e-mail: {nova_cobranca.cliente_email}")
+
         # Retorno de sucesso
         return jsonify({
             "status": "success",
@@ -273,6 +260,7 @@ def create_cobranca():
         db.session.remove()
         print(f"ERRO CRÍTICO GERAL (CREATE): {str(e)}")
         return jsonify({"status": "error", "message": f"Falha ao criar cobrança: {str(e)}"}), 500
+
 
 @app.route("/health", methods=["GET"])
 def health_check():
