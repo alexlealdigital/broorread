@@ -15,8 +15,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
-# CORREÇÃO: Removido 'Connection' da importação
-from rq import Worker, Queue 
+from rq import Worker, Queue, Connection
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
@@ -27,11 +26,6 @@ if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
 elif db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
-# O SQLAlchemy Puro nao precisa das opcoes do Flask, mas do driver
-if "postgresql+psycopg" not in db_url:
-    # Garante que o driver correto seja usado
-    db_url = db_url.replace("postgresql://", "postgresql+psycopg://")
-
 
 engine = create_engine(db_url, pool_pre_ping=True, pool_recycle=3600)
 Session = sessionmaker(bind=engine)
@@ -47,10 +41,8 @@ class Cobranca(Base):
     status = Column(String(50), default="pending", nullable=False)
     data_criacao = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-
 # ---------- ENVIO DE E-MAIL ----------
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
-    # (Código de envio de e-mail mantido. Deve funcionar com SMTP_SSL)
     try:
         smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
         smtp_port = int(os.environ.get("SMTP_PORT", 465))
@@ -93,41 +85,22 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
 
 # ---------- JOB RQ ----------
 def process_mercado_pago_webhook(payment_id):
-    # A sessão é aberta por Job para garantir isolamento limpo
     session = Session()
     try:
-        # Tenta ler o dado (na nova sessão limpa)
         cobranca = session.query(Cobranca).filter_by(external_reference=str(payment_id)).first()
-        
-        # ⚠️ Sem o Retry Loop, este Job depende que a transação seja rápida.
-        # Se a falha persistir, a latência do DB é o culpado final.
         if not cobranca:
-            print(f"[WORKER] Cobrança {payment_id} não encontrada. (Falha de Latência/Isolamento)")
-            # Lança erro para o RQ tentar novamente em 60 segundos
-            raise RuntimeError(f"Cobrança {payment_id} invisível. RQ deve re-tentar.") 
-            # O RQ tem uma politica de retry default de 3 vezes.
-            # Se fosse uma falha cronica, iriamos usar o Retry Loop.
+            print(f"[WORKER] Cobrança {payment_id} não encontrada.")
+            return
 
+        if cobranca.status != "approved":
+            print(f"[WORKER] Status {cobranca.status} ≠ approved. Nada a fazer.")
+            return
+
+        # Evita re-envio
         if cobranca.status == "delivered":
             print(f"[WORKER] Produto já entregue para {payment_id}.")
             return
 
-        # 1. Busca status final no Mercado Pago (O QUE DEVERIA FUNCIONAR)
-        access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
-        sdk = mercadopago.SDK(access_token)
-        resp = sdk.payment().get(payment_id)
-
-        if resp["status"] != 200:
-            raise RuntimeError(f"MP status {resp['status']}. RQ deve re-tentar.")
-
-        payment_status = resp["response"].get("status")
-        print(f"[WORKER] Status MP: {payment_status}. Status DB: {cobranca.status}")
-
-        if payment_status != "approved":
-            print(f"[WORKER] Status {payment_status} ≠ approved. Nada a fazer.")
-            return
-
-        # 2. Envia e-mail e marca como entregue
         link = os.environ.get("LINK_PRODUTO",
                               "https://drive.google.com/file/d/1HlMExRRjV5Wn5SUNZktc46ragh8Zj8uQ/view?usp=sharing")
 
@@ -138,25 +111,22 @@ def process_mercado_pago_webhook(payment_id):
         if not ok:
             raise RuntimeError("E-mail não enviado – re-enfileirando.")
 
-        # Marca como entregue (Só ocorre se o e-mail foi enviado com sucesso)
+        # Marca como entregue
         cobranca.status = "delivered"
         session.commit()
         print(f"[WORKER] Entrega concluída para {cobranca.cliente_email}.")
-        
     except Exception as e:
         session.rollback()
         raise e
     finally:
-        session.close() # Garante que a sessão seja fechada
-        
+        session.close()
+
 # ---------- INICIALIZAÇÃO DO WORKER ----------
 if __name__ == "__main__":
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
     redis_conn = redis.from_url(redis_url)
 
     Base.metadata.create_all(engine)  # garante tabelas
-    
-    # 🔑 CORREÇÃO FINAL: Usar with Connection para inicializar o worker corretamente
     with Connection(redis_conn):
         worker = Worker(["default"], connection=redis_conn)
         print("[WORKER] Worker iniciado – aguardando jobs...")
