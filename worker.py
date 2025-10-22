@@ -88,7 +88,7 @@ def process_mercado_pago_webhook(payment_id):
             # ⚠️ DADOS MOCKADOS: Como nao lemos o DB, usamos dados de teste/mock
             # ATENCAO: Se o app.py for corrigido, o Worker deveria ler o DB para pegar o email correto.
             # Aqui, para a emergencia, assumimos um email de teste/mock para o envio:
-            destinatario_mock = "teste@exemplo.com" # <--- Substitua pelo email de teste real
+            destinatario_mock = "profalexleal@gmail.com" # <--- Substitua pelo email de teste real
             nome_mock = "Cliente de Emergência"
             valor_mock = 1.00 # Baseado no valor de teste
             
@@ -124,3 +124,4 @@ if __name__ == "__main__":
     
     with app.app_context(): 
         worker.work()
+
