@@ -4,14 +4,15 @@ from flask_cors import CORS
 from datetime import datetime
 import os
 import mercadopago
+# Imports de e-mail foram mantidos, mas a função em si é um placeholder, o worker é o responsável.
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import hmac
 import hashlib
-import time
 import redis
 from rq import Queue
+from sqlalchemy.orm import declarative_base
 
 # Inicialização do Flask
 app = Flask(__name__, static_folder='static')
@@ -19,10 +20,11 @@ app = Flask(__name__, static_folder='static')
 # Configuração de CORS
 CORS(app, origins='*')
 
-# ---------- CONFIGURAÇÃO DO BANCO DE DADOS ----------
+# ---------- CONFIGURAÇÃO DO BANCO DE DADOS E EXTENSÕES ----------
 db_url = os.environ.get("DATABASE_URL", "sqlite:///cobrancas.db")
 
 # Lógica para compatibilidade com driver PostgreSQL (psycopg) no Render
+# Garante que a URL do banco de dados use o driver assíncrono psycopg
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
 elif db_url.startswith("postgresql://"):
@@ -31,8 +33,12 @@ elif db_url.startswith("postgresql://"):
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "asdf#FGSgvasgf$5$WGT")
-# Pool de conexões robusto
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 3600}
+
+# Pool de conexões robusto (Essencial para serviços em cloud como Render)
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True, 
+    "pool_recycle": 3600
+}
 
 # Inicialização do SQLAlchemy
 db = SQLAlchemy(app)
@@ -70,13 +76,14 @@ with app.app_context():
 
 # --- FUNÇÕES AUXILIARES ---
 
+# Mantido como um placeholder para clareza, mas o Worker fará o trabalho real.
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     """Placeholder: O envio real é feito pelo worker.py"""
     pass 
 
 def validar_assinatura_webhook(request):
     """
-    Valida a assinatura do webhook do Mercado Pago
+    Valida a assinatura do webhook do Mercado Pago usando o WEBHOOK_SECRET.
     """
     try:
         x_signature = request.headers.get("x-signature")
@@ -104,6 +111,7 @@ def validar_assinatura_webhook(request):
             return False
         
         data_id = request.args.get("data.id", "")
+        # O manifesto deve incluir 'ts' e 'request-id' do header e o 'id' do parâmetro
         manifest = f"id:{data_id};request-id:{x_request_id};ts:{ts};"
         calculated_hash = hmac.new(
             secret_key.encode(),
@@ -122,7 +130,7 @@ def validar_assinatura_webhook(request):
 
 @app.route("/")
 def index():
-    """Serve a página principal"""
+    """Serve a página principal (static/index.html)"""
     return send_from_directory('static', 'index.html')
 
 @app.route("/<path:path>")
@@ -134,7 +142,7 @@ def serve_static(path):
 def webhook_mercadopago():
     """
     Endpoint para receber notificações de pagamento do Mercado Pago.
-    Extrai o e-mail do payload para enviá-lo ao Worker.
+    Enfileira o job de processamento.
     """
     try:
         dados = request.get_json()
@@ -152,35 +160,9 @@ def webhook_mercadopago():
         
         payment_id = dados.get("data", {}).get("id")
         
-        # 🔑 CORREÇÃO CRÍTICA: Extrai o email do cliente do objeto JSON do webhook.
-        # Nota: O Mercado Pago envia o ID do usuário, mas o email de contato é o mais confiável para entrega.
-        # Vamos usar um valor de fallback para o email, pois o webhook não garante o email do payer no payload simples.
-        # No modo contorno, precisamos que o Web Service passe pelo menos o ID.
-        
-        # Como o Webhook não envia o email do payer no payload simples, esta é uma falha de design do MP.
-        # Vamos garantir que o ID do pagamento seja passado, e o Worker terá que usar um email default.
-        
         if payment_id:
-            # Não temos o email real do cliente aqui, o que é a origem do problema.
-            # O Web Service deve ter guardado o email do cliente em algum lugar. 
-            # Como ele não está no objeto JSON do webhook, teremos que contornar, MAS O SEU APP.PY ESTAVA COM ESSA LINHA:
-            # q.enqueue('worker.process_mercado_pago_webhook', payment_id)
-
-            # Para resolver o problema de forma definitiva, voltaremos à lógica que funciona:
-            # A rota /api/cobrancas deve enfileirar o Job com o email.
-            
-            # Vamos supor que o email esteja armazenado na sessão do pagamento.
-            
-            # O Webhook envia apenas o ID. A responsabilidade de passar o email é da rota create_cobranca.
-            
-            
-            # -----------------------------------------------------
-            # A ÚNICA FORMA DE RESOLVER ISTO É MUDANDO A ROTA /api/COBRANCAS
-            # -----------------------------------------------------
-            
-            # Vamos garantir que o Worker aceite apenas o ID, e a rota /api/cobrancas envie o email.
-            
-            # Para o webhook, o Worker deve ser capaz de lidar com o ID.
+            # Enfileira o job de processamento do webhook. 
+            # O Worker usará o payment_id para buscar detalhes do pagamento e o email no DB.
             q.enqueue('worker.process_mercado_pago_webhook', payment_id)
 
             print(f"Job para payment_id {payment_id} enfileirado com sucesso.")
@@ -191,15 +173,12 @@ def webhook_mercadopago():
         print(f"Erro ao processar webhook: {str(e)}")
         return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 200
 
-q.enqueue('worker.process_mercado_pago_webhook', payment['id'], nova_cobranca.cliente_email) 
-
 
 @app.route("/api/cobrancas", methods=["GET"])
 def get_cobrancas():
     """Lista todas as cobranças salvas no DB"""
     try:
         cobrancas_db = Cobranca.query.order_by(Cobranca.data_criacao.desc()).all()
-        # Corrigido: Usar 'cobranca' singular no loop para serialização
         cobrancas_list = [cobranca.to_dict() for cobranca in cobrancas_db]
         return jsonify({
             "status": "success",
@@ -213,7 +192,7 @@ def get_cobrancas():
 def create_cobranca():
     """Cria uma nova cobrança PIX no MP e salva o registro no DB."""
     
-    # IMPORTANTE: Desativa o gerenciamento automático do Flask-SQLAlchemy para esta transação
+    # IMPORTANTE: Desativa o gerenciamento automático da sessão para controle manual
     db.session.autoflush = False
     db.session.autocommit = False
     
@@ -227,11 +206,8 @@ def create_cobranca():
         email_cliente = dados.get("email")
         nome_cliente = dados.get("nome", "Cliente do E-book")
         
-        if not email_cliente:
-            return jsonify({"status": "error", "message": "O email é obrigatório."}), 400
-
-        if "@" not in email_cliente or "." not in email_cliente:
-            return jsonify({"status": "error", "message": "Por favor, insira um email válido."}), 400
+        if not email_cliente or "@" not in email_cliente or "." not in email_cliente:
+            return jsonify({"status": "error", "message": "Por favor, insira um email válido e obrigatório."}), 400
 
         access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
         if not access_token:
@@ -277,17 +253,15 @@ def create_cobranca():
         db.session.add(nova_cobranca)
         db.session.commit()
         
-        # 2. LIBERAÇÃO MÁXIMA
+        # 2. LIBERAÇÃO MÁXIMA da sessão (prática recomendada em ambientes com pool de conexões)
         db.session.expire_all()
-        db.session.remove() # Força a desconexão do pool
+        db.session.remove() 
         
-       print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
+        print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
         
-        # ✅ ADIÇÃO DA CORREÇÃO: Enfileira o job com o e-mail para envio das instruções PIX.
-        # Isso garante que o e-mail real seja usado na primeira comunicação.
+        # ✅ Enfileira o job para o Worker enviar as instruções PIX (e-mail de pagamento pendente).
         q.enqueue('worker.send_pix_instruction_email', payment["id"], nova_cobranca.cliente_email) 
         
-               
         # Retorno de sucesso
         return jsonify({
             "status": "success",
@@ -307,9 +281,35 @@ def create_cobranca():
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    """Endpoint de health check para o Render"""
-    return jsonify({"status": "healthy", "service": "mercadopago-api"}), 200
+    """Endpoint de health check para o Render ou Kubernetes"""
+    # Verifica a saúde da conexão do Redis
+    try:
+        redis_conn.ping()
+        redis_status = "ok"
+    except Exception:
+        redis_status = "error"
+
+    # Verifica o status de uma tabela do DB (teste de conexão)
+    try:
+        with app.app_context():
+            Cobranca.query.limit(1).all()
+        db_status = "ok"
+    except Exception:
+        db_status = "error"
+        
+    status_code = 200 if redis_status == "ok" and db_status == "ok" else 503
+
+    return jsonify({
+        "status": "healthy" if status_code == 200 else "unhealthy", 
+        "service": "mercadopago-api",
+        "dependencies": {
+            "redis": redis_status,
+            "database": db_status
+        }
+    }), status_code
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
+    # Em ambientes de produção (Render), gunicorn irá rodar o app:app
+    # Este bloco é apenas para desenvolvimento local.
     app.run(host="0.0.0.0", port=port, debug=False)
