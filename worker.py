@@ -131,13 +131,13 @@ if __name__ == "__main__":
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
     redis_conn = redis.from_url(redis_url)
 
-    # 🔑 CORREÇÃO FINAL: Cria as tabelas e inicia o Worker
-    # A linha with app.app_context(): deve ser usada aqui
     with app.app_context():
-        db.create_all()
+    db.create_all()
 
+    # Todas estas linhas devem ter o mesmo nível de indentação (4 espaços)
     worker = Worker(["default"], connection=redis_conn)
     print("[WORKER] Worker iniciado – aguardando jobs...")
     
     with app.app_context(): 
-        worker.work()
+    worker.work()
+
