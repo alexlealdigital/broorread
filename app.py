@@ -180,29 +180,14 @@ def get_cobrancas():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Erro ao acessar o banco de dados: {str(e)}"}), 500
 
+# NO SEU app.py (Substitua a função create_cobranca)
+
 @app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
     """Cria uma nova cobrança PIX no MP e salva o registro no DB."""
     try:
-        dados = request.get_json()
-        print(f"Dados recebidos: {dados}")
-        
-        if not dados:
-            return jsonify({"status": "error", "message": "Nenhum dado foi enviado."}), 400
-            
-        email_cliente = dados.get("email")
-        nome_cliente = dados.get("nome", "Cliente do E-book")
-        
-        if not email_cliente:
-            return jsonify({"status": "error", "message": "O email é obrigatório."}), 400
+        # ... (CÓDIGO DE VALIDAÇÃO DE DADOS E ACCESS TOKEN - MANTIDO) ...
 
-        if "@" not in email_cliente or "." not in email_cliente:
-            return jsonify({"status": "error", "message": "Por favor, insira um email válido."}), 400
-
-        access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
-        if not access_token:
-            return jsonify({"status": "error", "message": "Token do Mercado Pago não configurado."}), 500
-            
         sdk = mercadopago.SDK(access_token)
 
         valor_ebook = float(dados.get("valor", 1.00))
@@ -218,8 +203,68 @@ def create_cobranca():
         payment_response = sdk.payment().create(payment_data)
         
         if payment_response["status"] != 201:
-            error_msg = payment_response.get("response", {}).get("message", "Erro desconhecido do Mercado Pago")
-            return jsonify({"status": "error", "message": f"Erro do Mercado Pago: {error_msg}"}), 500
+            # ... (Tratamento de erro do Mercado Pago) ...
+            
+        payment = payment_response["response"]
+
+        qr_code_base64 = payment["point_of_interaction"]["transaction_data"]["qr_code_base64"]
+        qr_code_text = payment["point_of_interaction"]["transaction_data"]["qr_code"]
+
+        # ---------- CRIAÇÃO E PERSISTÊNCIA NO DB ----------
+        nova_cobranca = Cobranca(
+            external_reference=str(payment["id"]),
+            cliente_nome=nome_cliente,
+            cliente_email=email_cliente,
+            valor=valor_ebook,
+            status=payment["status"]
+        )
+        
+        # 🔑 PASSO CRÍTICO: Serializa os dados necessários para o Worker ANTES de limpar a sessão.
+        dados_entrega = {
+            'payment_id': str(payment["id"]),
+            'cliente_email': nova_cobranca.cliente_email,
+            'cliente_nome': nova_cobranca.cliente_nome,
+            'valor': nova_cobranca.valor,
+        }
+
+        try:
+            db.session.add(nova_cobranca)
+            db.session.commit()
+            
+            # 1. Correções de visibilidade e segurança
+            db.session.expire_all()
+            db.session.remove() 
+            
+            print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
+        
+        except Exception as db_error:
+            db.session.rollback()
+            db.session.remove() 
+            print(f"!!! ERRO CRÍTICO DB: FALHA AO SALVAR COBRANÇA: {str(db_error)}")
+            return jsonify({"status": "error", "message": "Falha interna ao registrar a cobrança (DB)."}, 500)
+        
+        # O Webhook receberá o ID, mas o Web Service usa a mesma lógica de enfileiramento
+        # para garantir que o Worker tenha os dados (mesmo que o Webhook falhe).
+        
+        # 🔑 ENFILEIRANDO DADOS COMPLETOS PARA O WORKER
+        # O Webhook padrão ainda enfileira o ID, mas o Job no RQ agora terá esses dados.
+        # Aqui assumimos que você vai modificar o webhook para enfileirar esses dados,
+        # ou que você usará a rota /api/webhook para enfileirar o ID.
+        # Pelo bem da emergência, vamos enfileirar o ID, mas o Worker VAI LER do DB.
+        # A solução de PUSH não é imediata com o RQ padrão.
+        
+        # Se for para consertar o Worker:
+        return jsonify({
+            "status": "success",
+            "message": "Cobrança PIX criada com sucesso!",
+            # ... (Restante do retorno)
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        db.session.remove()
+        print(f"Erro ao criar cobrança: {str(e)}")
+        return jsonify({"status": "error", "message": f"Erro ao criar cobrança: {str(e)}"}), 500
             
         payment = payment_response["response"]
 
