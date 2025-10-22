@@ -157,7 +157,7 @@ def webhook_mercadopago():
         # Enfileirar o job para processamento assíncrono
         payment_id = dados.get("data", {}).get("id")
         if payment_id:
-            q.enqueue('worker.process_mercado_pago_webhook', payment_id)
+            q.enqueue('worker.process_mercado_pago_webhook', payment['id'], nova_cobranca.cliente_email)
             print(f"Job para payment_id {payment_id} enfileirado com sucesso.")
 
         return jsonify({"status": "success", "message": "Webhook recebido e processamento enfileirado"}), 200
