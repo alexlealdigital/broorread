@@ -82,9 +82,7 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     pass 
 
 def validar_assinatura_webhook(request):
-    """
-    Valida a assinatura do webhook do Mercado Pago usando o WEBHOOK_SECRET.
-    """
+    
     try:
         x_signature = request.headers.get("x-signature")
         x_request_id = request.headers.get("x-request-id")
@@ -130,20 +128,17 @@ def validar_assinatura_webhook(request):
 
 @app.route("/")
 def index():
-    """Serve a página principal (static/index.html)"""
+   
     return send_from_directory('static', 'index.html')
 
 @app.route("/<path:path>")
 def serve_static(path):
-    """Serve arquivos estáticos"""
+   
     return send_from_directory('static', path)
 
 @app.route("/api/webhook", methods=["POST"])
 def webhook_mercadopago():
-    """
-    Endpoint para receber notificações de pagamento do Mercado Pago.
-    Enfileira o job de processamento.
-    """
+    
     try:
         dados = request.get_json()
         print("=" * 50)
@@ -176,7 +171,7 @@ def webhook_mercadopago():
 
 @app.route("/api/cobrancas", methods=["GET"])
 def get_cobrancas():
-    """Lista todas as cobranças salvas no DB"""
+    
     try:
         cobrancas_db = Cobranca.query.order_by(Cobranca.data_criacao.desc()).all()
         cobrancas_list = [cobranca.to_dict() for cobranca in cobrancas_db]
@@ -281,7 +276,7 @@ def create_cobranca():
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    """Endpoint de health check para o Render ou Kubernetes"""
+   
     # Verifica a saúde da conexão do Redis
     try:
         redis_conn.ping()
