@@ -240,8 +240,8 @@ def create_cobranca():
         
         print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")       
 	       
-	    q.enqueue('worker.process_mercado_pago_webhook', payment['id'], email_cliente)
-	    print(f"Job para pagamento {payment['id']} enfileirado com e-mail: {email_cliente}")
+        q.enqueue('worker.process_mercado_pago_webhook', payment['id'], email_cliente)
+        print(f"Job para pagamento {payment['id']} enfileirado com e-mail: {email_cliente}")
 
         # Retorno de sucesso
         return jsonify({
