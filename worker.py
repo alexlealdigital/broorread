@@ -101,7 +101,7 @@ def process_mercado_pago_webhook(payment_id, email_cliente=None):
         resp = sdk.payment().get(payment_id)
 
         if resp["status"] != 200:
-            raise RuntimeError(f"MP respondeu {resp["status"]}")
+            raise RuntimeError(f"MP respondeu {resp['status']}")
 
         payment = resp["response"]
         if payment.get("status") != "approved":
