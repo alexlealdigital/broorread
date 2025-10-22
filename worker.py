@@ -48,8 +48,8 @@ class Cobranca(db.Model):
 
 
 # Criação das tabelas (necessário para inicialização)
-with app.app_context():
-    db.create_all()
+    with app.app_context():
+        db.create_all()
 
 
 # ---------- FUNÇÃO DE ENVIO DE E-MAIL (CORRIGIDA PARA PROTOCOLO SSL) ----------
@@ -138,6 +138,7 @@ if __name__ == "__main__":
         print("[WORKER] Worker iniciado – aguardando jobs...")
 
         worker.work()
+
 
 
 
