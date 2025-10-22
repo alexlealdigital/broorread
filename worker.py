@@ -92,9 +92,9 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
 
 # ---------- JOB DE CONTORNO (IGNORANDO O DB) ----------
 def process_mercado_pago_webhook(payment_id, email_cliente=None):
-    """
-    CONTORNO: recebe o e-mail real pelo Job.
-    """
+	    """
+	    PLANO B: Recebe o e-mail real pelo Job (enfileirado pelo app.py) e ignora o DB.
+	    """
     with app.app_context():
         access_token = os.environ["MERCADOPAGO_ACCESS_TOKEN"]
         sdk = mercadopago.SDK(access_token)
@@ -103,23 +103,27 @@ def process_mercado_pago_webhook(payment_id, email_cliente=None):
         if resp["status"] != 200:
             raise RuntimeError(f"MP respondeu {resp['status']}")
 
-        payment = resp["response"]
-        if payment.get("status") != "approved":
-            print(f"[WORKER] Pagamento {payment_id} não aprovado.")
-            return
-
-        # Usa e-mail que veio do Job; se não vier, usa fallback
-        destinatario = email_cliente or "profalexleal@gmail.com"
-        nome_mock    = "Cliente"
-        valor_mock   = 1.00
-        link         = os.environ.get("LINK_PRODUTO",
-                       "https://drive.google.com/file/d/1HlMExRRjV5Wn5SUNZktc46ragh8Zj8uQ/view?usp=sharing")
-
-        enviar_email_confirmacao(destinatario=destinatario,
-                                 nome_cliente=nome_mock,
-                                 valor=valor_mock,
-                                 link_produto=link)
-        print(f"[WORKER] E-mail enviado para {destinatario}")
+	        payment = resp["response"]
+	        if payment.get("status") != "approved":
+	            print(f"[WORKER] Pagamento {payment_id} não aprovado.")
+	            return
+	
+	        # 🔑 CORREÇÃO: Usa o e-mail que veio do Job. Se não vier, levanta um erro, pois o app.py deve fornecê-lo.
+	        if not email_cliente:
+	            print(f"[WORKER] ERRO CRÍTICO: E-mail do cliente não fornecido para o job {payment_id}.")
+	            return
+	            
+	        destinatario = email_cliente
+	        nome_mock    = "Cliente" # Mantém o mock, pois o DB é ignorado
+	        valor_mock   = 1.00    # Mantém o mock, pois o DB é ignorado
+	        link         = os.environ.get("LINK_PRODUTO",
+	                       "https://drive.google.com/file/d/1HlMExRRjV5Wn5SUNZktc46ragh8Zj8uQ/view?usp=sharing")
+	
+	        enviar_email_confirmacao(destinatario=destinatario,
+	                                 nome_cliente=nome_mock,
+	                                 valor=valor_mock,
+	                                 link_produto=link)
+	        print(f"[WORKER] E-mail enviado para {destinatario}")
 
 
 # ---------- INICIALIZAÇÃO DO WORKER ----------
@@ -137,4 +141,3 @@ if __name__ == "__main__":
     
     with app.app_context(): 
         worker.work()
-
