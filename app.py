@@ -292,8 +292,13 @@ def create_cobranca():
         db.session.expire_all()
         db.session.remove() # Força a desconexão do pool
         
-        print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
+       print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
         
+        # ✅ ADIÇÃO DA CORREÇÃO: Enfileira o job com o e-mail para envio das instruções PIX.
+        # Isso garante que o e-mail real seja usado na primeira comunicação.
+        q.enqueue('worker.send_pix_instruction_email', payment["id"], nova_cobranca.cliente_email) 
+        
+               
         # Retorno de sucesso
         return jsonify({
             "status": "success",
