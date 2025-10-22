@@ -191,16 +191,6 @@ def webhook_mercadopago():
         print(f"Erro ao processar webhook: {str(e)}")
         return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 200
 
-### O Diagnóstico Final
-
-**O `app.py` tem o e-mail, mas enfileira o Job apenas na rota `/api/cobrancas`.**
-
-A rota `/api/cobrancas` deve ser corrigida para **enviar o e-mail junto com o `payment_id`**.
-
-Você tem que garantir que a sua rota **`create_cobranca`** (que tem o e-mail) chame o `q.enqueue` com o e-mail:
-
-```python
-# NO SEU app.py, dentro de create_cobranca:
 q.enqueue('worker.process_mercado_pago_webhook', payment['id'], nova_cobranca.cliente_email) 
 
 
