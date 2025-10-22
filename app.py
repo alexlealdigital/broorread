@@ -238,12 +238,10 @@ def create_cobranca():
         db.session.expire_all()
         db.session.remove() # Força a desconexão do pool
         
-        print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
-        
-	        # 🔑 CORREÇÃO CRÍTICA FINAL PARA O PLANO B: Enfileira o Job com o e-mail do cliente real.
-	        # Isso garante que o worker (que ignora o DB) tenha o e-mail correto.
-	        q.enqueue('worker.process_mercado_pago_webhook', payment['id'], email_cliente)
-	        print(f"Job para pagamento {payment['id']} enfileirado com e-mail: {email_cliente}")
+        print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")       
+	       
+	    q.enqueue('worker.process_mercado_pago_webhook', payment['id'], email_cliente)
+	    print(f"Job para pagamento {payment['id']} enfileirado com e-mail: {email_cliente}")
 
         # Retorno de sucesso
         return jsonify({
