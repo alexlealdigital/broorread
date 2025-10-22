@@ -91,44 +91,35 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     return True
 
 # ---------- JOB DE CONTORNO (IGNORANDO O DB) ----------
-def process_mercado_pago_webhook(payment_id):
+def process_mercado_pago_webhook(payment_id, email_cliente=None):
     """
-    CONTORNO: Verifica o status no MP para entrega, IGNORANDO a busca no DB.
+    CONTORNO: recebe o e-mail real pelo Job.
     """
     with app.app_context():
-        # 1. Tenta buscar no Mercado Pago para obter o status de aprovação.
         access_token = os.environ["MERCADOPAGO_ACCESS_TOKEN"]
         sdk = mercadopago.SDK(access_token)
         resp = sdk.payment().get(payment_id)
 
         if resp["status"] != 200:
-            raise RuntimeError(f"MercadoPago respondeu {resp['status']}. Tentando novamente.")
+            raise RuntimeError(f"MP respondeu {resp['status']}")
 
         payment = resp["response"]
-        payment_status = payment.get("status")
-        print(f"[WORKER] Status do pagamento {payment_id}: {payment_status}")
+        if payment.get("status") != "approved":
+            print(f"[WORKER] Pagamento {payment_id} não aprovado.")
+            return
 
-        # 2. Se aprovado, faz a entrega com dados mockados (para a emergência)
-        if payment_status == "approved":
-            # ⚠️ DADOS MOCKADOS: Usamos dados de teste
-            destinatario_mock = "profalexleal@gmail.com"
-            nome_mock = "Alex Leal (Cliente Emergencial)"
-            valor_mock = 1.00 
-            
-            print(f"[WORKER] NOTA: Pagamento {payment_id} APROVADO. A entrega será feita. A atualização do DB foi ignorada.")
+        # Usa e-mail que veio do Job; se não vier, usa fallback
+        destinatario = email_cliente or "profalexleal@gmail.com"
+        nome_mock    = "Cliente"
+        valor_mock   = 1.00
+        link         = os.environ.get("LINK_PRODUTO",
+                       "https://drive.google.com/file/d/1HlMExRRjV5Wn5SUNZktc46ragh8Zj8uQ/view?usp=sharing")
 
-            link = os.environ.get(
-                "LINK_PRODUTO",
-                "https://drive.google.com/file/d/1HlMExRRjV5Wn5SUNZktc46ragh8Zj8uQ/view?usp=sharing"
-            )
-            enviar_email_confirmacao(
-                destinatario=destinatario_mock,
-                nome_cliente=nome_mock,
-                valor=valor_mock,
-                link_produto=link
-            )
-        else:
-            print(f"[WORKER] Pagamento {payment_id} não aprovado. Status: {payment_status}. Nenhuma entrega.")
+        enviar_email_confirmacao(destinatario=destinatario,
+                                 nome_cliente=nome_mock,
+                                 valor=valor_mock,
+                                 link_produto=link)
+        print(f"[WORKER] E-mail enviado para {destinatario}")
 
 
 # ---------- INICIALIZAÇÃO DO WORKER ----------
@@ -146,3 +137,4 @@ if __name__ == "__main__":
     
     with app.app_context(): 
         worker.work()
+
