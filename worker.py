@@ -132,14 +132,13 @@ if __name__ == "__main__":
     redis_conn = redis.from_url(redis_url)
 
     with app.app_context():
-    db.create_all()
+        db.create_all()
 
-    # Todas estas linhas devem ter o mesmo nível de indentação (4 espaços)
-    worker = Worker(["default"], connection=redis_conn)
-    print("[WORKER] Worker iniciado – aguardando jobs...")
-    
-    with app.app_context(): 
-    worker.work()
+        worker = Worker(["default"], connection=redis_conn)
+        print("[WORKER] Worker iniciado – aguardando jobs...")
+
+        worker.work()
+
 
 
 
