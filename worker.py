@@ -11,7 +11,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import redis
-from rq import Worker, Queue # Importação corrigida
+from rq import Worker, Queue 
 from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -34,16 +34,22 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle"
 # Inicialização mínima do DB para contexto
 db = SQLAlchemy(app) 
 
-# --- MODELO DUMMY (Não usado para busca, apenas para estrutura) ---
+# --- MODELO CORRIGIDO (Usando tipos do db.Column) ---
 class Cobranca(db.Model):
     __tablename__ = "cobrancas"
-    id = db.Column(Integer, primary_key=True)
-    external_reference = db.Column(String(100), nullable=False)
-    cliente_nome = db.Column(String(200), nullable=False)
-    cliente_email = db.Column(String(200), nullable=False)
-    valor = db.Column(Float, nullable=False)
-    status = db.Column(String(50), default="pending", nullable=False)
-    data_criacao = Column(DateTime, default=datetime.utcnow, nullable=False)
+    # CORREÇÃO: Usando db.Integer, db.String, etc., que são definidos pelo Flask-SQLAlchemy
+    id = db.Column(db.Integer, primary_key=True)
+    external_reference = db.Column(db.String(100), nullable=False)
+    cliente_nome = db.Column(db.String(200), nullable=False)
+    cliente_email = db.Column(db.String(200), nullable=False)
+    valor = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(50), default="pending", nullable=False)
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+# Criação das tabelas (necessário para inicialização)
+with app.app_context():
+    db.create_all()
 
 
 # ---------- FUNÇÃO DE ENVIO DE E-MAIL (CORRIGIDA PARA PROTOCOLO SSL) ----------
@@ -73,9 +79,13 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     msg.attach(MIMEText(corpo_html, "html"))
     
     # 🔑 CORREÇÃO SMTP: Usando SMTP_SSL na porta 465 (mais robusto)
-    with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
-        server.login(email_user, email_pass)
-        server.send_message(msg)
+    try:
+        with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=10) as server:
+            server.login(email_user, email_pass)
+            server.send_message(msg)
+    except Exception as exc:
+        print(f"[WORKER] Falha no envio SMTP: {exc}")
+        return False
     
     print(f"[WORKER] E-mail DE ENTREGA enviado para {destinatario}")
     return True
@@ -92,7 +102,6 @@ def process_mercado_pago_webhook(payment_id):
         resp = sdk.payment().get(payment_id)
 
         if resp["status"] != 200:
-            # Lançamos erro para que o RQ tente novamente mais tarde
             raise RuntimeError(f"MercadoPago respondeu {resp['status']}. Tentando novamente.")
 
         payment = resp["response"]
@@ -102,11 +111,10 @@ def process_mercado_pago_webhook(payment_id):
         # 2. Se aprovado, faz a entrega com dados mockados (para a emergência)
         if payment_status == "approved":
             # ⚠️ DADOS MOCKADOS: Usamos dados de teste
-            destinatario_mock = "profalexleal@gmail.com" # Substitua pelo email de teste real
+            destinatario_mock = "profalexleal@gmail.com"
             nome_mock = "Alex Leal (Cliente Emergencial)"
-            valor_mock = 1.00 # Baseado no valor de teste
+            valor_mock = 1.00 
             
-            # --- MOCK DA ATUALIZAÇÃO DO BANCO (Substituído por LOG) ---
             print(f"[WORKER] NOTA: Pagamento {payment_id} APROVADO. A entrega será feita. A atualização do DB foi ignorada.")
 
             link = os.environ.get(
@@ -128,11 +136,11 @@ if __name__ == "__main__":
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
     redis_conn = redis.from_url(redis_url)
 
-    # Cria as tabelas (apenas para inicialização)
+    # 🔑 CORREÇÃO FINAL: Cria as tabelas e inicia o Worker
+    # A linha with app.app_context(): deve ser usada aqui
     with app.app_context():
         db.create_all()
 
-    # 🔑 CORREÇÃO FINAL: Usa redis_conn diretamente.
     worker = Worker(["default"], connection=redis_conn)
     print("[WORKER] Worker iniciado – aguardando jobs...")
     
