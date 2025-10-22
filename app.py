@@ -190,7 +190,7 @@ def get_cobrancas():
 
 @app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
-    """Cria uma nova cobrança PIX no MP e salva o registro no DB."""
+   
     
     # IMPORTANTE: Desativa o gerenciamento automático da sessão para controle manual
     db.session.autoflush = False
