@@ -239,9 +239,10 @@ def create_cobranca():
         db.session.remove() # Força a desconexão do pool
         
         print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")       
-	       
+        
+        # Alinhado corretamente com 8 espaços
         q.enqueue('worker.process_mercado_pago_webhook', payment['id'], email_cliente)
-        print(f"Job para pagamento {payment['id']} enfileirado com e-mail: {email_cliente}")
+        print(f"Job para pagamento {payment['id']} enfileirado com e-mail: {email_cliente}")       
 
         # Retorno de sucesso
         return jsonify({
