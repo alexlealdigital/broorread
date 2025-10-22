@@ -78,7 +78,7 @@ with app.app_context():
 
 # Mantido como um placeholder para clareza, mas o Worker fará o trabalho real.
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
-    """Placeholder: O envio real é feito pelo worker.py"""
+   
     pass 
 
 def validar_assinatura_webhook(request):
