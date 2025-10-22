@@ -190,7 +190,6 @@ def webhook_mercadopago():
     except Exception as e:
         print(f"Erro ao processar webhook: {str(e)}")
         return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 200
-```
 
 ### O Diagnóstico Final
 
