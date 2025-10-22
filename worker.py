@@ -1,34 +1,26 @@
 #!/usr/bin/env python3
 """
-Worker RQ – ENTREGA DEFINITIVA
-1. Lê a cobrança no DB (external_reference = payment_id)
-2. Se status == approved E ainda não entregue → envia e-mail
-3. Marca como "delivered" para não voltar a enviar
+Worker RQ – versão compatível com rq>=2.0
 """
 
 import os
-import sys
-import time
 import redis
+from rq import Worker, Queue
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
+from sqlalchemy.orm import sessionmaker, declarative_base
+from datetime import datetime
 import mercadopago
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime
-from rq import Worker, Queue, Connection
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
 
-# ---------- CONFIGURAÇÃO DO BANCO (SQLAlchemy puro) ----------
+# ---------- DB ----------
 db_url = os.environ.get("DATABASE_URL", "sqlite:///cobrancas.db")
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
-elif db_url.startswith("postgresql://"):
-    db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
 engine = create_engine(db_url, pool_pre_ping=True, pool_recycle=3600)
-Session = sessionmaker(bind=engine)
+Session = sessionmaker(bind=engine, expire_on_commit=False)
 Base = declarative_base()
 
 class Cobranca(Base):
@@ -41,7 +33,7 @@ class Cobranca(Base):
     status = Column(String(50), default="pending", nullable=False)
     data_criacao = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-# ---------- ENVIO DE E-MAIL ----------
+# ---------- E-MAIL ----------
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     try:
         smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
@@ -83,7 +75,7 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
         print(f"[WORKER] Falha ao enviar e-mail: {exc}")
         return False
 
-# ---------- JOB RQ ----------
+# ---------- JOB ----------
 def process_mercado_pago_webhook(payment_id):
     session = Session()
     try:
@@ -91,12 +83,9 @@ def process_mercado_pago_webhook(payment_id):
         if not cobranca:
             print(f"[WORKER] Cobrança {payment_id} não encontrada.")
             return
-
         if cobranca.status != "approved":
             print(f"[WORKER] Status {cobranca.status} ≠ approved. Nada a fazer.")
             return
-
-        # Evita re-envio
         if cobranca.status == "delivered":
             print(f"[WORKER] Produto já entregue para {payment_id}.")
             return
@@ -111,7 +100,6 @@ def process_mercado_pago_webhook(payment_id):
         if not ok:
             raise RuntimeError("E-mail não enviado – re-enfileirando.")
 
-        # Marca como entregue
         cobranca.status = "delivered"
         session.commit()
         print(f"[WORKER] Entrega concluída para {cobranca.cliente_email}.")
@@ -121,13 +109,13 @@ def process_mercado_pago_webhook(payment_id):
     finally:
         session.close()
 
-# ---------- INICIALIZAÇÃO DO WORKER ----------
+# ---------- WORKER ----------
 if __name__ == "__main__":
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
     redis_conn = redis.from_url(redis_url)
 
-    Base.metadata.create_all(engine)  # garante tabelas
-    with Connection(redis_conn):
-        worker = Worker(["default"], connection=redis_conn)
-        print("[WORKER] Worker iniciado – aguardando jobs...")
-        worker.work()
+    Base.metadata.create_all(engine)
+    queue = Queue("default", connection=redis_conn)
+    worker = Worker([queue], connection=redis_conn)
+    print("[WORKER] Worker iniciado – aguardando jobs...")
+    worker.work()
