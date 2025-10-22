@@ -240,10 +240,10 @@ def create_cobranca():
         
         print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")
         
-        # O job de notificação para o worker é desnecessário aqui, pois o webhook já o faz.
-        # A linha abaixo foi removida para evitar redundância e confusão de fluxo.
-        # q.enqueue('worker.process_mercado_pago_webhook', payment['id'], nova_cobranca.cliente_email)
-        # print(f"Job para pagamento {payment['id']} enfileirado com e-mail: {nova_cobranca.cliente_email}")
+	        # 🔑 CORREÇÃO CRÍTICA FINAL PARA O PLANO B: Enfileira o Job com o e-mail do cliente real.
+	        # Isso garante que o worker (que ignora o DB) tenha o e-mail correto.
+	        q.enqueue('worker.process_mercado_pago_webhook', payment['id'], email_cliente)
+	        print(f"Job para pagamento {payment['id']} enfileirado com e-mail: {email_cliente}")
 
         # Retorno de sucesso
         return jsonify({
