@@ -158,7 +158,7 @@ def webhook_mercadopago():
         if payment_id:
             # Enfileira o job de processamento do webhook. 
             # O Worker usará o payment_id para buscar detalhes do pagamento e o email no DB.
-            q.enqueue('worker.process_mercado_pago_webhook', payment_id)
+            # q.enqueue('worker.process_mercado_pago_webhook', payment_id)
 
             print(f"Job para payment_id {payment_id} enfileirado com sucesso.")
 
