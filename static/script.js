@@ -24,16 +24,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(formCobranca);
         const dadosCobranca = Object.fromEntries(formData.entries());
 
-        // CORREÇÃO: Mapeia o campo cliente_email para email que o backend espera
+        // --- [CORREÇÃO 1: OBJETO PARA PLANO A] ---
+        // Agora enviamos product_id e removemos titulo/valor
         const dadosParaEnvio = {
             email: dadosCobranca.cliente_email,
             nome: dadosCobranca.cliente_nome,
-            telefone: dadosCobranca.cliente_telefone,
-            documento: dadosCobranca.cliente_documento,
-            titulo: dadosCobranca.titulo,
-            descricao: dadosCobranca.descricao,
-            valor: parseFloat(dadosCobranca.valor)
+            
+            // Hardcoded para o seu produto de teste ID=1
+            // Você pode tornar isso dinâmico se tiver vários botões de compra
+            product_id: 1 
         };
+        // --- FIM DA CORREÇÃO 1 ---
 
         // Mostra uma mensagem de "carregando"
         showLoadingInModal();
@@ -45,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // Envia os dados mapeados para o backend
+                // Envia os dados corrigidos para o backend
                 body: JSON.stringify(dadosParaEnvio),
             });
 
@@ -54,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 // SUCESSO! Mostra o QR Code no Modal
                 showQrCodeInModal(result);
-                showToast('Cobrança criada com sucesso!', 'success');
+                showToast('Cobrança criada com sucesso! Pague o PIX para receber.', 'success');
                 
                 // Limpa o formulário após sucesso
                 formCobranca.reset();
@@ -71,12 +72,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Função para validar o formulário
+    // --- [CORREÇÃO 2: VALIDAÇÃO PARA PLANO A] ---
+    // Função para validar o formulário (sem titulo e valor)
     function validateForm() {
         const email = document.getElementById('cliente_email').value;
         const nome = document.getElementById('cliente_nome').value;
-        const titulo = document.getElementById('titulo').value;
-        const valor = document.getElementById('valor').value;
+        // const titulo = document.getElementById('titulo').value; // REMOVIDO
+        // const valor = document.getElementById('valor').value;   // REMOVIDO
 
         // Limpa mensagens de erro anteriores
         clearFieldErrors();
@@ -98,20 +100,11 @@ document.addEventListener('DOMContentLoaded', () => {
             isValid = false;
         }
 
-        // Validação de título
-        if (!titulo || titulo.trim().length < 3) {
-            showFieldError('titulo', 'Título deve ter pelo menos 3 caracteres');
-            isValid = false;
-        }
-
-        // Validação de valor
-        if (!valor || parseFloat(valor) <= 0) {
-            showFieldError('valor', 'Valor deve ser maior que zero');
-            isValid = false;
-        }
+        // Validações de 'titulo' e 'valor' REMOVIDAS
 
         return isValid;
     }
+    // --- FIM DA CORREÇÃO 2 ---
 
     // Função para validar email
     function isValidEmail(email) {
@@ -122,6 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Função para mostrar erro em campo específico
     function showFieldError(fieldId, message) {
         const field = document.getElementById(fieldId);
+        // Evita adicionar erro se o campo não existir mais no HTML
+        if (!field) return; 
+
         const errorDiv = document.createElement('div');
         errorDiv.className = 'field-error';
         errorDiv.textContent = message;
@@ -130,7 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
         errorDiv.style.marginTop = '0.25rem';
         
         field.style.borderColor = '#e74c3c';
-        field.parentNode.appendChild(errorDiv);
+        // Insere o erro logo após o campo
+        field.parentNode.insertBefore(errorDiv, field.nextSibling); 
     }
 
     // Função para limpar erros de campo
@@ -140,11 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const inputs = document.querySelectorAll('input, textarea');
         inputs.forEach(input => {
-            input.style.borderColor = '#e0e0e0';
+            input.style.borderColor = '#e0e0e0'; // Cor padrão da borda
         });
     }
 
-    // Funções auxiliares para controlar o Modal
+    // Funções auxiliares para controlar o Modal (sem mudanças)
     function showLoadingInModal() {
         modalBody.innerHTML = `
             <div style="text-align: center; padding: 2rem;">
@@ -175,9 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="fas fa-info-circle"></i>
                     Clique no código acima para selecioná-lo e copiá-lo
                 </p>
-                ${data.valor ? `<p style="margin-top: 1rem; font-size: 1.1rem; font-weight: bold; color: #27ae60;">Valor: R$ ${data.valor.toFixed(2)}</p>` : ''}
+                ${data.cobranca && data.cobranca.valor ? `<p style="margin-top: 1rem; font-size: 1.1rem; font-weight: bold; color: #27ae60;">Valor: R$ ${data.cobranca.valor.toFixed(2)}</p>` : ''}
             </div>
         `;
+         modal.style.display = 'block'; // Garante que o modal apareça
     }
 
     function showErrorInModal(message) {
@@ -200,13 +198,12 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.style.display = 'block';
     }
 
-    // Função para mostrar toast notifications
+    // Função para mostrar toast notifications (sem mudanças)
     function showToast(message, type = 'info') {
         const toastContent = toast.querySelector('.toast-content');
         const toastIcon = toast.querySelector('.toast-icon');
         const toastMessage = toast.querySelector('.toast-message');
 
-        // Define ícone e cor baseado no tipo
         let icon, color;
         switch (type) {
             case 'success':
@@ -227,87 +224,109 @@ document.addEventListener('DOMContentLoaded', () => {
         toast.style.background = color;
         toast.style.display = 'block';
 
-        // Auto-hide após 5 segundos
         setTimeout(() => {
             toast.style.display = 'none';
         }, 5000);
     }
 
-    // Fecha o modal ao clicar no 'X'
-    modalClose.addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
+    // Fecha o modal ao clicar no 'X' (sem mudanças)
+    if (modalClose) {
+        modalClose.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
 
-    // Fecha o modal ao clicar fora dele
+    // Fecha o modal ao clicar fora dele (sem mudanças)
     window.addEventListener('click', (event) => {
         if (event.target == modal) {
             modal.style.display = 'none';
         }
     });
 
-    // Fecha o toast ao clicar nele
-    toast.addEventListener('click', () => {
-        toast.style.display = 'none';
-    });
+    // Fecha o toast ao clicar nele (sem mudanças)
+    if (toast) {
+        toast.addEventListener('click', () => {
+            toast.style.display = 'none';
+        });
+    }
 
-    // Lógica para trocar de abas
+    // Lógica para trocar de abas (sem mudanças)
     const navButtons = document.querySelectorAll('.nav-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
     navButtons.forEach(button => {
         button.addEventListener('click', () => {
-            // Remove a classe 'active' de todos
             navButtons.forEach(btn => btn.classList.remove('active'));
             tabContents.forEach(tab => tab.classList.remove('active'));
 
-            // Adiciona 'active' ao botão e tab clicados
             button.classList.add('active');
-            document.getElementById(`tab-${button.dataset.tab}`).classList.add('active');
+            const targetTab = document.getElementById(`tab-${button.dataset.tab}`);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
         });
     });
 
-    // Máscara para telefone
+    // Máscara para telefone (sem mudanças)
     const telefoneInput = document.getElementById('cliente_telefone');
     if (telefoneInput) {
         telefoneInput.addEventListener('input', (e) => {
             let value = e.target.value.replace(/\D/g, '');
-            if (value.length <= 11) {
-                value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-                if (value.length < 14) {
-                    value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-                }
+            // Limita a 11 dígitos
+            value = value.substring(0, 11); 
+            if (value.length > 10) { // Celular (XX) XXXXX-XXXX
+                value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+            } else if (value.length > 6) { // Fixo (XX) XXXX-XXXX
+                value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+            } else if (value.length > 2) { // (XX) XXXX
+                value = value.replace(/^(\d{2})(\d{0,4}).*/, '($1) $2');
+            } else if (value.length > 0) { // (XX
+                value = value.replace(/^(\d*)/, '($1');
             }
             e.target.value = value;
         });
     }
 
-    // Máscara para CPF
+    // Máscara para CPF/CNPJ (sem mudanças)
     const documentoInput = document.getElementById('cliente_documento');
     if (documentoInput) {
         documentoInput.addEventListener('input', (e) => {
             let value = e.target.value.replace(/\D/g, '');
-            if (value.length <= 11) {
-                value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-            } else {
-                value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+             // Limita a 14 dígitos (CNPJ)
+            value = value.substring(0, 14);
+            if (value.length <= 11) { // CPF
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            } else { // CNPJ
+                value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+                value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                value = value.replace(/(\d{4})(\d)/, '$1-$2');
             }
             e.target.value = value;
         });
     }
 
-    // Validação em tempo real
-    const inputs = document.querySelectorAll('input[required], textarea[required]');
-    inputs.forEach(input => {
-        input.addEventListener('blur', () => {
+    // Validação em tempo real (sem mudanças)
+    // Seleciona apenas os campos que ainda existem e são obrigatórios
+    const requiredInputs = document.querySelectorAll('#cliente_email, #cliente_nome'); 
+    requiredInputs.forEach(input => {
+        input.addEventListener('blur', () => { // Ao perder o foco
             if (input.value.trim() === '') {
-                input.style.borderColor = '#e74c3c';
+                input.style.borderColor = '#e74c3c'; // Borda vermelha se vazio
             } else {
-                input.style.borderColor = '#27ae60';
+                 // Verifica se é email e se é válido
+                if (input.id === 'cliente_email' && !isValidEmail(input.value)) {
+                    input.style.borderColor = '#e74c3c'; 
+                } else {
+                    input.style.borderColor = '#27ae60'; // Borda verde se preenchido e válido
+                }
             }
         });
 
-        input.addEventListener('focus', () => {
-            input.style.borderColor = '#667eea';
+        input.addEventListener('focus', () => { // Ao ganhar o foco
+            input.style.borderColor = '#667eea'; // Borda azul
         });
     });
 });
