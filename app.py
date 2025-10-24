@@ -23,8 +23,6 @@ CORS(app, origins='*')
 # ---------- CONFIGURAÇÃO DO BANCO DE DADOS E EXTENSÕES ----------
 db_url = os.environ.get("DATABASE_URL", "sqlite:///cobrancas.db")
 
-# Lógica para compatibilidade com driver PostgreSQL (psycopg) no Render
-# Garante que a URL do banco de dados use o driver assíncrono psycopg
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
 elif db_url.startswith("postgresql://"):
@@ -34,13 +32,11 @@ app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "asdf#FGSgvasgf$5$WGT")
 
-# Pool de conexões robusto (Essencial para serviços em cloud como Render)
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True, 
     "pool_recycle": 3600
 }
 
-# Inicialização do SQLAlchemy
 db = SQLAlchemy(app)
 
 # Configuração do Redis e RQ
@@ -48,7 +44,7 @@ redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 redis_conn = redis.from_url(redis_url)
 q = Queue(connection=redis_conn)
 
-# ---------- MODELO DE DADOS ----------
+# ---------- MODELO DE DADOS (CORRIGIDO PARA PLANO A) ----------
 class Cobranca(db.Model):
     __tablename__ = "cobrancas"
     id = db.Column(db.Integer, primary_key=True)
@@ -59,7 +55,7 @@ class Cobranca(db.Model):
     status = db.Column(db.String(50), default="pending", nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
-    # --- ADICIONE ESTAS DUAS LINHAS ---
+    # --- ADIÇÃO CORRETA ---
     product_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
     produto = db.relationship('Produto')
     # --- FIM DA ADIÇÃO ---
@@ -73,10 +69,9 @@ class Cobranca(db.Model):
             "valor": self.valor,
             "status": self.status,
             "data_criacao": self.data_criacao.isoformat() if self.data_criacao else None
-            # (Opcional) Adicionar "product_id": self.product_id
         }
 
-# O seu modelo Produto está PERFEITO, mantenha como está:
+# --- NOVO MODELO PRODUTO ---
 class Produto(db.Model):
     __tablename__ = "produtos"
     id = db.Column(db.Integer, primary_key=True)
@@ -85,19 +80,16 @@ class Produto(db.Model):
     link_download = db.Column(db.String(500), nullable=False)
 
 
-# A criação das tabelas está CORRETA
+# Criação das tabelas
 with app.app_context():
     db.create_all()
 
-# --- FUNÇÕES AUXILIARES ---
+# --- FUNÇÕES AUXILIARES (Sem mudanças) ---
 
-# Mantido como um placeholder para clareza, mas o Worker fará o trabalho real.
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
-   
     pass 
 
 def validar_assinatura_webhook(request):
-    
     try:
         x_signature = request.headers.get("x-signature")
         x_request_id = request.headers.get("x-request-id")
@@ -124,7 +116,6 @@ def validar_assinatura_webhook(request):
             return False
         
         data_id = request.args.get("data.id", "")
-        # O manifesto deve incluir 'ts' e 'request-id' do header e o 'id' do parâmetro
         manifest = f"id:{data_id};request-id:{x_request_id};ts:{ts};"
         calculated_hash = hmac.new(
             secret_key.encode(),
@@ -143,14 +134,13 @@ def validar_assinatura_webhook(request):
 
 @app.route("/")
 def index():
-   
     return send_from_directory('static', 'index.html')
 
 @app.route("/<path:path>")
 def serve_static(path):
-   
     return send_from_directory('static', path)
 
+# --- [ROTA DO WEBHOOK CORRIGIDA] ---
 @app.route("/api/webhook", methods=["POST"])
 def webhook_mercadopago():
     
@@ -171,11 +161,12 @@ def webhook_mercadopago():
         payment_id = dados.get("data", {}).get("id")
         
         if payment_id:
-            # Enfileira o job de processamento do webhook. 
-            # O Worker usará o payment_id para buscar detalhes do pagamento e o email no DB.
-            # q.enqueue('worker.process_mercado_pago_webhook', payment_id)
+            # --- CORREÇÃO: Linha reativada ---
+            # O Worker agora só recebe o ID e busca o resto no DB.
+            q.enqueue('worker.process_mercado_pago_webhook', payment_id)
+            # --- FIM DA CORREÇÃO ---
 
-            print(f"Job para payment_id {payment_id} enfileirado com sucesso.")
+            print(f"Job (Plano A) para payment_id {payment_id} enfileirado pelo Webhook.")
 
         return jsonify({"status": "success", "message": "Webhook recebido e processamento enfileirado"}), 200
         
@@ -184,11 +175,10 @@ def webhook_mercadopago():
         return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 200
 
 
+# --- [ROTA DE COBRANÇAS CORRIGIDA] ---
 @app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
     
-    
-    # IMPORTANTE: Desativa o gerenciamento automático da sessão para controle manual
     db.session.autoflush = False
     db.session.autocommit = False
     
@@ -200,10 +190,27 @@ def create_cobranca():
             return jsonify({"status": "error", "message": "Nenhum dado foi enviado."}), 400
             
         email_cliente = dados.get("email")
-        nome_cliente = dados.get("nome", "Cliente do E-book")
+        nome_cliente = dados.get("nome", "Cliente") # Mudado de "Cliente do E-book"
+
+        # --- [CORREÇÃO 1] ---
+        # Recebemos o 'product_id' do frontend
+        product_id_recebido = dados.get("product_id")
+        
+        if not product_id_recebido:
+            return jsonify({"status": "error", "message": "ID do produto é obrigatório."}), 400
         
         if not email_cliente or "@" not in email_cliente or "." not in email_cliente:
             return jsonify({"status": "error", "message": "Por favor, insira um email válido e obrigatório."}), 400
+
+        # --- [CORREÇÃO 2] ---
+        # Buscamos o produto e o preço no DB (Mais seguro!)
+        produto = db.session.get(Produto, int(product_id_recebido))
+        if not produto:
+            return jsonify({"status": "error", "message": "Produto não encontrado."}), 404
+
+        valor_correto = produto.preco
+        descricao_correta = produto.nome
+        # --- FIM DAS CORREÇÕES ---
 
         access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
         if not access_token:
@@ -211,19 +218,15 @@ def create_cobranca():
             
         sdk = mercadopago.SDK(access_token)
 
-        valor_ebook = float(dados.get("valor", 1.00))
-        descricao_ebook = dados.get("titulo", "Seu E-book Incrível")
-
         payment_data = {
-            "transaction_amount": valor_ebook,
-            "description": descricao_ebook,
+            "transaction_amount": valor_correto,     # Usa o valor do DB
+            "description": descricao_correta,        # Usa a descrição do DB
             "payment_method_id": "pix",
             "payer": {"email": email_cliente}
         }
 
         payment_response = sdk.payment().create(payment_data)
         
-        # --- Verificação de status do Mercado Pago ---
         if payment_response["status"] != 201:
             error_msg = payment_response.get("response", {}).get("message", "Erro desconhecido do Mercado Pago")
             return jsonify({"status": "error", "message": f"Erro do Mercado Pago: {error_msg}"}), 500
@@ -233,33 +236,30 @@ def create_cobranca():
         qr_code_base64 = payment["point_of_interaction"]["transaction_data"]["qr_code_base64"]
         qr_code_text = payment["point_of_interaction"]["transaction_data"]["qr_code"]
 
-        # ---------- CRIAÇÃO E PERSISTÊNCIA NO DB ----------
+        # --- [CORREÇÃO 3] ---
+        # Salva a cobrança LIGADA ao product_id
         nova_cobranca = Cobranca(
             external_reference=str(payment["id"]),
             cliente_nome=nome_cliente,
             cliente_email=email_cliente,
-            valor=valor_ebook,
-            status=payment["status"]
+            valor=valor_correto,
+            status=payment["status"],
+            product_id=produto.id  # <-- A LIGAÇÃO IMPORTANTE!
         )
         
-        # Serialização ANTES do commit/limpeza, para retorno seguro
         cobranca_dict = nova_cobranca.to_dict() 
 
-        # 1. ESCRITA MANUAL NA SESSÃO
         db.session.add(nova_cobranca)
         db.session.commit()
-        
-        # 2. LIBERAÇÃO MÁXIMA
         db.session.expire_all()
-        db.session.remove() # Força a desconexão do pool
+        db.session.remove()
         
-        print(f"Cobrança {payment['id']} SALVA COM SUCESSO e liberada para o Worker.")       
+        print(f"Cobrança {payment['id']} SALVA COM SUCESSO (Plano A).")
         
-        # Alinhado corretamente com 8 espaços
-        q.enqueue('worker.process_mercado_pago_webhook', payment['id'], email_cliente)
-        print(f"Job para pagamento {payment['id']} enfileirado com e-mail: {email_cliente}")       
-
-        # Retorno de sucesso
+        # --- [CORREÇÃO 4] ---
+        # A linha q.enqueue() foi REMOVIDA daqui.
+        # O webhook é quem vai enfileirar o job agora.
+        
         return jsonify({
             "status": "success",
             "message": "Cobrança PIX criada com sucesso!",
@@ -270,7 +270,6 @@ def create_cobranca():
         }), 201
         
     except Exception as e:
-        # Tenta reverter e remover a sessão em caso de qualquer falha
         db.session.rollback()
         db.session.remove()
         print(f"ERRO CRÍTICO GERAL (CREATE): {str(e)}")
@@ -280,17 +279,16 @@ def create_cobranca():
 @app.route("/health", methods=["GET"])
 def health_check():
    
-    # Verifica a saúde da conexão do Redis
     try:
         redis_conn.ping()
         redis_status = "ok"
     except Exception:
         redis_status = "error"
 
-    # Verifica o status de uma tabela do DB (teste de conexão)
     try:
         with app.app_context():
-            Cobranca.query.limit(1).all()
+            # Tenta consultar a nova tabela Produtos
+            Produto.query.limit(1).all()
         db_status = "ok"
     except Exception:
         db_status = "error"
@@ -308,6 +306,4 @@ def health_check():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    # Em ambientes de produção (Render), gunicorn irá rodar o app:app
-    # Este bloco é apenas para desenvolvimento local.
     app.run(host="0.0.0.0", port=port, debug=False)
