@@ -9,7 +9,7 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
     color: #333;
-    background-color: #f5f7fa;
+    background-color: #f5f7fa; /* Note: Your HTML uses a dark theme, this CSS uses light. Adjust if needed */
 }
 
 .container {
@@ -18,7 +18,7 @@ body {
     padding: 0 20px;
 }
 
-/* Header */
+/* Header (Keep if using this structure) */
 .header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -84,7 +84,7 @@ body {
     display: block;
 }
 
-/* Cards */
+/* Cards (Keep if using this structure) */
 .card {
     background: white;
     border-radius: 15px;
@@ -135,7 +135,7 @@ body {
     color: #333;
 }
 
-/* Forms */
+/* Forms (Keep if using this structure) */
 .form {
     padding: 2rem;
 }
@@ -199,7 +199,7 @@ body {
     flex-wrap: wrap;
 }
 
-/* Buttons */
+/* Buttons (Generic Button Styles) */
 .btn {
     padding: 0.75rem 2rem;
     border: none;
@@ -235,42 +235,9 @@ body {
     transform: translateY(-2px);
 }
 
-.btn-success {
-    background: #28a745;
-    color: white;
-}
+/* ... (other button styles: success, warning, danger, sm) ... */
 
-.btn-success:hover {
-    background: #218838;
-    transform: translateY(-2px);
-}
-
-.btn-warning {
-    background: #ffc107;
-    color: #212529;
-}
-
-.btn-warning:hover {
-    background: #e0a800;
-    transform: translateY(-2px);
-}
-
-.btn-danger {
-    background: #dc3545;
-    color: white;
-}
-
-.btn-danger:hover {
-    background: #c82333;
-    transform: translateY(-2px);
-}
-
-.btn-sm {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-}
-
-/* Cobranças Container */
+/* Cobranças Container (Keep if using this structure) */
 .cobrancas-container {
     padding: 2rem;
 }
@@ -290,60 +257,7 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
-.cobranca-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-.cobranca-title {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 0.25rem;
-}
-
-.cobranca-reference {
-    font-size: 0.875rem;
-    color: #6c757d;
-}
-
-.cobranca-valor {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #28a745;
-}
-
-.cobranca-info {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.cobranca-info-item {
-    display: flex;
-    flex-direction: column;
-}
-
-.cobranca-info-label {
-    font-size: 0.875rem;
-    color: #6c757d;
-    margin-bottom: 0.25rem;
-}
-
-.cobranca-info-value {
-    font-weight: 500;
-}
-
-.cobranca-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
+/* ... (other cobranca item styles) ... */
 
 /* Status badges */
 .status-badge {
@@ -353,26 +267,7 @@ body {
     font-weight: 600;
     text-transform: uppercase;
 }
-
-.status-pending {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.status-approved {
-    background: #d4edda;
-    color: #155724;
-}
-
-.status-rejected {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.status-cancelled {
-    background: #d1ecf1;
-    color: #0c5460;
-}
+/* ... (status badge colors) ... */
 
 /* Loading */
 .loading {
@@ -394,34 +289,10 @@ body {
     padding: 1rem;
     flex-wrap: wrap;
 }
+/* ... (pagination button styles) ... */
 
-.pagination button {
-    padding: 0.5rem 1rem;
-    border: 1px solid #dee2e6;
-    background: white;
-    color: #6c757d;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.pagination button:hover {
-    background: #e9ecef;
-}
-
-.pagination button.active {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
-}
-
-.pagination button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Modal */
-.modal {
+/* Modal (Original from your form page) */
+.modal#modal-detalhes { /* Specific ID for the old modal */
     display: none;
     position: fixed;
     z-index: 1000;
@@ -433,7 +304,7 @@ body {
     backdrop-filter: blur(5px);
 }
 
-.modal-content {
+.modal#modal-detalhes .modal-content { /* Specific ID */
     background-color: white;
     margin: 5% auto;
     padding: 0;
@@ -445,41 +316,10 @@ body {
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
-.modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+/* ... (other original modal styles: header, close, body) ... */
 
-.modal-close {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: background-color 0.3s ease;
-}
-
-.modal-close:hover {
-    background-color: rgba(255,255,255,0.2);
-}
-
-.modal-body {
-    padding: 2rem;
-}
-
-/* Toast */
-.toast {
+/* Toast (Original from your form page) */
+.toast#toast { /* Specific ID for the old toast */
     position: fixed;
     top: 20px;
     right: 20px;
@@ -491,107 +331,206 @@ body {
     transform: translateX(400px);
     transition: transform 0.3s ease;
     max-width: 400px;
+    display: none; /* Make sure it starts hidden */
 }
 
-.toast.show {
+.toast#toast.show {
     transform: translateX(0);
+    display: flex; /* Or block depending on content */
 }
 
-.toast-content {
-    display: flex;
+/* ... (other original toast styles: content, icon, colors) ... */
+
+
+/* --- [NOVO] ESTILOS PARA O MODAL DE CHECKOUT (From index.html <style>) --- */
+
+/* Use variables from the dark theme defined in index.html */
+:root {
+    --black: #000000ff;
+    --oxford-blue: #14213dff;
+    --orange-web: #fca311ff;
+    --platinum: #e5e5e5ff;
+    --white: #ffffffff;
+    --success-green: #27ae60;
+    --error-red: #e74c3c;
+    --border-grey: #e0e0e0;
+
+    --font-heading: 'Poppins', sans-serif;
+    --font-body: 'Lato', sans-serif;
+}
+
+
+.modal#checkout-modal { /* Specific ID for the new modal */
+    display: none; /* Escondido por padrão */
+    position: fixed; 
+    z-index: 1000; 
+    left: 0; top: 0; 
+    width: 100%; height: 100%; 
+    overflow: auto; 
+    background-color: rgba(0, 0, 0, 0.7); /* Fundo escuro semi-transparente */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    animation: fadeInModal 0.3s ease-out;
+}
+@keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
+
+.modal#checkout-modal .modal-content { /* Specific ID */
+    background-color: var(--oxford-blue); /* Fundo do modal */
+    margin: 10% auto; /* Centralizado verticalmente e horizontalmente */
+    padding: 2.5rem;
+    border: 1px solid rgba(252, 163, 17, 0.2); /* Borda laranja sutil */
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px; /* Largura máxima */
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    animation: slideInModal 0.4s ease-out;
+}
+@keyframes slideInModal { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+
+.modal#checkout-modal .modal-close { /* Specific ID */
+    color: var(--platinum);
+    position: absolute;
+    top: 1rem; right: 1.5rem;
+    font-size: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+.modal#checkout-modal .modal-close:hover,
+.modal#checkout-modal .modal-close:focus { color: var(--orange-web); }
+
+.modal#checkout-modal h2 { /* Specific ID */
+    font-family: var(--font-heading);
+    color: var(--white);
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+/* Estilos do formulário dentro do modal de checkout */
+#checkout-form .form-group { margin-bottom: 1.25rem; }
+#checkout-form label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--platinum); font-size: 0.9rem; }
+#checkout-form input[type="text"],
+#checkout-form input[type="email"] { 
+    width: 100%; 
+    padding: 0.85rem; 
+    border: 1px solid var(--border-grey); 
+    border-radius: 5px; 
+    background-color: rgba(255, 255, 255, 0.1); /* Fundo levemente transparente */
+    color: var(--white);
+    font-size: 1rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+#checkout-form input:focus {
+    border-color: var(--orange-web);
+    box-shadow: 0 0 0 3px rgba(252, 163, 17, 0.3);
+    outline: none;
+}
+#checkout-form .field-error { 
+    color: var(--error-red); 
+    font-size: 0.85rem; 
+    margin-top: 0.3rem; 
+    display: none; /* Escondido por padrão, JS mostra */
+}
+
+.btn-confirmar-pagamento { 
+    width: 100%; 
+    padding: 1rem; 
+    background-color: var(--success-green); 
+    color: white; 
+    border: none; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    font-size: 1.1rem; 
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin-top: 1rem; /* Espaço antes do botão */
+    display: flex; /* To align icon */
     align-items: center;
-    gap: 0.75rem;
+    justify-content: center;
+    gap: 0.5rem;
 }
+.btn-confirmar-pagamento:hover { background-color: #239b54; transform: scale(1.02); }
+/* .btn-confirmar-pagamento i { margin-right: 0.5rem; } // Replaced by gap */
 
-.toast-icon {
-    font-size: 1.2rem;
-}
+/* Estilo para área de resultado (QR Code/Erro) */
+#checkout-resultado { margin-top: 1.5rem; }
+#checkout-resultado textarea { resize: none; } /* Impede redimensionar o textarea */
 
-.toast.success .toast-icon {
-    color: #28a745;
+/* Loading Spinner */
+.loading-spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top: 4px solid var(--orange-web);
+    width: 40px; height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
 }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-.toast.error .toast-icon {
-    color: #dc3545;
+/* --- [NOVO] ESTILOS PARA O TOAST (From index.html <style>) --- */
+/* Use um ID diferente ou uma classe se quiser separar do toast antigo */
+.toast#feedback-toast { /* Added ID for potential separation */
+    display: none; /* Escondido por padrão */
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1rem 1.5rem;
+    border-radius: 5px;
+    color: var(--white); /* Using dark theme variable */
+    font-size: 0.9rem;
+    z-index: 2000;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    align-items: center; /* Alinha ícone e texto */
+    opacity: 0;
+    transition: opacity 0.3s ease, bottom 0.3s ease;
 }
+.toast#feedback-toast.show {
+    display: flex; /* Mudar para flex quando mostrar */
+    opacity: 1;
+    bottom: 3rem; /* Efeito de subir */
+}
+.toast#feedback-toast .toast-icon { margin-right: 0.75rem; font-size: 1.2rem; }
+.toast#feedback-toast .toast-message { /* Added class for message */ } 
 
-.toast.warning .toast-icon {
-    color: #ffc107;
-}
-
-.toast.info .toast-icon {
-    color: #17a2b8;
-}
 
 /* Responsive */
 @media (max-width: 768px) {
-    .container {
-        padding: 0 15px;
-    }
+    /* ... (your existing responsive rules) ... */
     
-    .header-content {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .cobranca-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .cobranca-info {
-        grid-template-columns: 1fr;
-    }
-    
-    .form-actions {
-        flex-direction: column;
-    }
-    
-    .btn {
-        width: 100%;
-    }
-    
-    .modal-content {
-        margin: 10% auto;
-        width: 95%;
-    }
+    /* Ajuste Modal de Checkout em Telas Menores */ 
+    .modal#checkout-modal .modal-content { 
+        margin: 15% auto; 
+        width: 95%; 
+        padding: 1.5rem; 
+    } 
 }
 
-/* Animações */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+@media (max-width: 480px) {
+    /* ... (your existing responsive rules) ... */
 
-.cobranca-item {
-    animation: fadeIn 0.5s ease;
+    /* Ajuste Modal de Checkout em Telas Pequenas */ 
+    .modal#checkout-modal .modal-content { 
+        margin: 10% auto; 
+        padding: 1rem; 
+    } 
+    .modal#checkout-modal h2 { 
+        font-size: 1.5rem; 
+        margin-bottom: 1.5rem; 
+    } 
+    #checkout-form input { 
+        padding: 0.7rem; 
+    } 
+    .btn-confirmar-pagamento { 
+        font-size: 1rem; 
+        padding: 0.8rem; 
+    } 
 }
 
 /* Scrollbar personalizada */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
