@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>R·READ - A Banca Digital</title>
     
-    <!-- Importação das Fontes (Poppins e Lato) --><link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@700&display=swap" rel="stylesheet">
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* --- 1. Configuração Global e Paleta de Cores --- */
         :root {
@@ -17,625 +17,281 @@
             --orange-web: #fca311ff;
             --platinum: #e5e5e5ff;
             --white: #ffffffff;
+            --success-green: #27ae60;
+            --error-red: #e74c3c;
+            --border-grey: #e0e0e0;
 
             --font-heading: 'Poppins', sans-serif;
             --font-body: 'Lato', sans-serif;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth; /* Para rolagem suave */
-        }
-
-        body {
-            font-family: var(--font-body);
-            background-color: var(--black);
-            color: var(--white);
-            overflow-x: hidden; /* Impede rolagem horizontal */
-        }
-
-        a {
-            text-decoration: none;
-            color: inherit;
-            transition: color 0.3s ease, background-color 0.3s ease;
-        }
-
-        ul {
-            list-style: none;
-        }
-
-        .container {
-            width: 90%;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* Classes de utilidade */
-        .section {
-            padding: 6rem 5%;
-        }
-
-        .section-title {
-            font-family: var(--font-heading);
-            font-size: clamp(2rem, 5vw, 3rem);
-            font-weight: 700;
-            color: var(--white);
-            text-align: center;
-            margin-bottom: 3.5rem;
-            line-height: 1.3;
-        }
-
-        .section-title .portal-dot {
-            color: var(--orange-web);
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font-body); background-color: var(--black); color: var(--white); overflow-x: hidden; }
+        a { text-decoration: none; color: inherit; transition: color 0.3s ease, background-color 0.3s ease; }
+        ul { list-style: none; }
+        .container { width: 90%; max-width: 1200px; margin: 0 auto; }
+        .section { padding: 6rem 5%; }
+        .section-title { font-family: var(--font-heading); font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; color: var(--white); text-align: center; margin-bottom: 3.5rem; line-height: 1.3; }
+        .section-title .portal-dot { color: var(--orange-web); }
 
         /* --- 2. Barra de Navegação Fixa --- */
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 1.2rem 5%;
-            z-index: 100;
-
-            /* Efeito de vidro fosco */
-            background-color: rgba(20, 33, 61, 0.7); /* --oxford-blue com 70% opacidade */
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(252, 163, 17, 0.1); /* Borda laranja sutil */
-
-            /* Layout com Grid */
-            display: grid;
-            grid-template-columns: auto 1fr auto;
-            align-items: center;
-            gap: 1rem;
-        }
+        .navbar { position: fixed; top: 0; left: 0; width: 100%; padding: 1.2rem 5%; z-index: 100; background-color: rgba(20, 33, 61, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid rgba(252, 163, 17, 0.1); display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem; }
+        .navbar .logo img { height: 30px; width: auto; display: block; transition: transform 0.3s ease; }
+        .navbar .logo:hover img { transform: scale(1.05); }
+        .navbar .nav-links { display: flex; justify-content: center; gap: 2.5rem; }
+        .navbar .nav-links a { font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .navbar .nav-links a:hover { color: var(--orange-web); }
         
-        .navbar .logo {
-            display: block;
-        }
-        
-        .navbar .logo img {
-            height: 30px; /* Altura do logo na barra */
-            width: auto;
-            display: block; /* Remove espaços extras */
-            transition: transform 0.3s ease;
-        }
-        
-        .navbar .logo:hover img {
-            transform: scale(1.05); /* Leve zoom no hover */
-        }
-
-        .navbar .nav-links {
-            display: flex;
-            justify-content: center;
-            gap: 2.5rem;
-        }
-
-        .navbar .nav-links a {
-            font-weight: 700;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .navbar .nav-links a:hover {
-            color: var(--orange-web);
-        }
-
-        .cta-button {
-            font-family: var(--font-heading);
-            font-weight: 700;
-            font-size: 0.9rem;
-            color: var(--black);
-            background-color: var(--orange-web);
-            padding: 0.75rem 1.5rem;
-            border: 2px solid var(--orange-web);
-            border-radius: 50px; /* Bordas bem arredondadas */
-            cursor: pointer;
-            transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, color 0.3s ease;
-            white-space: nowrap; /* Impede quebra de linha */
-            display: inline-block;
-        }
-
-        .cta-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(252, 163, 17, 0.5); /* Brilho laranja */
-        }
-        
-        /* Botão Secundário (Estilo Ghost) */
-        .cta-secondary {
-            background-color: transparent;
-            color: var(--orange-web);
-        }
-
-        .cta-secondary:hover {
-            background-color: var(--orange-web);
-            color: var(--black);
-        }
-
+        /* Botão CTA Genérico */
+        .cta-button { font-family: var(--font-heading); font-weight: 700; font-size: 0.9rem; color: var(--black); background-color: var(--orange-web); padding: 0.75rem 1.5rem; border: 2px solid var(--orange-web); border-radius: 50px; cursor: pointer; transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, color 0.3s ease; white-space: nowrap; display: inline-block; text-align: center; }
+        .cta-button:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(252, 163, 17, 0.5); }
+        .cta-secondary { background-color: transparent; color: var(--orange-web); }
+        .cta-secondary:hover { background-color: var(--orange-web); color: var(--black); }
 
         /* --- 3. Seção Hero --- */
-        .hero {
-            height: 100vh; /* Tela cheia */
-            position: relative;
-            display: grid; /* Para centralizar o conteúdo facilmente */
-            place-items: center;
-            overflow: hidden; 
-            text-align: center;
-            padding: 0 5%;
-            background-color: var(--oxford-blue); /* Fundo é a cor principal */
-        }
-        
-        .hero-content {
-            z-index: 1;
-            animation: fadeIn 1.5s ease-out;
-            display: flex; 
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .hero-image {
-            width: clamp(250px, 60vw, 550px); /* Tamanho responsivo para a imagem do tubarão */
-            height: auto;
-            margin-bottom: 2rem;
-            animation: floatImage 3s ease-in-out infinite; /* Animação de "flutuar" */
-        }
-        
-        @keyframes floatImage {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-15px); }
-            100% { transform: translateY(0px); }
-        }
-
-
-        .hero-content h1 {
-            font-family: var(--font-heading);
-            font-size: clamp(2.5rem, 6vw, 4.5rem); /* Tipografia responsiva */
-            font-weight: 700;
-            color: var(--white);
-            line-height: 1.2;
-            margin-bottom: 1rem;
-            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); /* Sombra para legibilidade */
-        }
-        
-        .hero-content h1 span.highlight {
-            color: var(--orange-web);
-        }
-
-
-        .hero-content p {
-            font-size: clamp(1rem, 2.5vw, 1.25rem);
-            color: var(--platinum);
-            max-width: 650px;
-            margin: 0 auto 2.5rem auto;
-            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-        }
-
-        .hero-content .cta-button {
-            font-size: 1.1rem;
-            padding: 1rem 2.5rem;
-        }
+        .hero { height: 100vh; position: relative; display: grid; place-items: center; overflow: hidden; text-align: center; padding: 0 5%; background-color: var(--oxford-blue); }
+        .hero-content { z-index: 1; animation: fadeIn 1.5s ease-out; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .hero-image { width: clamp(250px, 60vw, 550px); height: auto; margin-bottom: 2rem; animation: floatImage 3s ease-in-out infinite; }
+        @keyframes floatImage { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
+        .hero-content h1 { font-family: var(--font-heading); font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 700; color: var(--white); line-height: 1.2; margin-bottom: 1rem; text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); }
+        .hero-content h1 span.highlight { color: var(--orange-web); }
+        .hero-content p { font-size: clamp(1rem, 2.5vw, 1.25rem); color: var(--platinum); max-width: 650px; margin: 0 auto 2.5rem auto; text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); }
+        .hero-content .cta-button { font-size: 1.1rem; padding: 1rem 2.5rem; }
 
         /* --- 4. Seção de Recursos --- */
-        #recursos {
-            background-color: var(--black);
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 2.5rem;
-        }
-
-        .feature-card {
-            text-align: center;
-        }
-
-        .feature-card h3 {
-            font-family: var(--font-heading);
-            font-size: 1.5rem;
-            color: var(--white);
-            margin-bottom: 0.5rem;
-        }
-
-        .feature-card p {
-            color: var(--platinum);
-            line-height: 1.6;
-        }
+        #recursos { background-color: var(--black); }
+        .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
+        .feature-card { text-align: center; }
+        .feature-card h3 { font-family: var(--font-heading); font-size: 1.5rem; color: var(--white); margin-bottom: 0.5rem; }
+        .feature-card p { color: var(--platinum); line-height: 1.6; }
 
         /* --- 5. Seção Conceito (Sobre) --- */
-        #sobre {
-            background-color: var(--oxford-blue);
-        }
-
-        .concept-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            align-items: center;
-            gap: 4rem;
-        }
-
-        .concept-image { 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .concept-image img { 
-            width: 100%;
-            max-width: 500px; 
-            height: auto;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            transition: transform 0.5s ease-in-out; 
-        }
-        
-        .concept-image img:hover {
-            transform: scale(1.03); 
-        }
-
-
-        .concept-content .section-title {
-            text-align: left;
-            margin-bottom: 1.5rem;
-        }
-
-        .concept-content p {
-            color: var(--platinum);
-            line-height: 1.7;
-            font-size: 1.1rem;
-            margin-bottom: 2rem;
-        }
+        #sobre { background-color: var(--oxford-blue); }
+        .concept-grid { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 4rem; }
+        .concept-image { display: flex; justify-content: center; align-items: center; }
+        .concept-image img { width: 100%; max-width: 500px; height: auto; border-radius: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); transition: transform 0.5s ease-in-out; }
+        .concept-image img:hover { transform: scale(1.03); }
+        .concept-content .section-title { text-align: left; margin-bottom: 1.5rem; }
+        .concept-content p { color: var(--platinum); line-height: 1.7; font-size: 1.1rem; margin-bottom: 2rem; }
         
         /* --- 6. NOVA SEÇÃO: ESTANTE DE LIVROS --- */
-        #estante {
-            background-color: var(--black);
-        }
-        
-        .bookshelf-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 2rem;
-        }
-        
-        .book-card {
-            background-color: var(--oxford-blue);
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .book-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(252, 163, 17, 0.3); /* Brilho laranja no hover */
-        }
-        
-        .book-cover {
-            width: 100%;
-            height: 380px; /* Altura fixa para capas */
-            object-fit: cover; /* Garante que a imagem cubra o espaço */
-            border-bottom: 3px solid var(--orange-web);
-        }
-        
-        .book-info {
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1; /* Faz esta área crescer para preencher o espaço */
-        }
-        
-        .book-info h3 {
-            font-family: var(--font-heading);
-            font-size: 1.25rem;
-            color: var(--white);
-            margin-bottom: 0.25rem;
-        }
-        
-        .book-info .book-author {
-            font-size: 0.9rem;
-            color: var(--platinum);
-            margin-bottom: 0.75rem;
-        }
-        
-        .book-info .book-description {
-            font-size: 0.9rem;
-            color: var(--platinum);
-            line-height: 1.5;
-            flex-grow: 1; /* Empurra o preço e botões para baixo */
-            margin-bottom: 1rem;
-        }
-        
-        .book-info .book-price {
-            font-family: var(--font-heading);
-            font-size: 1.4rem;
-            color: var(--orange-web);
-            margin-bottom: 1rem;
-        }
-        
-        .book-buttons {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 0.5rem;
-        }
-        
-        .book-buttons .cta-button {
-            width: 100%;
-            font-size: 0.9rem;
-            padding: 0.75rem 1rem;
-        }
-        
-        /* Botão "Em Breve" */
-        .book-buttons .cta-soon {
-            background-color: transparent;
-            color: var(--platinum);
-            border-color: var(--platinum);
-            cursor: not-allowed;
-        }
-        
-        .book-buttons .cta-soon:hover {
-            transform: none;
-            box-shadow: none;
-            background-color: transparent;
-            color: var(--platinum);
-        }
-
+        #estante { background-color: var(--black); }
+        .bookshelf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; }
+        .book-card { background-color: var(--oxford-blue); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: column; }
+        .book-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(252, 163, 17, 0.3); }
+        .book-cover { width: 100%; height: 380px; object-fit: cover; border-bottom: 3px solid var(--orange-web); }
+        .book-info { padding: 1.25rem; display: flex; flex-direction: column; flex-grow: 1; }
+        .book-info h3 { font-family: var(--font-heading); font-size: 1.25rem; color: var(--white); margin-bottom: 0.25rem; }
+        .book-info .book-author { font-size: 0.9rem; color: var(--platinum); margin-bottom: 0.75rem; }
+        .book-info .book-description { font-size: 0.9rem; color: var(--platinum); line-height: 1.5; flex-grow: 1; margin-bottom: 1rem; }
+        .book-info .book-price { font-family: var(--font-heading); font-size: 1.4rem; color: var(--orange-web); margin-bottom: 1rem; }
+        .book-buttons { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
+        .book-buttons .cta-button, .book-buttons button { width: 100%; font-size: 0.9rem; padding: 0.75rem 1rem; } /* Aplica estilo a <a> e <button> */
+        .cta-soon { background-color: transparent; color: var(--platinum); border-color: var(--platinum); cursor: not-allowed; opacity: 0.6; } /* Estilo para Em Breve */
+        .cta-soon:hover { transform: none; box-shadow: none; background-color: transparent; color: var(--platinum); }
 
         /* --- 7. Seção CTA Final --- */
-        .cta-final {
-            background-color: var(--oxford-blue); /* Mudado para --oxford-blue para variar */
-            text-align: center;
-        }
-        
-        .cta-final p {
-            font-size: 1.2rem;
-            color: var(--platinum);
-            max-width: 500px;
-            margin: 0 auto 2.5rem auto;
-        }
-
-        .cta-final .cta-button {
-            font-size: 1.1rem;
-            padding: 1rem 2.5rem;
-        }
+        .cta-final { background-color: var(--oxford-blue); text-align: center; }
+        .cta-final p { font-size: 1.2rem; color: var(--platinum); max-width: 500px; margin: 0 auto 2.5rem auto; }
+        .cta-final .cta-button { font-size: 1.1rem; padding: 1rem 2.5rem; }
         
         /* --- 8. Rodapé --- */
-        .footer {
-            background-color: var(--black); /* Mudado para --black */
-            padding: 4rem 5% 2rem 5%;
-            border-top: 4px solid var(--orange-web);
-        }
-        
-        .footer-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 3rem;
-            margin-bottom: 3rem;
-        }
-        
-        .footer-col .logo {
-            display: inline-block;
-        }
+        .footer { background-color: var(--black); padding: 4rem 5% 2rem 5%; border-top: 4px solid var(--orange-web); }
+        .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 3rem; margin-bottom: 3rem; }
+        .footer-col .logo img { height: 35px; width: auto; margin-bottom: 0.5rem; }
+        .footer-col p { color: var(--platinum); font-size: 0.9rem; line-height: 1.6; max-width: 300px; }
+        .footer-col h4 { font-family: var(--font-heading); font-size: 1.1rem; color: var(--white); margin-bottom: 1rem; }
+        .footer-col ul li { margin-bottom: 0.5rem; }
+        .footer-col ul a { color: var(--platinum); font-size: 0.9rem; }
+        .footer-col ul a:hover { color: var(--orange-web); }
+        .social-links a { color: var(--white); font-size: 1.2rem; font-weight: 700; margin-right: 1rem; }
+        .social-links a:hover { color: var(--orange-web); }
+        .footer-bottom { text-align: center; padding-top: 2rem; border-top: 1px solid rgba(229, 229, 229, 0.2); }
+        .footer-bottom p { color: var(--platinum); font-size: 0.9rem; }
 
-        .footer-col .logo img {
-            height: 35px; 
-            width: auto;
-            margin-bottom: 0.5rem;
+        /* --- [NOVO] ESTILOS PARA O MODAL DE CHECKOUT --- */
+        .modal { 
+            display: none; /* Escondido por padrão */
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; top: 0; 
+            width: 100%; height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0, 0, 0, 0.7); /* Fundo escuro semi-transparente */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            animation: fadeInModal 0.3s ease-out;
         }
-        
-        .footer-col p {
+        @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
+
+        .modal-content {
+            background-color: var(--oxford-blue); /* Fundo do modal */
+            margin: 10% auto; /* Centralizado verticalmente e horizontalmente */
+            padding: 2.5rem;
+            border: 1px solid rgba(252, 163, 17, 0.2); /* Borda laranja sutil */
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px; /* Largura máxima */
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            animation: slideInModal 0.4s ease-out;
+        }
+        @keyframes slideInModal { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+
+        .modal-close {
             color: var(--platinum);
-            font-size: 0.9rem;
-            line-height: 1.6;
-            max-width: 300px;
+            position: absolute;
+            top: 1rem; right: 1.5rem;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
         }
+        .modal-close:hover,
+        .modal-close:focus { color: var(--orange-web); }
 
-        .footer-col h4 {
+        .modal h2 {
             font-family: var(--font-heading);
-            font-size: 1.1rem;
             color: var(--white);
-            margin-bottom: 1rem;
-        }
-        
-        .footer-col ul li {
-            margin-bottom: 0.5rem;
-        }
-        
-        .footer-col ul a {
-            color: var(--platinum);
-            font-size: 0.9rem;
-        }
-        
-        .footer-col ul a:hover {
-            color: var(--orange-web);
-        }
-        
-        .social-links a {
-            color: var(--white);
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-right: 1rem;
-        }
-        
-        .social-links a:hover {
-            color: var(--orange-web);
-        }
-        
-        .footer-bottom {
             text-align: center;
-            padding-top: 2rem;
-            border-top: 1px solid rgba(229, 229, 229, 0.2); 
+            margin-bottom: 2rem;
         }
-        
-        .footer-bottom p {
-            color: var(--platinum);
+
+        /* Estilos do formulário dentro do modal */
+        #checkout-form .form-group { margin-bottom: 1.25rem; }
+        #checkout-form label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--platinum); font-size: 0.9rem; }
+        #checkout-form input[type="text"],
+        #checkout-form input[type="email"] { 
+            width: 100%; 
+            padding: 0.85rem; 
+            border: 1px solid var(--border-grey); 
+            border-radius: 5px; 
+            background-color: rgba(255, 255, 255, 0.1); /* Fundo levemente transparente */
+            color: var(--white);
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        #checkout-form input:focus {
+            border-color: var(--orange-web);
+            box-shadow: 0 0 0 3px rgba(252, 163, 17, 0.3);
+            outline: none;
+        }
+        #checkout-form .field-error { 
+            color: var(--error-red); 
+            font-size: 0.85rem; 
+            margin-top: 0.3rem; 
+            display: none; /* Escondido por padrão, JS mostra */
+        }
+
+        .btn-confirmar-pagamento { 
+            width: 100%; 
+            padding: 1rem; 
+            background-color: var(--success-green); 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 1.1rem; 
+            font-weight: bold;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            margin-top: 1rem; /* Espaço antes do botão */
+            display: flex; /* Para alinhar ícone */
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-confirmar-pagamento:hover { background-color: #239b54; transform: scale(1.02); }
+
+        /* Estilo para área de resultado (QR Code/Erro) */
+        #checkout-resultado { margin-top: 1.5rem; }
+        #checkout-resultado textarea { resize: none; } /* Impede redimensionar o textarea */
+
+        /* Loading Spinner */
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid var(--orange-web);
+            width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- [NOVO] ESTILOS PARA O TOAST --- */
+        .toast {
+            display: none; /* Escondido por padrão */
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 1.5rem;
+            border-radius: 5px;
+            color: var(--white);
             font-size: 0.9rem;
+            z-index: 2000;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            align-items: center; /* Alinha ícone e texto */
+            opacity: 0;
+            transition: opacity 0.3s ease, bottom 0.3s ease;
         }
+        .toast.show {
+            display: flex; /* Mudar para flex quando mostrar */
+            opacity: 1;
+            bottom: 3rem; /* Efeito de subir */
+        }
+        .toast-icon { margin-right: 0.75rem; font-size: 1.2rem; }
+        .toast-message { /* Classe adicionada no JS para o texto */ }
 
 
         /* --- 9. Responsividade --- */
-
-        /* Tablets */
-        @media (max-width: 992px) {
-             .bookshelf-grid {
-                grid-template-columns: repeat(2, 1fr); /* 2 colunas */
-            }
-        }
-
-        /* Tablets e celulares grandes */
-        @media (max-width: 768px) {
-            .navbar {
-                grid-template-columns: auto auto; 
-                justify-content: space-between;
-            }
-
-            .navbar .nav-links {
-                display: none; 
-            }
-
-            .hero-content h1 {
-                line-height: 1.3;
-            }
-            
-            .features-grid {
-                grid-template-columns: 1fr; 
-                gap: 4rem;
-            }
-            
-            .concept-grid {
-                grid-template-columns: 1fr; 
-                gap: 3rem;
-            }
-            
-            .concept-image {
-                order: 1; 
-            }
-            
-            .concept-content {
-                order: 2; 
-                text-align: center;
-            }
-            
-            .concept-content .section-title {
-                text-align: center;
-            }
-            
-            .footer-grid {
-                grid-template-columns: 1fr; 
-                text-align: center;
-            }
-            
-            .footer-col p {
-                margin: 0 auto;
-            }
-        }
-
-        /* Celulares pequenos */
-        @media (max-width: 480px) {
-            .navbar {
-                padding: 1rem 5%;
-            }
-
-            .navbar .logo img {
-                height: 25px; 
-            }
-
-            .cta-button {
-                font-size: 0.8rem;
-                padding: 0.6rem 1rem;
-            }
-            
-             .bookshelf-grid {
-                grid-template-columns: 1fr; /* 1 coluna */
-            }
-            
-            .book-cover {
-                height: 320px; /* Altura menor para capas em mobile */
-            }
-
-            .hero-content p {
-                margin-bottom: 2rem;
-            }
-
-            .hero-content .cta-button {
-                font-size: 1rem;
-                padding: 0.9rem 2rem;
-            }
-            
-            .section {
-                padding: 4rem 5%;
-            }
-            
-            .section-title {
-                margin-bottom: 2.5rem;
-            }
-        }
+        @media (max-width: 992px) { .bookshelf-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) { .navbar { grid-template-columns: auto auto; justify-content: space-between; } .navbar .nav-links { display: none; } .hero-content h1 { line-height: 1.3; } .features-grid { grid-template-columns: 1fr; gap: 4rem; } .concept-grid { grid-template-columns: 1fr; gap: 3rem; } .concept-image { order: 1; } .concept-content { order: 2; text-align: center; } .concept-content .section-title { text-align: center; } .footer-grid { grid-template-columns: 1fr; text-align: center; } .footer-col p { margin: 0 auto; } /* Ajuste Modal em Telas Menores */ .modal-content { margin: 15% auto; width: 95%; padding: 1.5rem; } }
+        @media (max-width: 480px) { .navbar { padding: 1rem 5%; } .navbar .logo img { height: 25px; } .cta-button { font-size: 0.8rem; padding: 0.6rem 1rem; } .bookshelf-grid { grid-template-columns: 1fr; } .book-cover { height: 320px; } .hero-content p { margin-bottom: 2rem; } .hero-content .cta-button { font-size: 1rem; padding: 0.9rem 2rem; } .section { padding: 4rem 5%; } .section-title { margin-bottom: 2.5rem; } /* Ajuste Modal em Telas Pequenas */ .modal-content { margin: 10% auto; padding: 1rem; } .modal h2 { font-size: 1.5rem; margin-bottom: 1.5rem; } #checkout-form input { padding: 0.7rem; } .btn-confirmar-pagamento { font-size: 1rem; padding: 0.8rem; } }
         
     </style>
 </head>
 <body>
 
-    <!-- 1. BARRA DE NAVEGAÇÃO FIXA --><nav class="navbar">
+    <nav class="navbar">
         <a href="#" class="logo">
             <img src="https://i.imgur.com/nCvDQz7.png" alt="Logo R·READ">
         </a>
-        
         <ul class="nav-links">
             <li><a href="#hero">Início</a></li>
             <li><a href="#recursos">Recursos</a></li>
             <li><a href="#sobre">Sobre</a></li>
-            <!-- Link da Biblioteca atualizado -->
             <li><a href="#estante">Biblioteca</a></li> 
         </ul>
-        
-        <!-- Botão CTA Navbar Atualizado -->
         <a href="#" class="cta-button">[·] Assinar R·READ</a>
     </nav>
 
-    <!-- 2. SEÇÃO HERO --><header class="hero" id="hero">
+    <header class="hero" id="hero">
         <div class="hero-content">
             <img src="https://i.imgur.com/9jVudjM.png" alt="Tubarão devorando livros" class="hero-image">
-
             <h1>Devore o <span class="highlight">conteúdo.</span></h1>
-            <p>
-                A sua banca digital premium. Revistas, e-books e artigos 
-                entregues instantaneamente.
-            </p>
-            <!-- Botão Hero Atualizado -->
+            <p>A sua banca digital premium. Revistas, e-books e artigos entregues instantaneamente.</p>
             <a href="#estante" class="cta-button">[·] ACESSAR A ESTANTE</a>
         </div>
     </header>
 
     <main>
         
-        <!-- 3. SEÇÃO DE RECURSOS --><section class="section" id="recursos">
+        <section class="section" id="recursos">
             <div class="container">
                 <h2 class="section-title">Acesso<span class="portal-dot">·</span>Velocidade<span class="portal-dot">·</span>Conteúdo</h2>
-                
                 <div class="features-grid">
-                    <!-- Card 1 --><div class="feature-card">
+                    <div class="feature-card">
                         <h3>Conteúdo Instantâneo</h3>
                         <p>Nosso "·" não é um 'loading'...  É o conteúdo ideal, direto na sua mão.</p>
                     </div>
-                    <!-- Card 2 --><div class="feature-card">
+                    <div class="feature-card">
                         <h3>Biblioteca Offline</h3>
                         <p>Leve seu conteúdo com você. Baixe uma vez, leia para sempre.</p>
                     </div>
-                    <!-- Card 3 --><div class="feature-card">
+                    <div class="feature-card">
                         <h3>Curadoria Premium</h3>
                         <p>Obras que falam a sua língua. Se é bom, está aqui.</p>
                     </div>
@@ -643,7 +299,7 @@
             </div>
         </section>
 
-        <!-- 4. SEÇÃO CONCEITO (SOBRE) --><section class="section" id="sobre">
+        <section class="section" id="sobre">
             <div class="container">
                 <div class="concept-grid">
                     <div class="concept-image">
@@ -658,65 +314,62 @@
             </div>
         </section>
         
-        <!-- 6. NOVA SEÇÃO ESTANTE --><section class="section" id="estante">
+        <section class="section" id="estante">
             <div class="container">
                 <h2 class="section-title">Nossa <span class="portal-dot">Estante</span></h2>
                 
                 <div class="bookshelf-grid">
                     
-                    <!-- Livro Card 1 -->
-                    <div class="book-card">
-                        <img src="https://i.imgur.com/DDixmXv.png" alt="Capa do Livro 1" class="book-cover">
+                    <div class="book-card card-produto"> <img src="https://i.imgur.com/DDixmXv.png" alt="História dos Jogos de Videogame" class="book-cover">
                         <div class="book-info">
                             <h3>História dos Jogos de Videogame</h3>
                             <p class="book-author">32 páginas</p>
                             <p class="book-description">Prepare-se para uma viagem eletrizante pela história dos videogames!</p>
                             <p class="book-price">R$ 12,90</p>
                             <div class="book-buttons">
-                                <a href="#" class="cta-button">[·] Comprar</a>
+                                <button class="cta-button comprar-btn" data-product-id="1"> <i class="fas fa-shopping-cart"></i> Comprar Agora 
+                                </button>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Livro Card 2 (Em Breve) -->
-                    <div class="book-card">
-                        <img src="https://i.imgur.com/1kQWkWp.png" alt="Capa do Livro 2" class="book-cover">
+                    <div class="book-card card-produto"> 
+                        <img src="https://i.imgur.com/1kQWkWp.png" alt="Entre no Mercado de Tecnologia" class="book-cover">
                         <div class="book-info">
                             <h3>Entre no Mercado de Tecnologia</h3>
                             <p class="book-author">32 páginas</p>
                             <p class="book-description">Um roteiro prático para transformar o sonho do primeiro emprego em realidade.</p>
                             <p class="book-price">R$ 12,90</p>
                             <div class="book-buttons">
-                                <a href="#" class="cta-button cta-soon">[·] Em Breve</a>
+                                 <a href="#" class="cta-button cta-soon">[·] Em Breve</a> 
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Livro Card 3 -->
-                    <div class="book-card">
-                        <img src="https://i.imgur.com/ENUO1U3.png" alt="Capa do Livro 3" class="book-cover">
+                     <div class="book-card card-produto">
+                        <img src="https://i.imgur.com/ENUO1U3.png" alt="O Resgate da Ordem pelo Amor" class="book-cover">
                         <div class="book-info">
                             <h3>O Resgate da Ordem pelo Amor</h3>
                             <p class="book-author">42 páginas</p>
                             <p class="book-description">A Constelação Familiar revela as dinâmicas ocultas que nos ligam ao nosso sistema.</p>
                             <p class="book-price">R$ 19,90</p>
                             <div class="book-buttons">
-                                <a href="#" class="cta-button cta-soon">[·] Em Breve</a>
+                                <button class="cta-button comprar-btn" data-product-id="3"> <i class="fas fa-shopping-cart"></i> Comprar Agora
+                                 </button>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Livro Card 4 -->
-                    <div class="book-card">
-                        <img src="https://i.imgur.com/d3pn0Da.png" alt="Capa do Livro 4" class="book-cover">
+                     <div class="book-card card-produto">
+                        <img src="https://i.imgur.com/d3pn0Da.png" alt="Domine as Técnicas do Judô" class="book-cover">
                         <div class="book-info">
                             <h3>Domine as Técnicas do Judô</h3>
                             <p class="book-author">50 páginas</p>
-                            <p class="book-description">Corpo e Mente em Harmonia.
-Seu Guia Essencial para o Equilíbrio.</p>
+                            <p class="book-description">Corpo e Mente em Harmonia. Seu Guia Essencial para o Equilíbrio.</p>
                             <p class="book-price">R$ 19,90</p>
                             <div class="book-buttons">
-                                <a href="#" class="cta-button cta-soon">[·] Em Breve</a>
+                                 <button class="cta-button comprar-btn" data-product-id="4"> <i class="fas fa-shopping-cart"></i> Comprar Agora
+                                 </button>
                             </div>
                         </div>
                     </div>
@@ -725,59 +378,82 @@ Seu Guia Essencial para o Equilíbrio.</p>
             </div>
         </section>
 
-        <!-- 7. SEÇÃO CTA FINAL --><section class="section cta-final">
+        <section class="section cta-final">
             <div class="container">
                 <h2 class="section-title">Já está perguntando<br>"que ponto é esse<span class="portal-dot">?</span>"</h2>
                 <p>Junte-se à revolução da leitura digital.</p>
-                <!-- Botão CTA Final Atualizado -->
                 <a href="#estante" class="cta-button">[·] VER TODOS OS TÍTULOS</a>
             </div>
         </section>
         
     </main>
 
-    <!-- 8. RODAPÉ --><footer class="footer">
+    <footer class="footer">
         <div class="container footer-grid">
-            
             <div class="footer-col">
                 <a href="#" class="logo">
                     <img src="https://i.imgur.com/nCvDQz7.png" alt="Logo R·READ">
                 </a>
                 <p>B·ROO banca digital</p>
             </div>
-            
             <div class="footer-col">
                 <h4>Links Rápidos</h4>
                 <ul>
                     <li><a href="#hero">Início</a></li>
                     <li><a href="#recursos">Recursos</a></li>
                     <li><a href="#sobre">Sobre</a></li>
-                    <!-- Link do Rodapé atualizado -->
                     <li><a href="#estante">Biblioteca</a></li>
                     <li><a href="#">Privacidade</a></li>
                     <li><a href="#">Termos de Uso</a></li>
                 </ul>
             </div>
-            
             <div class="footer-col">
                 <h4>Siga-nos</h4>
                 <div class="social-links">
-                    <a href="#">FB</a>
-                    <a href="#">IG</a>
-                    <a href="#">X</a>
+                    <a href="#">FB</a> <a href="#">IG</a> <a href="#">X</a>
                 </div>
             </div>
-            
         </div>
         <div class="footer-bottom">
             <p>© 2025 B·ROO Digital. Todos os direitos reservados.</p>
         </div>
     </footer>
 
-    <!-- JAVASCRIPT --><script>
-        // Não há scripts adicionais necessários para as últimas mudanças
-    </script>
+    <div id="checkout-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close" id="checkout-modal-close">&times;</span>
+            <h2>Finalizar Compra</h2>
+            
+            <div id="checkout-produto-detalhes" style="margin-bottom: 1.5rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+                </div>
 
-</body>
+            <form id="checkout-form">
+                <input type="hidden" id="checkout_product_id" name="product_id">
+                <div class="form-group">
+                    <label for="checkout_nome">Nome Completo *</label>
+                    <input type="text" id="checkout_nome" name="nome" required minlength="2">
+                    <div class="field-error" style="display: none;"></div> 
+                </div>
+                <div class="form-group">
+                    <label for="checkout_email">Email *</label>
+                    <input type="email" id="checkout_email" name="email" required>
+                     <div class="field-error" style="display: none;"></div> 
+                </div>
+                <button type="submit" class="btn-confirmar-pagamento">
+                    <i class="fas fa-lock"></i> Confirmar e Pagar com PIX
+                </button>
+            </form>
+
+            <div id="checkout-resultado" style="margin-top: 1.5rem;">
+                </div>
+        </div>
+    </div>
+
+     <div id="feedback-toast" class="toast"> 
+        <span class="toast-icon"><i class="fas fa-info-circle"></i></span>
+        <span class="toast-message">Mensagem aqui</span>
+    </div>
+
+
+    <script src="script.js"></script> </body>
 </html>
-
