@@ -59,6 +59,11 @@ class Cobranca(db.Model):
     status = db.Column(db.String(50), default="pending", nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
+    # --- ADICIONE ESTAS DUAS LINHAS ---
+    product_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
+    produto = db.relationship('Produto')
+    # --- FIM DA ADIÇÃO ---
+    
     def to_dict(self):
         return {
             "id": self.id,
@@ -68,9 +73,19 @@ class Cobranca(db.Model):
             "valor": self.valor,
             "status": self.status,
             "data_criacao": self.data_criacao.isoformat() if self.data_criacao else None
+            # (Opcional) Adicionar "product_id": self.product_id
         }
 
-# Criação das tabelas
+# O seu modelo Produto está PERFEITO, mantenha como está:
+class Produto(db.Model):
+    __tablename__ = "produtos"
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(200), nullable=False)
+    preco = db.Column(db.Float, nullable=False)
+    link_download = db.Column(db.String(500), nullable=False)
+
+
+# A criação das tabelas está CORRETA
 with app.app_context():
     db.create_all()
 
