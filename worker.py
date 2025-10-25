@@ -1,3 +1,4 @@
+'''
 #!/usr/bin/env python3
 """
 Worker RQ – ARQUITETURA "PLANO A"
@@ -65,7 +66,7 @@ with app.app_context():
 
 
 # ---------- FUNÇÃO DE ENVIO DE E-MAIL (SEM MUDANÇAS) ----------
-def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
+def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, cobranca, nome_produto):
     """ Envia e-mail, usando SMTP_SSL para máxima compatibilidade. """
     try:
         smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
@@ -81,10 +82,6 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     msg["From"] = email_user
     msg["To"] = destinatario
     
-    # Definição da função
-def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, cobranca, nome_produto): # <-- Adicione nome_produto
-    # ... (try smtp_server, etc.) ...
-
     corpo_html = f"""
 <!doctype html>
 <html>
@@ -159,65 +156,6 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
 </body>
 </html>
 """
-    # Restante da função de envio de e-mail...
-    msg.attach(MIMEText(corpo_html, "html"))
-    # ... try enviar email ...
-    # Restante da função...
-def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, cobranca, nome_produto): # <-- Adicione nome_produto
-    # ... (try smtp_server, etc.) ...
-
-    corpo_html = f"""
-<!doctype html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    {/* ... (Estilos CSS com chaves duplicadas {{ }}) ... */}
-  </style>
-</head>
-<body>
-  <div class="email-wrapper">
-    <div class="container">
-      <div class="header">
-        <h1>✅ Parabéns pela sua compra!</h1>
-      </div>
-      <div class="content">
-        <p>Olá, {nome_cliente},</p>
-
-        <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao e-book "<strong>{nome_produto}</strong>" foi confirmado.</p> {/* <-- Use nome_produto aqui */}
-
-        <h2>Agora é hora de devorar o conteúdo!</h2>
-
-        <p>Clique no nosso <span class="brand-dot">·</span> (micro-portal!) abaixo para acessar seu e-book:</p>
-
-        <div class="button-container"> 
-          <a href="{link_produto}" class="button" target="_blank">[·] Baixar Meu E-book Agora</a>
-        </div>
-
-        <p style="font-size: 0.9em; color: #777;">Se o botão não funcionar, copie e cole o link abaixo no seu navegador:</p>
-        <code class="link-copy">{link_produto}</code>
-
-        <div class="footer-text">
-          Boas leituras!<br>
-          Equipe <strong>R·READ / B·ROO banca digital</strong>
-          <br><br>
-          Pedido ID: {cobranca.id} <br> 
-          Lembre-se: nosso <span class="brand-dot">·</span> não é só um ponto, é uma experiência! A interação é o nosso DNA. <br>
-          Em caso de dúvidas, responda a este e-mail.
-        </div>
-      </div>
-    </div>
-  </div>
-</body>
-</html>
-"""
-    msg.attach(MIMEText(corpo_html, "html"))
-    # ... (Resto da função de envio) ...
-   
-    # Restante da função...
-
-    # Restante da função...
-    # Restante da função...
     msg.attach(MIMEText(corpo_html, "html"))
     
     try:
@@ -284,7 +222,9 @@ def process_mercado_pago_webhook(payment_id):
         sucesso = enviar_email_confirmacao(destinatario=destinatario,
                                            nome_cliente=nome_cliente,
                                            valor=valor_real,
-                                           link_produto=link_real)
+                                           link_produto=link_real,
+                                           cobranca=cobranca,
+                                           nome_produto=produto.nome)
         
         if sucesso:
             print(f"[WORKER] E-mail (Plano A) enviado com sucesso para {destinatario}.")
@@ -310,11 +250,4 @@ if __name__ == "__main__":
     
     with app.app_context(): 
         worker.work()
-
-
-
-
-
-
-
-
+'''
