@@ -128,7 +128,7 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
         <h1>✅ Parabéns pela sua compra!</h1>
       </div>
       <div class="content">
-        <p>Olá, {{nome_cliente}},</p> {/* Variáveis Python ainda usam chaves simples */}
+        <p>Olá, {{nome_cliente}},</p> 
         
         <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {{valor:.2f}}</strong> referente ao e-book "<strong>{{produto.nome}}</strong>" foi confirmado.</p>
         
@@ -250,5 +250,6 @@ if __name__ == "__main__":
     
     with app.app_context(): 
         worker.work()
+
 
 
