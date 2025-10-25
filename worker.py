@@ -1,4 +1,3 @@
-'''
 #!/usr/bin/env python3
 """
 Worker RQ – ARQUITETURA "PLANO A"
@@ -22,9 +21,9 @@ import time
 app = Flask(__name__)
 
 db_url = os.environ.get("DATABASE_URL", "sqlite:///cobrancas.db")
-if db_url.startswith("postgres://"):
+if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
-elif db_url.startswith("postgresql://"):
+elif db_url and db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
@@ -33,7 +32,7 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle"
 
 db = SQLAlchemy(app) 
 
-# --- MODELOS DE DADOS (AGORA SINCRONIZADOS COM APP.PY) ---
+# --- MODELOS DE DADOS (SINCRONIZADOS COM APP.PY) ---
 
 class Cobranca(db.Model):
     __tablename__ = "cobrancas"
@@ -44,28 +43,23 @@ class Cobranca(db.Model):
     valor = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(50), default="pending", nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    
-    # --- ADIÇÃO (DEVE SER IGUAL AO APP.PY) ---
     product_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
     produto = db.relationship('Produto')
-    # --- FIM DA ADIÇÃO ---
 
-# --- ADIÇÃO (MODELO PRODUTO É NECESSÁRIO AQUI TAMBÉM) ---
 class Produto(db.Model):
     __tablename__ = "produtos"
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(200), nullable=False)
     preco = db.Column(db.Float, nullable=False)
     link_download = db.Column(db.String(500), nullable=False)
-# --- FIM DA ADIÇÃO ---
 
-
-# Criação das tabelas (vai criar 'produtos' e atualizar 'cobrancas')
+# Criação das tabelas
 with app.app_context():
     db.create_all()
 
 
-# ---------- FUNÇÃO DE ENVIO DE E-MAIL (SEM MUDANÇAS) ----------
+# ---------- FUNÇÃO DE ENVIO DE E-MAIL ----------
+# Certifique-se que a definição recebe 'nome_produto' e 'cobranca'
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, cobranca, nome_produto):
     """ Envia e-mail, usando SMTP_SSL para máxima compatibilidade. """
     try:
@@ -78,10 +72,11 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
         return False
         
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Produto APROVADO - Seu E-book está pronto! 🎉"
+    msg["Subject"] = f"R·READ: Seu e-book \"{nome_produto}\" está pronto para devorar! 🎉" # Assunto dinâmico
     msg["From"] = email_user
     msg["To"] = destinatario
     
+    # Bloco corpo_html 100% limpo, sem comentários /*...*/ internos
     corpo_html = f"""
 <!doctype html>
 <html>
@@ -169,25 +164,32 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
     print(f"[WORKER] E-mail DE ENTREGA enviado para {destinatario}")
     return True
 
-# --- MODIFICAÇÃO CRÍTICA: LÓGICA DO "PLANO A" ---
-# ---------- JOB DO "PLANO A" (USANDO O DB) ----------
+# ---------- JOB DO "PLANO A" ----------
 def process_mercado_pago_webhook(payment_id):
     """
     PLANO A: Recebe o payment_id do webhook, consulta o MP, 
-    e se APROVADO, busca os dados REAIS (email e produto) 
-    no nosso DB para fazer a entrega.
+    e se APROVADO, busca os dados REAIS no nosso DB para fazer a entrega.
     """
     with app.app_context():
-        access_token = os.environ["MERCADOPAGO_ACCESS_TOKEN"]
+        access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
+        if not access_token:
+             print("[WORKER] ERRO CRÍTICO: MERCADOPAGO_ACCESS_TOKEN não configurado.")
+             return # Não pode continuar sem token
+
         sdk = mercadopago.SDK(access_token)
         
         try:
             resp = sdk.payment().get(payment_id)
         except Exception as e:
             print(f"[WORKER] Falha ao consultar MP para o ID {payment_id}: {e}")
-            return # Falha, o RQ tentará novamente
+            # Considerar não retornar imediatamente, pode ser erro de rede. 
+            # O RQ tentará novamente por padrão. Se quiser falhar rápido: raise e
+            return 
 
         if resp["status"] != 200:
+            # Erro na API do MP, logar e tentar novamente depois
+            print(f"[WORKER] MP respondeu {resp['status']} para o ID {payment_id}. Detalhes: {resp.get('response')}")
+            # Lançar exceção para o RQ tentar novamente
             raise RuntimeError(f"MP respondeu {resp['status']} para o ID {payment_id}")
 
         payment = resp["response"]
@@ -196,58 +198,94 @@ def process_mercado_pago_webhook(payment_id):
             print(f"[WORKER] Pagamento {payment_id} não aprovado ({payment.get('status')}). Ignorando.")
             return
 
-        # 1. BUSCA A COBRANÇA NO NOSSO DB
         print(f"[WORKER] Pagamento {payment_id} APROVADO. Buscando no DB...")
         cobranca = Cobranca.query.filter_by(external_reference=str(payment_id)).first()
 
         if not cobranca:
-            print(f"[WORKER] ERRO CRÍTICO: Cobrança {payment_id} aprovada, mas não encontrada no DB.")
+            # Isso é grave. O pagamento foi aprovado mas não achamos no nosso DB.
+            # Logar intensamente, talvez notificar um admin. Não reenfileirar.
+            print(f"[WORKER] ERRO CRÍTICO: Cobranca {payment_id} aprovada, mas não encontrada no DB.")
             return
 
-        # 2. BUSCA O PRODUTO CORRETO (usando o relationship)
-        produto = cobranca.produto
+        produto = cobranca.produto # Usando o relationship
         
         if not produto:
-            print(f"[WORKER] ERRO CRÍTICO: Produto ID {cobranca.product_id} não encontrado no DB.")
+             # Isso também é grave. A cobrança existe mas não tem produto associado?
+            print(f"[WORKER] ERRO CRÍTICO: Produto não encontrado para a Cobranca ID {cobranca.id} (MP ID: {payment_id}).")
             return
 
-        # 3. USA OS DADOS REAIS DO BANCO DE DADOS
+        # Dados reais do banco
         destinatario = cobranca.cliente_email
         nome_cliente = cobranca.cliente_nome
         valor_real = cobranca.valor
         link_real = produto.link_download
+        nome_produto = produto.nome
 
-        print(f"[WORKER] Enviando produto '{produto.nome}' para {destinatario}...")
+        print(f"[WORKER] Enviando produto '{nome_produto}' para {destinatario}...")
 
-        sucesso = enviar_email_confirmacao(destinatario=destinatario,
-                                           nome_cliente=nome_cliente,
-                                           valor=valor_real,
-                                           link_produto=link_real,
-                                           cobranca=cobranca,
-                                           nome_produto=produto.nome)
+        # Chama a função de envio passando todos os parâmetros necessários
+        sucesso = enviar_email_confirmacao(
+            destinatario=destinatario,
+            nome_cliente=nome_cliente,
+            valor=valor_real,
+            link_produto=link_real,
+            cobranca=cobranca, 
+            nome_produto=nome_produto 
+        )
         
         if sucesso:
             print(f"[WORKER] E-mail (Plano A) enviado com sucesso para {destinatario}.")
-            # (Opcional) Atualiza o status no DB
-            cobranca.status = "delivered" 
-            db.session.commit()
+            try:
+                cobranca.status = "delivered" 
+                db.session.commit()
+                print(f"[WORKER] Status da Cobranca {cobranca.id} atualizado para 'delivered'.")
+            except Exception as db_exc:
+                 print(f"[WORKER] ALERTA: Falha ao atualizar status da Cobranca {cobranca.id} para 'delivered': {db_exc}")
+                 db.session.rollback() # Desfaz a tentativa de commit
         else:
-            print(f"[WORKER] Falha no envio de e-mail (Plano A) para {destinatario}.")
-# --- FIM DA MODIFICAÇÃO ---
+            print(f"[WORKER] Falha no envio de e-mail (Plano A) para {destinatario}. O job será re-tentado pelo RQ.")
+            # Lançar exceção para sinalizar ao RQ que o job falhou e deve ser re-tentado
+            raise Exception(f"Falha no envio SMTP para {destinatario}")
 
-
-# ---------- INICIALIZAÇÃO DO WORKER (SEM MUDANÇAS) ----------
+# ---------- INICIALIZAÇÃO DO WORKER ----------
 if __name__ == "__main__":
-    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+    redis_url = os.environ.get("REDIS_URL") # Não precisa de default aqui, se não tiver URL, vai falhar (correto)
+    if not redis_url:
+        raise ValueError("Variável de ambiente REDIS_URL não configurada.")
+
     redis_conn = redis.from_url(redis_url)
 
-    with app.app_context():
-        db.create_all()
+    # Verifica conexão com Redis antes de iniciar
+    try:
+        redis_conn.ping()
+        print("[WORKER] Conexão com Redis OK.")
+    except redis.exceptions.ConnectionError as redis_err:
+        print(f"[WORKER] ERRO CRÍTICO: Não foi possível conectar ao Redis em {redis_url}. Erro: {redis_err}")
+        exit(1) # Impede o worker de iniciar sem Redis
 
-    # Todas estas linhas devem ter o mesmo nível de indentação (4 espaços)
-    worker = Worker(["default"], connection=redis_conn)
-    print("[WORKER] Worker iniciado – aguardando jobs...")
+    # Verifica conexão com DB antes de iniciar
+    try:
+        with app.app_context():
+            # Tenta uma operação simples no DB
+             db.session.execute(db.text('SELECT 1'))
+        print("[WORKER] Conexão com Banco de Dados OK.")
+    except Exception as db_init_err:
+         print(f"[WORKER] ERRO CRÍTICO: Não foi possível conectar ao Banco de Dados. Verifique DATABASE_URL. Erro: {db_init_err}")
+         exit(1) # Impede o worker de iniciar sem DB
+
+    # Cria tabelas (agora que sabemos que o DB conecta)
+    with app.app_context():
+        try:
+            db.create_all()
+            print("[WORKER] Tabelas verificadas/criadas no DB.")
+        except Exception as create_err:
+             print(f"[WORKER] ALERTA: Erro ao executar db.create_all(): {create_err}")
+             # Pode ser um problema de permissão ou esquema, mas permite continuar
+
+    # Inicia o worker
+    worker_queues = ["default"] # Pode adicionar mais filas se precisar
+    worker = Worker(worker_queues, connection=redis_conn)
+    print(f"[WORKER] Worker iniciado – aguardando jobs nas filas: {', '.join(worker_queues)}...")
     
-    with app.app_context(): 
-        worker.work()
-'''
+    # worker.work() precisa estar fora do app_context geralmente
+    worker.work()
