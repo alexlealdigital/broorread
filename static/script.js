@@ -61,7 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
         checkoutProdutoDetalhes.innerHTML = `
             ${imgSrc ? `<img src="${imgSrc}" alt="${nome}" style="max-width: 80px; margin-bottom: 0.5rem; border-radius: 4px;">` : ''}
             <h3 style="margin: 0.5rem 0;">${nome || 'Produto Selecionado'}</h3>
-            <p style="font-weight: bold; color: #333;">${preco || ''}</p>
+            {/* AQUI: Adicionamos a classe 'checkout-preco' e removemos o estilo inline */}
+            <p class="checkout-preco">${preco || ''}</p> 
         `;
         checkoutProductIdInput.value = productId;
         checkoutModal.style.display = 'block';
