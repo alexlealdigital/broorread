@@ -81,9 +81,10 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     msg["From"] = email_user
     msg["To"] = destinatario
     
-   # Dentro de def enviar_email_confirmacao(...):
-   # Dentro de def enviar_email_confirmacao(...):
-    # ...
+    # Definição da função
+def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, cobranca, nome_produto): # <-- Adicione nome_produto
+    # ... (try smtp_server, etc.) ...
+
     corpo_html = f"""
 <!doctype html>
 <html>
@@ -100,14 +101,14 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     p {{ margin-bottom: 15px; font-size: 1em; color: #555; }}
     strong {{ color: #14213d; }}
     .button-container {{ text-align: center; margin: 25px 0; }}
-    .button {{
+    .button {{ 
         background-color: #fca311;
         color: #14213d !important;
-        padding: 14px 28px;
+        padding: 14px 28px; 
         text-decoration: none !important;
-        border-radius: 25px;
-        font-weight: bold;
-        display: inline-block;
+        border-radius: 25px; 
+        font-weight: bold; 
+        display: inline-block; 
         font-family: 'Poppins', sans-serif;
         font-size: 1.1em;
         border: none;
@@ -130,25 +131,25 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
       </div>
       <div class="content">
         <p>Olá, {nome_cliente},</p>
-
+        
         <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao e-book "<strong>{nome_produto}</strong>" foi confirmado.</p>
-
+        
         <h2>Agora é hora de devorar o conteúdo!</h2>
-
+        
         <p>Clique no nosso <span class="brand-dot">·</span> (micro-portal!) abaixo para acessar seu e-book:</p>
-
-        <div class="button-container">
+        
+        <div class="button-container"> 
           <a href="{link_produto}" class="button" target="_blank">[·] Baixar Meu E-book Agora</a>
         </div>
 
         <p style="font-size: 0.9em; color: #777;">Se o botão não funcionar, copie e cole o link abaixo no seu navegador:</p>
         <code class="link-copy">{link_produto}</code>
-
+        
         <div class="footer-text">
           Boas leituras!<br>
           Equipe <strong>R·READ / B·ROO banca digital</strong>
           <br><br>
-          Pedido ID: {cobranca.id} <br>
+          Pedido ID: {cobranca.id} <br> 
           Lembre-se: nosso <span class="brand-dot">·</span> não é só um ponto, é uma experiência! A interação é o nosso DNA. <br>
           Em caso de dúvidas, responda a este e-mail.
         </div>
@@ -158,6 +159,9 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
 </body>
 </html>
 """
+    # Restante da função de envio de e-mail...
+    msg.attach(MIMEText(corpo_html, "html"))
+    # ... try enviar email ...
     # Restante da função...
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, cobranca, nome_produto): # <-- Adicione nome_produto
     # ... (try smtp_server, etc.) ...
@@ -306,6 +310,7 @@ if __name__ == "__main__":
     
     with app.app_context(): 
         worker.work()
+
 
 
 
