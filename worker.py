@@ -81,13 +81,86 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
     msg["From"] = email_user
     msg["To"] = destinatario
     
-   corpo_html = f"""
-        <!doctype html><html><body>
-        <h1>✅ Pagamento Aprovado!</h1>
-        <p>Olá, {nome_cliente}! Seu pagamento de R$ {valor:.2f} foi aprovado.</p>
-        <p><a href="{link_produto}">📥 BAIXAR MEU E-BOOK</a></p>
-        </body></html>
-        """
+   # Dentro de def enviar_email_confirmacao(...):
+    # Dentro de def enviar_email_confirmacao(...):
+    # ...
+    corpo_html = f"""
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {{ font-family: 'Lato', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }}
+    .email-wrapper {{ background-color: #f4f4f4; padding: 20px 0; }}
+    .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }}
+    .header {{ background-color: #14213d; padding: 20px; text-align: center; }}
+    .header h1 {{ color: #ffffff; font-family: 'Poppins', sans-serif; font-size: 1.8em; margin: 0; }}
+    .content {{ padding: 30px; }}
+    h2 {{ color: #fca311; font-family: 'Poppins', sans-serif; font-size: 1.5em; margin: 25px 0 15px 0; text-align: center; }}
+    p {{ margin-bottom: 15px; font-size: 1em; color: #555; }}
+    strong {{ color: #14213d; }}
+    .button-container {{ text-align: center; margin: 25px 0; }}
+    .button {{ 
+        background-color: #fca311;
+        color: #14213d !important;
+        padding: 14px 28px; 
+        text-decoration: none !important;
+        border-radius: 25px; 
+        font-weight: bold; 
+        display: inline-block; 
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.1em;
+        border: none;
+        cursor: pointer;
+        text-align: center;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }}
+    .button:hover {{ background-color: #e0900b; transform: scale(1.03); }}
+    .footer-text {{ font-size: 0.9em; color: #777; margin-top: 25px; border-top: 1px solid #e5e5e5; padding-top: 20px; text-align: center; }}
+    .link-copy {{ word-break: break-all; font-family: monospace; font-size: 0.85em; background-color: #f0f0f0; padding: 5px; border-radius: 4px; display: block; margin-top: 5px; }}
+    .brand-dot {{ color: #fca311; font-weight: bold; }}
+    a {{ color: #fca311; text-decoration: underline; }}
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="container">
+      <div class="header">
+        <h1>✅ Parabéns pela sua compra!</h1>
+      </div>
+      <div class="content">
+        <p>Olá, {nome_cliente},</p>
+        
+        <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao e-book "<strong>{produto.nome}</strong>" foi confirmado.</p>
+        
+        <h2>Agora é hora de devorar o conteúdo!</h2>
+        
+        <p>Clique no nosso <span class="brand-dot">·</span> (micro-portal!) abaixo para acessar seu e-book:</p>
+        
+        <div class="button-container"> 
+          <a href="{link_produto}" class="button" target="_blank">[·] Baixar Meu E-book Agora</a>
+        </div>
+
+        <p style="font-size: 0.9em; color: #777;">Se o botão não funcionar, copie e cole o link abaixo no seu navegador:</p>
+        <code class="link-copy">{link_produto}</code>
+        
+        <div class="footer-text">
+          Boas leituras!<br>
+          Equipe <strong>R·READ / B·ROO banca digital</strong>
+          <br><br>
+          Pedido ID: {cobranca.id} <br> 
+          Lembre-se: nosso <span class="brand-dot">·</span> não é só um ponto, é uma experiência! A interação é o nosso DNA. <br>
+          Em caso de dúvidas, responda a este e-mail.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+"""
+    # Restante da função...
+
+    # Restante da função...
     # Restante da função...
     msg.attach(MIMEText(corpo_html, "html"))
     
@@ -181,6 +254,7 @@ if __name__ == "__main__":
     
     with app.app_context(): 
         worker.work()
+
 
 
 
