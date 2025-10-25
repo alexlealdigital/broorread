@@ -1,159 +1,170 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Seleciona o formulário de criação de cobrança
-    const formCobranca = document.getElementById('form-cobranca');
+    
+    // --- SELETORES GLOBAIS (APENAS PARA O NOVO MODAL) ---
+    const checkoutModal = document.getElementById('checkout-modal');
+    const checkoutModalClose = document.getElementById('checkout-modal-close');
+    const checkoutProdutoDetalhes = document.getElementById('checkout-produto-detalhes');
+    const checkoutForm = document.getElementById('checkout-form');
+    const checkoutResultado = document.getElementById('checkout-resultado');
+    const checkoutProductIdInput = document.getElementById('checkout_product_id');
+    const checkoutNomeInput = document.getElementById('checkout_nome');
+    const checkoutEmailInput = document.getElementById('checkout_email');
+    
+    // Usa o novo ID para o toast, se você o renomeou no HTML
+    const feedbackToast = document.getElementById('feedback-toast'); 
+    
+    // --- EVENT LISTENERS ---
 
-    // Seleciona a área para mostrar o resultado (modal)
-    const modal = document.getElementById('modal-detalhes');
-    const modalBody = document.getElementById('modal-body');
-    const modalClose = document.querySelector('.modal-close');
+    // 1. Ouvinte para os botões "Comprar Agora" na página principal
+    const comprarButtons = document.querySelectorAll('.comprar-btn');
+    console.log("DEBUG: Botões encontrados:", comprarButtons); // DEBUG
+    comprarButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            console.log("DEBUG: Botão Comprar clicado!"); // DEBUG
+            const productId = event.target.closest('.comprar-btn').dataset.productId;
+            
+            const card = event.target.closest('.book-card'); // Corrigido para .book-card
+            const imgSrc = card?.querySelector('img')?.src;
+            const nome = card?.querySelector('h3')?.textContent;
+            const preco = card?.querySelector('.book-price')?.textContent; // Corrigido para .book-price
 
-    // Elementos para feedback visual
-    const toast = document.getElementById('toast');
+            if (productId) { // Só abre se tiver ID
+               openCheckoutModal(productId, imgSrc, nome, preco);
+            } else {
+               console.error("DEBUG: Product ID não encontrado no botão.");
+            }
+        });
+    });
 
-    // Adiciona um "ouvinte" para o ENVIO do formulário
-    formCobranca.addEventListener('submit', async (event) => {
-        // Previne o comportamento padrão do formulário (que é recarregar a página)
-        event.preventDefault();
+    // 2. Ouvinte para fechar o Modal de Checkout
+    if (checkoutModalClose) {
+        checkoutModalClose.addEventListener('click', closeCheckoutModal);
+    }
+    window.addEventListener('click', (event) => {
+        if (event.target == checkoutModal) {
+            closeCheckoutModal();
+        }
+    });
 
-        // Validação do formulário antes do envio
-        if (!validateForm()) {
+    // 3. Ouvinte para o ENVIO do formulário DENTRO do Modal de Checkout
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', handleCheckoutSubmit);
+    } else {
+        console.error("DEBUG: Formulário de checkout (#checkout-form) não encontrado!"); // DEBUG
+    }
+
+    // --- FUNÇÕES DO FLUXO DE CHECKOUT ---
+
+    function openCheckoutModal(productId, imgSrc, nome, preco) {
+        console.log("DEBUG: Abrindo modal para produto ID:", productId); // DEBUG
+        resetCheckoutModal(); 
+        checkoutProdutoDetalhes.innerHTML = `
+            ${imgSrc ? `<img src="${imgSrc}" alt="${nome}" style="max-width: 80px; margin-bottom: 0.5rem; border-radius: 4px;">` : ''}
+            <h3 style="margin: 0.5rem 0;">${nome || 'Produto Selecionado'}</h3>
+            <p style="font-weight: bold; color: #333;">${preco || ''}</p>
+        `;
+        checkoutProductIdInput.value = productId;
+        checkoutModal.style.display = 'block';
+    }
+
+    function closeCheckoutModal() {
+        checkoutModal.style.display = 'none';
+        resetCheckoutModal(); 
+    }
+
+    function resetCheckoutModal() {
+        checkoutProdutoDetalhes.innerHTML = '';
+        checkoutResultado.innerHTML = '';
+        if (checkoutForm) {
+           checkoutForm.reset(); 
+           checkoutForm.style.display = 'block'; 
+           clearFieldErrors(checkoutForm); 
+        }
+    }
+
+    async function handleCheckoutSubmit(event) {
+        event.preventDefault(); 
+        
+        if (!validateCheckoutForm()) {
             return;
         }
 
-        // Pega os dados do formulário
-        const formData = new FormData(formCobranca);
-        const dadosCobranca = Object.fromEntries(formData.entries());
+        const nomeCliente = checkoutNomeInput.value;
+        const emailCliente = checkoutEmailInput.value;
+        const productId = checkoutProductIdInput.value; 
 
-        // --- [CORREÇÃO 1: OBJETO PARA PLANO A] ---
-        // Agora enviamos product_id e removemos titulo/valor
         const dadosParaEnvio = {
-            email: dadosCobranca.cliente_email,
-            nome: dadosCobranca.cliente_nome,
-            
-            // Hardcoded para o seu produto de teste ID=1
-            // Você pode tornar isso dinâmico se tiver vários botões de compra
-            product_id: 1 
+            email: emailCliente,
+            nome: nomeCliente,
+            product_id: parseInt(productId) 
         };
-        // --- FIM DA CORREÇÃO 1 ---
+        console.log("DEBUG: Enviando para API:", dadosParaEnvio); // DEBUG
 
-        // Mostra uma mensagem de "carregando"
-        showLoadingInModal();
+        showLoadingInCheckoutResult();
+        checkoutForm.style.display = 'none'; 
 
         try {
-            // CHAMA A NOSSA API (MÉTODO POST)
             const response = await fetch('/api/cobrancas', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                // Envia os dados corrigidos para o backend
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(dadosParaEnvio),
             });
 
             const result = await response.json();
+             console.log("DEBUG: Resposta da API:", result); // DEBUG
 
             if (response.ok) {
-                // SUCESSO! Mostra o QR Code no Modal
-                showQrCodeInModal(result);
-                showToast('Cobrança criada com sucesso! Pague o PIX para receber.', 'success');
-                
-                // Limpa o formulário após sucesso
-                formCobranca.reset();
+                showQrCodeInCheckoutResult(result);
+                showToast('Cobrança PIX gerada! Pague para receber.', 'success');
             } else {
-                // Se a API retornar um erro
-                throw new Error(result.message || 'Ocorreu um erro ao gerar a cobrança.');
+                throw new Error(result.message || 'Erro ao gerar cobrança PIX.');
             }
 
         } catch (error) {
-            // Se houver um erro de rede ou na API
-            console.error('Erro ao criar cobrança:', error);
-            showErrorInModal(error.message);
+            console.error('Erro no checkout:', error);
+            showErrorInCheckoutResult(error.message);
             showToast(error.message, 'error');
+            checkoutForm.style.display = 'block'; 
         }
-    });
+    }
 
-    // --- [CORREÇÃO 2: VALIDAÇÃO PARA PLANO A] ---
-    // Função para validar o formulário (sem titulo e valor)
-    function validateForm() {
-        const email = document.getElementById('cliente_email').value;
-        const nome = document.getElementById('cliente_nome').value;
-        // const titulo = document.getElementById('titulo').value; // REMOVIDO
-        // const valor = document.getElementById('valor').value;   // REMOVIDO
-
-        // Limpa mensagens de erro anteriores
-        clearFieldErrors();
-
+    function validateCheckoutForm() {
+        clearFieldErrors(checkoutForm); 
         let isValid = true;
 
-        // Validação de email
+        const nome = checkoutNomeInput.value.trim();
+        const email = checkoutEmailInput.value.trim();
+
+        if (nome.length < 2) {
+            showFieldError(checkoutNomeInput, 'Nome deve ter pelo menos 2 caracteres');
+            isValid = false;
+        }
+
         if (!email) {
-            showFieldError('cliente_email', 'Email é obrigatório');
+            showFieldError(checkoutEmailInput, 'Email é obrigatório');
             isValid = false;
         } else if (!isValidEmail(email)) {
-            showFieldError('cliente_email', 'Por favor, insira um email válido');
+            showFieldError(checkoutEmailInput, 'Por favor, insira um email válido');
             isValid = false;
         }
-
-        // Validação de nome
-        if (!nome || nome.trim().length < 2) {
-            showFieldError('cliente_nome', 'Nome deve ter pelo menos 2 caracteres');
-            isValid = false;
-        }
-
-        // Validações de 'titulo' e 'valor' REMOVIDAS
 
         return isValid;
     }
-    // --- FIM DA CORREÇÃO 2 ---
 
-    // Função para validar email
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
 
-    // Função para mostrar erro em campo específico
-    function showFieldError(fieldId, message) {
-        const field = document.getElementById(fieldId);
-        // Evita adicionar erro se o campo não existir mais no HTML
-        if (!field) return; 
-
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'field-error';
-        errorDiv.textContent = message;
-        errorDiv.style.color = '#e74c3c';
-        errorDiv.style.fontSize = '0.9rem';
-        errorDiv.style.marginTop = '0.25rem';
-        
-        field.style.borderColor = '#e74c3c';
-        // Insere o erro logo após o campo
-        field.parentNode.insertBefore(errorDiv, field.nextSibling); 
-    }
-
-    // Função para limpar erros de campo
-    function clearFieldErrors() {
-        const errorDivs = document.querySelectorAll('.field-error');
-        errorDivs.forEach(div => div.remove());
-        
-        const inputs = document.querySelectorAll('input, textarea');
-        inputs.forEach(input => {
-            input.style.borderColor = '#e0e0e0'; // Cor padrão da borda
-        });
-    }
-
-    // Funções auxiliares para controlar o Modal (sem mudanças)
-    function showLoadingInModal() {
-        modalBody.innerHTML = `
+    // --- FUNÇÕES AUXILIARES DE UI (MODAL E TOAST) ---
+    
+    function showLoadingInCheckoutResult() {
+        checkoutResultado.innerHTML = `
             <div style="text-align: center; padding: 2rem;">
                 <div class="loading-spinner"></div>
-                <p style="margin-top: 1rem;">Gerando sua cobrança, aguarde...</p>
+                <p style="margin-top: 1rem;">Gerando sua cobrança PIX, aguarde...</p>
             </div>
         `;
-        modal.style.display = 'block';
     }
 
-    function showQrCodeInModal(data) {
-        modalBody.innerHTML = `
+    function showQrCodeInCheckoutResult(data) {
+        checkoutResultado.innerHTML = `
             <div style="text-align: center;">
                 <h2 style="color: #27ae60; margin-bottom: 1rem;">
                     <i class="fas fa-check-circle"></i>
@@ -162,24 +173,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
                     <img src="data:image/jpeg;base64,${data.qr_code_base64}" 
                          alt="PIX QR Code" 
-                         style="max-width: 100%; border: 2px solid #e0e0e0; border-radius: 8px;">
+                         style="max-width: 100%; max-height: 250px; border: 2px solid #e0e0e0; border-radius: 8px;">
                 </div>
                 <p style="margin: 1rem 0; font-weight: bold;">Ou copie e cole o código PIX:</p>
                 <textarea readonly 
-                          style="width: 100%; min-height: 100px; font-family: monospace; font-size: 0.9rem; padding: 0.5rem; border: 2px solid #e0e0e0; border-radius: 5px; background: #f8f9fa;"
-                          onclick="this.select()">${data.qr_code_text}</textarea>
+                          style="width: 100%; min-height: 100px; font-family: monospace; font-size: 0.9rem; padding: 0.5rem; border: 2px solid #e0e0e0; border-radius: 5px; background: #f8f9fa; resize: none;"
+                          onclick="this.select(); document.execCommand('copy'); showToast('Código PIX copiado!', 'success');">${data.qr_code_text}</textarea>
                 <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
                     <i class="fas fa-info-circle"></i>
-                    Clique no código acima para selecioná-lo e copiá-lo
+                    Clique no código acima para copiá-lo
                 </p>
                 ${data.cobranca && data.cobranca.valor ? `<p style="margin-top: 1rem; font-size: 1.1rem; font-weight: bold; color: #27ae60;">Valor: R$ ${data.cobranca.valor.toFixed(2)}</p>` : ''}
+                 <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #555;">Após o pagamento, você receberá o produto no seu email.</p>
             </div>
         `;
-         modal.style.display = 'block'; // Garante que o modal apareça
     }
 
-    function showErrorInModal(message) {
-        modalBody.innerHTML = `
+    function showErrorInCheckoutResult(message) {
+         checkoutResultado.innerHTML = `
             <div style="text-align: center; padding: 2rem;">
                 <h2 style="color: #e74c3c; margin-bottom: 1rem;">
                     <i class="fas fa-exclamation-triangle"></i>
@@ -189,144 +200,97 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p style="color: #666; font-size: 0.9rem;">
                     Por favor, verifique os dados e tente novamente. Se o problema persistir, entre em contato conosco.
                 </p>
-                <button onclick="document.getElementById('modal-detalhes').style.display='none'" 
-                        style="margin-top: 1rem; padding: 0.5rem 1rem; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    Fechar
-                </button>
             </div>
         `;
-        modal.style.display = 'block';
+    }
+    
+    // Funções de validação e UI 
+    
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
     }
 
-    // Função para mostrar toast notifications (sem mudanças)
-    function showToast(message, type = 'info') {
-        const toastContent = toast.querySelector('.toast-content');
-        const toastIcon = toast.querySelector('.toast-icon');
-        const toastMessage = toast.querySelector('.toast-message');
+    function showFieldError(fieldElement, message) {
+        if (!fieldElement) return;
+        const errorDiv = fieldElement.nextElementSibling; 
+        if (errorDiv && errorDiv.classList.contains('field-error')) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        fieldElement.style.borderColor = '#e74c3c'; 
+    }
 
-        let icon, color;
-        switch (type) {
-            case 'success':
-                icon = 'fas fa-check-circle';
-                color = '#27ae60';
-                break;
-            case 'error':
-                icon = 'fas fa-exclamation-circle';
-                color = '#e74c3c';
-                break;
-            default:
-                icon = 'fas fa-info-circle';
-                color = '#3498db';
+    function clearFieldErrors(form) {
+        if (!form) return;
+        const errorDivs = form.querySelectorAll('.field-error');
+        errorDivs.forEach(div => {
+            div.textContent = '';
+            div.style.display = 'none';
+        });
+        const inputs = form.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.style.borderColor = '#ccc'; 
+        });
+    }
+
+    function showToast(message, type = 'info') {
+        // Usa a variável feedbackToast definida no início
+        if (!feedbackToast) {
+            console.warn("Elemento Toast não encontrado com ID: feedback-toast"); // DEBUG
+            return; 
         }
 
-        toastIcon.className = icon;
-        toastMessage.textContent = message;
-        toast.style.background = color;
-        toast.style.display = 'block';
+        const toastIcon = feedbackToast.querySelector('.toast-icon i'); 
+        const toastMessage = feedbackToast.querySelector('.toast-message');
+
+        let iconClass, color;
+        switch (type) {
+            case 'success': iconClass = 'fas fa-check-circle'; color = '#27ae60'; break;
+            case 'error': iconClass = 'fas fa-exclamation-circle'; color = '#e74c3c'; break;
+            default: iconClass = 'fas fa-info-circle'; color = '#3498db'; break;
+        }
+
+        if (toastIcon) toastIcon.className = iconClass; 
+        if (toastMessage) toastMessage.textContent = message;
+        feedbackToast.style.background = color;
+        
+        feedbackToast.classList.add('show'); 
+        feedbackToast.style.display = 'flex'; 
 
         setTimeout(() => {
-            toast.style.display = 'none';
+            feedbackToast.classList.remove('show');
+            feedbackToast.style.display = 'none';
         }, 5000);
     }
 
-    // Fecha o modal ao clicar no 'X' (sem mudanças)
-    if (modalClose) {
-        modalClose.addEventListener('click', () => {
-            modal.style.display = 'none';
+    // Fecha o toast ao clicar nele
+    if (feedbackToast) {
+        feedbackToast.addEventListener('click', () => {
+            feedbackToast.classList.remove('show');
+            feedbackToast.style.display = 'none';
         });
     }
 
-    // Fecha o modal ao clicar fora dele (sem mudanças)
-    window.addEventListener('click', (event) => {
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
-    });
-
-    // Fecha o toast ao clicar nele (sem mudanças)
-    if (toast) {
-        toast.addEventListener('click', () => {
-            toast.style.display = 'none';
-        });
-    }
-
-    // Lógica para trocar de abas (sem mudanças)
-    const navButtons = document.querySelectorAll('.nav-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    navButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            navButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(tab => tab.classList.remove('active'));
-
-            button.classList.add('active');
-            const targetTab = document.getElementById(`tab-${button.dataset.tab}`);
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-        });
-    });
-
-    // Máscara para telefone (sem mudanças)
-    const telefoneInput = document.getElementById('cliente_telefone');
-    if (telefoneInput) {
-        telefoneInput.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/\D/g, '');
-            // Limita a 11 dígitos
-            value = value.substring(0, 11); 
-            if (value.length > 10) { // Celular (XX) XXXXX-XXXX
-                value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
-            } else if (value.length > 6) { // Fixo (XX) XXXX-XXXX
-                value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-            } else if (value.length > 2) { // (XX) XXXX
-                value = value.replace(/^(\d{2})(\d{0,4}).*/, '($1) $2');
-            } else if (value.length > 0) { // (XX
-                value = value.replace(/^(\d*)/, '($1');
-            }
-            e.target.value = value;
-        });
-    }
-
-    // Máscara para CPF/CNPJ (sem mudanças)
-    const documentoInput = document.getElementById('cliente_documento');
-    if (documentoInput) {
-        documentoInput.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/\D/g, '');
-             // Limita a 14 dígitos (CNPJ)
-            value = value.substring(0, 14);
-            if (value.length <= 11) { // CPF
-                value = value.replace(/(\d{3})(\d)/, '$1.$2');
-                value = value.replace(/(\d{3})(\d)/, '$1.$2');
-                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-            } else { // CNPJ
-                value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-                value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-                value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
-                value = value.replace(/(\d{4})(\d)/, '$1-$2');
-            }
-            e.target.value = value;
-        });
-    }
-
-    // Validação em tempo real (sem mudanças)
-    // Seleciona apenas os campos que ainda existem e são obrigatórios
-    const requiredInputs = document.querySelectorAll('#cliente_email, #cliente_nome'); 
-    requiredInputs.forEach(input => {
-        input.addEventListener('blur', () => { // Ao perder o foco
+    // Validação em tempo real para o modal
+    const modalInputs = checkoutForm ? checkoutForm.querySelectorAll('input[required]') : [];
+    modalInputs.forEach(input => {
+        input.addEventListener('blur', () => { 
             if (input.value.trim() === '') {
-                input.style.borderColor = '#e74c3c'; // Borda vermelha se vazio
+                input.style.borderColor = '#e74c3c'; 
             } else {
-                 // Verifica se é email e se é válido
-                if (input.id === 'cliente_email' && !isValidEmail(input.value)) {
-                    input.style.borderColor = '#e74c3c'; 
+                if (input.id === 'checkout_email' && !isValidEmail(input.value)) {
+                    input.style.borderColor = '#e74c3c';
                 } else {
-                    input.style.borderColor = '#27ae60'; // Borda verde se preenchido e válido
+                    input.style.borderColor = '#ccc'; 
                 }
             }
         });
-
-        input.addEventListener('focus', () => { // Ao ganhar o foco
-            input.style.borderColor = '#667eea'; // Borda azul
+        input.addEventListener('focus', () => { 
+            input.style.borderColor = '#667eea'; 
         });
     });
-});
+
+    console.log("DEBUG: Script carregado e ouvintes configurados."); // DEBUG
+
+}); // Fim do DOMContentLoaded
