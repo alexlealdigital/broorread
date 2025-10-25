@@ -433,6 +433,13 @@ body {
     margin-top: 0.3rem; 
     display: none; /* Escondido por padrão, JS mostra */
 }
+#checkout-produto-detalhes .checkout-preco {
+    font-size: 1.4rem;        
+    font-weight: bold;        
+    color: var(--orange-web); /* Cor laranja */
+    margin-top: 0.5rem;       
+    margin-bottom: 0;       
+}
 
 .btn-confirmar-pagamento { 
     width: 100%; 
