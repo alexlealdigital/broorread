@@ -60,8 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resetCheckoutModal(); 
         checkoutProdutoDetalhes.innerHTML = `
             ${imgSrc ? `<img src="${imgSrc}" alt="${nome}" style="max-width: 80px; margin-bottom: 0.5rem; border-radius: 4px;">` : ''}
-            <h3 style="margin: 0.5rem 0;">${nome || 'Produto Selecionado'}</h3>
-            {/* LINHA APAGADA */} 
+            <h3 style="margin: 0.5rem 0;">${nome || 'Produto Selecionado'}</h3>            
             <p class="checkout-preco">${preco || ''}</p> 
         `;
         checkoutProductIdInput.value = productId;
