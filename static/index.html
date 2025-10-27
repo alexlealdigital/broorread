@@ -42,6 +42,34 @@
         .cta-secondary { background-color: transparent; color: var(--orange-web); }
         .cta-secondary:hover { background-color: var(--orange-web); color: var(--black); }
 
+        /* --- [NOVO] BOTÃO VOLTAR (FIXO) --- */
+        .back-button {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            z-index: 999; /* Abaixo do modal (1000) mas acima do resto */
+            background-color: rgba(20, 33, 61, 0.8); /* var(--oxford-blue) com alpha */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            color: var(--orange-web);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid var(--orange-web);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+        }
+        .back-button:hover {
+            transform: scale(1.1);
+            background-color: var(--orange-web);
+            color: var(--black);
+            box-shadow: 0 0 20px rgba(252, 163, 17, 0.5);
+        }
+
         /* --- 6. SEÇÃO: ESTANTE DE LIVROS (ESSENCIAL) --- */
         #estante { background-color: var(--black); }
         .bookshelf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; }
@@ -198,10 +226,15 @@
             .modal h2 { font-size: 1.5rem; margin-bottom: 1.5rem; }
             #checkout-form input { padding: 0.7rem; }
             .btn-confirmar-pagamento { font-size: 1rem; padding: 0.8rem; }
+            .back-button { top: 1rem; left: 1rem; width: 40px; height: 40px; font-size: 1rem; }
         }
     </style>
 </head>
 <body>
+
+    <a href="https://rread.netlify.app/" class="back-button" title="Voltar ao site principal">
+        <i class="fas fa-arrow-left"></i>
+    </a>
 
     <main>
         <section class="section" id="estante">
