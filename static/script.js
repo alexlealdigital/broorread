@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <p style="margin: 1rem 0; font-weight: bold;">Ou copie e cole o código PIX:</p>
                 <textarea readonly 
-                          style="width: 100%; min-height: 100px; font-family: monospace; font-size: 0.9rem; padding: 0.5rem; border: 2px solid #e0e0e0; border-radius: 5px; background: #f8f9fa; resize: none;"
+                          style="width: 100%; min-height: 100px; font-family: monospace; font-size: 0.9rem; padding: 0.5rem; border: 2px solid #e0e0e0; border-radius: 5px; background: #f8f9fa; resize: none; color: #333;;"
                           onclick="this.select(); document.execCommand('copy'); showToast('Código PIX copiado!', 'success');">${data.qr_code_text}</textarea>
                 <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
                     <i class="fas fa-info-circle"></i>
