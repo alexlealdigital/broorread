@@ -194,45 +194,33 @@
     </main>
 
     <!-- Modal de Checkout - ID e classes MANTIDAS -->
-    <div id="checkout-modal" class="modal">
-        <div class="modal-content bg-card-bg rounded-lg p-6 max-w-md w-full mx-auto my-16 shadow-2xl border border-primary-accent border-opacity-20">
-            <span class="modal-close text-text-lighter hover:text-primary-accent absolute right-4 top-2 text-3xl font-bold cursor-pointer" id="checkout-modal-close">&times;</span>
-            <h2 class="text-2xl font-heading font-bold text-center mb-6 text-text-light">Finalizar Compra</h2>
+    <div id="checkout-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close" id="checkout-modal-close">&times;</span>
+            <h2>Finalizar Compra</h2>
             
-            <!-- Detalhes do Produto - ID MANTIDO -->
-            <!-- Adicionado 'text-center' para centralizar o conteúdo (capa do livro) -->
-            <div id="checkout-produto-detalhes" class="mb-6 p-4 bg-input-bg rounded-lg text-center">
-                <!-- Detalhes inseridos pelo JavaScript -->
-            </div>
+            <div id="checkout-produto-detalhes" style="margin-bottom: 1.5rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+                </div>
 
-            <!-- Formulário de Checkout - ID MANTIDO -->
             <form id="checkout-form">
                 <input type="hidden" id="checkout_product_id" name="product_id">
-                
-                <div class="form-group mb-4">
-                    <label for="checkout_nome" class="block text-sm font-medium mb-2 text-text-lighter">Nome Completo *</label>
-                    <input type="text" id="checkout_nome" name="nome" required minlength="2" class="w-full px-4 py-2 rounded-lg bg-dark-bg border border-gray-600 focus:border-primary-accent focus:ring-primary-accent text-text-light">
-                    <!-- Campo de Erro - Classe MANTIDA -->
-                    <div class="field-error text-error-red text-sm mt-1" style="display: none;"></div>
+                <div class="form-group">
+                    <label for="checkout_nome">Nome Completo *</label>
+                    <input type="text" id="checkout_nome" name="nome" required minlength="2">
+                    <div class="field-error" style="display: none;"></div> 
                 </div>
-                
-                <div class="form-group mb-4">
-                    <label for="checkout_email" class="block text-sm font-medium mb-2 text-text-lighter">Email *</label>
-                    <input type="email" id="checkout_email" name="email" required class="w-full px-4 py-2 rounded-lg bg-dark-bg border border-gray-600 focus:border-primary-accent focus:ring-primary-accent text-text-light">
-                    <!-- Campo de Erro - Classe MANTIDA -->
-                    <div class="field-error text-error-red text-sm mt-1" style="display: none;"></div>
+                <div class="form-group">
+                    <label for="checkout_email">Email *</label>
+                    <input type="email" id="checkout_email" name="email" required>
+                     <div class="field-error" style="display: none;"></div> 
                 </div>
-                
-                <!-- Botão de Confirmação - Classe MANTIDA -->
-                <button type="submit" class="btn-confirmar-pagamento w-full bg-success-green hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 mt-4">
-                    <i data-feather="lock"></i> Confirmar e Pagar com PIX
+                <button type="submit" class="btn-confirmar-pagamento">
+                    <i class="fas fa-lock"></i> Confirmar e Pagar com PIX
                 </button>
             </form>
 
-            <!-- Resultado do Checkout - ID MANTIDO -->
-            <div id="checkout-resultado" class="mt-6">
-                <!-- Conteúdo do resultado (QR Code/Pix Copia e Cola) -->
-            </div>
+            <div id="checkout-resultado" style="margin-top: 1.5rem;">
+                </div>
         </div>
     </div>
 
