@@ -8,12 +8,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@700&display=swap" rel="stylesheet">
     
-    <!-- Tailwind CSS para o novo design -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Configuração do Tailwind para usar as fontes e cores originais/de referência
         tailwind.config = {
-            theme: {
+           theme: {
                 extend: {
                     colors: {
                         'primary-accent': '#fca311', // orange-web
@@ -24,16 +23,21 @@
                         'text-lighter': '#e5e5e5', // platinum
                         'success-green': '#27ae60',
                         'error-red': '#e74c3c',
+                         /* Adicionando cores que faltavam do CSS puro */
+                        'border-grey': '#e0e0e0',
+                        'white': '#ffffffff',
+                        'black': '#000000ff',
+                        'platinum': '#e5e5e5ff',
+                        'orange-web': '#fca311ff',
                     },
-                    fontFamily: {
+                     fontFamily: {
                         heading: ['Poppins', 'sans-serif'],
                         body: ['Lato', 'sans-serif'],
                     },
                 }
-            }
+             }
         }
     </script>
-    <!-- Feather Icons para os ícones no lugar do Font Awesome -->
     <script src="https://unpkg.com/feather-icons"></script>
     <style>
         /* Estilos customizados para manter a lógica e animações */
@@ -47,12 +51,12 @@
 
         /* Classes de layout e texto que não são facilmente substituíveis */
         .section-title { 
-            font-family: var(--font-heading); 
+            font-family: 'Poppins', sans-serif; /* Corrigido para usar a fonte correta */
             font-size: clamp(2rem, 5vw, 3rem); 
             font-weight: 700; 
             text-align: center; 
             margin-bottom: 3.5rem; 
-            line-height: 1.3; 
+            line-height: 1.3;
         }
         .portal-dot { color: #fca311; }
 
@@ -91,7 +95,7 @@
             transition: opacity 0.3s ease, bottom 0.3s ease;
         }
         .toast.show {
-            display: flex;
+            display: flex; 
             opacity: 1;
             bottom: 3rem;
         }
@@ -102,15 +106,125 @@
             border: 4px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             border-top: 4px solid #fca311; /* primary-accent */
-            width: 40px; height: 40px;
+            width: 40px; 
+            height: 40px;
             animation: spin 1s linear infinite;
             margin: 0 auto;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+
+        /* --- [INÍCIO] ESTILOS DO MODAL DE CHECKOUT (COPIADOS DO compra.txt) --- */
+        
+        /* Definindo as variáveis de cor que o CSS copiado usa */
+        :root {
+            --black: #000000ff;
+            --oxford-blue: #14213dff;
+            --orange-web: #fca311ff;
+            --platinum: #e5e5e5ff;
+            --white: #ffffffff;
+            --success-green: #27ae60;
+            --error-red: #e74c3c;
+            --border-grey: #e0e0e0;
+
+            --font-heading: 'Poppins', sans-serif;
+            --font-body: 'Lato', sans-serif;
+        }
+
+        .modal-close {
+            color: var(--platinum);
+            position: absolute;
+            top: 1rem; right: 1.5rem;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .modal-close:hover,
+        .modal-close:focus { color: var(--orange-web); }
+
+        .modal h2 {
+            font-family: var(--font-heading);
+            color: var(--white);
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        /* Estilos do formulário dentro do modal */
+        #checkout-form .form-group { margin-bottom: 1.25rem; }
+        #checkout-form label { 
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--platinum);
+            font-size: 0.9rem;
+        }
+        #checkout-form input[type="text"],
+        #checkout-form input[type="email"] { 
+            width: 100%;
+            padding: 0.85rem;
+            border: 1px solid var(--border-grey);
+            border-radius: 5px;
+            background-color: var(--black);
+            color: var(--white);
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        #checkout-form input:focus {
+            border-color: var(--orange-web);
+            box-shadow: 0 0 0 3px rgba(252, 163, 17, 0.3);
+            outline: none;
+        }
+        #checkout-form .field-error { 
+            color: var(--error-red);
+            font-size: 0.85rem;
+            margin-top: 0.3rem;
+            display: none;
+        }
+
+        .btn-confirmar-pagamento { 
+            width: 100%;
+            padding: 1rem;
+            background-color: var(--success-green);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-confirmar-pagamento:hover { background-color: #239b54; transform: scale(1.02); }
+
+        /* Estilo para área de resultado (QR Code/Erro) */
+        #checkout-resultado { margin-top: 1.5rem; }
+        #checkout-resultado textarea { resize: none; }
+
+        /* --- [FIM] DOS ESTILOS DO MODAL --- */
+
+
+        /* --- [INÍCIO] AJUSTES RESPONSIVOS DO MODAL (COPIADOS DO compra.txt) --- */
+        @media (max-width: 768px) {
+             /* Ajuste Modal em Telas Menores */ 
+             .modal-content { margin: 15% auto; width: 95%; padding: 1.5rem; }
+        }
+        @media (max-width: 480px) {
+             /* Ajuste Modal em Telas Pequenas */ 
+             .modal-content { margin: 10% auto; padding: 1rem; } 
+             .modal h2 { font-size: 1.5rem; margin-bottom: 1.5rem; } 
+             #checkout-form input { padding: 0.7rem; } 
+             .btn-confirmar-pagamento { font-size: 1rem; padding: 0.8rem; } 
+        }
+        /* --- [FIM] DOS AJUSTES RESPONSIVOS --- */
+
     </style>
 </head>
 <body class="bg-dark-bg text-text-light font-body" style="padding-top: 5rem;"> 
-    <!-- Botão Voltar ao Início -->
     <a href="https://rread.netlify.app/" 
        class="fixed top-6 left-5% text-primary-accent font-bold text-base z-100 bg-card-bg bg-opacity-70 backdrop-blur-md px-4 py-2 rounded-full border border-primary-accent border-opacity-20 transition-all hover:scale-105"
        style="left: 5%; top: 1.5rem;">
@@ -123,69 +237,68 @@
                 <h2 class="section-title text-text-light">Nossa <span class="portal-dot">Estante</span></h2>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8" id="bookshelf-grid">
-                    <!-- CARD 1 -->
-                    <div class="book-card card-produto bg-card-bg rounded-lg overflow-hidden shadow-xl transition-transform hover:scale-[1.03] hover:shadow-2xl"> 
+     
+                     <div class="book-card card-produto bg-card-bg rounded-lg overflow-hidden shadow-xl transition-transform hover:scale-[1.03] hover:shadow-2xl"> 
                         <img src="https://i.imgur.com/mYIMzZ0.png" alt="História dos Jogos de Videogame" class="w-full h-64 object-contain p-4 bg-input-bg border-b-2 border-primary-accent">
-                        <div class="book-info p-6 flex flex-col flex-grow">
+                         <div class="book-info p-6 flex flex-col flex-grow">
                             <h3 class="text-xl font-heading font-bold mb-2 text-text-light">História dos Jogos de Videogame</h3>
                             <p class="book-author text-text-lighter text-sm mb-3">32 páginas</p>
-                            <p class="book-description text-text-lighter mb-4 text-sm flex-grow">Prepare-se para uma viagem eletrizante pela história dos videogames!</p>
+                             <p class="book-description text-text-lighter mb-4 text-sm flex-grow">Prepare-se para uma viagem eletrizante pela história dos videogames!</p>
                             <p class="book-price text-primary-accent text-xl font-heading font-bold mb-4">R$ 12,90</p>
                             <div class="book-buttons">
-                                <!-- Botão de Compra - Classe comprar-btn e data-product-id MANTIDAS -->
-                                <button class="comprar-btn w-full bg-primary-accent hover:bg-opacity-80 text-dark-bg font-bold py-3 px-4 rounded-full transition-all flex items-center justify-center gap-2" data-product-id="1"> 
-                                    <i data-feather="shopping-cart"></i> Comprar Agora 
+                                 <button class="comprar-btn w-full bg-primary-accent hover:bg-opacity-80 text-dark-bg font-bold py-3 px-4 rounded-full transition-all flex items-center justify-center gap-2" data-product-id="1"> 
+                                     <i data-feather="shopping-cart"></i> Comprar Agora 
                                 </button>
                             </div>
-                        </div>
+                         </div>
                     </div>
                     
-                    <!-- CARD 2 -->
                     <div class="book-card card-produto bg-card-bg rounded-lg overflow-hidden shadow-xl transition-transform hover:scale-[1.03] hover:shadow-2xl"> 
-                        <img src="https://i.imgur.com/1kQWkWp.png" alt="Entre no Mercado de Tecnologia" class="w-full h-64 object-contain p-4 bg-input-bg border-b-2 border-primary-accent">
+                         <img src="https://i.imgur.com/1kQWkWp.png" alt="Entre no Mercado de Tecnologia" class="w-full h-64 object-contain p-4 bg-input-bg border-b-2 border-primary-accent">
                         <div class="book-info p-6 flex flex-col flex-grow">
                             <h3 class="text-xl font-heading font-bold mb-2 text-text-light">Entre no Mercado de Tecnologia</h3>
-                            <p class="book-author text-text-lighter text-sm mb-3">32 páginas</p>
+                             <p class="book-author text-text-lighter text-sm mb-3">32 páginas</p>
                             <p class="book-description text-text-lighter mb-4 text-sm flex-grow">Um guia prático para ingressar no mercado de tecnologia.</p>
-                            <p class="book-price text-primary-accent text-xl font-heading font-bold mb-4">R$ 12,90</p>
+                             <p class="book-price text-primary-accent text-xl font-heading font-bold mb-4">R$ 12,90</p>
                             <div class="book-buttons">
-                                <!-- Botão Em Breve - Classe cta-soon MANTIDA -->
                                 <a href="#" class="cta-soon w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-full cursor-not-allowed flex items-center justify-center gap-2">
                                     <i data-feather="clock"></i> Em Breve
                                 </a>
-                            </div>
+                             </div>
                         </div>
                     </div>
                     
-                    <!-- CARD 3 -->
-                    <div class="book-card card-produto bg-card-bg rounded-lg overflow-hidden shadow-xl transition-transform hover:scale-[1.03] hover:shadow-2xl">
+              
+                     <div class="book-card card-produto bg-card-bg rounded-lg overflow-hidden shadow-xl transition-transform hover:scale-[1.03] hover:shadow-2xl">
                         <img src="https://i.imgur.com/ENUO1U3.png" alt="O Resgate da Ordem pelo Amor" class="w-full h-64 object-contain p-4 bg-input-bg border-b-2 border-primary-accent">
-                        <div class="book-info p-6 flex flex-col flex-grow">
+                        
+                         <div class="book-info p-6 flex flex-col flex-grow">
                             <h3 class="text-xl font-heading font-bold mb-2 text-text-light">O Resgate da Ordem pelo Amor</h3>
                             <p class="book-author text-text-lighter text-sm mb-3">42 páginas</p>
-                            <p class="book-description text-text-lighter mb-4 text-sm flex-grow">A Constelação Familiar revela as dinâmicas ocultas que nos ligam ao nosso sistema.</p>
+                             <p class="book-description text-text-lighter mb-4 text-sm flex-grow">A Constelação Familiar revela as dinâmicas ocultas que nos ligam ao nosso sistema.</p>
                             <p class="book-price text-primary-accent text-xl font-heading font-bold mb-4">R$ 19,90</p>
                             <div class="book-buttons">
-                                <a href="#" class="cta-soon w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-full cursor-not-allowed flex items-center justify-center gap-2">
+                                 <a href="#" class="cta-soon w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-full cursor-not-allowed flex items-center justify-center gap-2">
                                     <i data-feather="clock"></i> Em Breve
-                                </a>
+                                 </a>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- CARD 4 -->
-                    <div class="book-card card-produto bg-card-bg rounded-lg overflow-hidden shadow-xl transition-transform hover:scale-[1.03] hover:shadow-2xl">
+      
+                     <div class="book-card card-produto bg-card-bg rounded-lg overflow-hidden shadow-xl transition-transform hover:scale-[1.03] hover:shadow-2xl">
                         <img src="https://i.imgur.com/d3pn0Da.png" alt="Domine as Técnicas do Judô" class="w-full h-64 object-contain p-4 bg-input-bg border-b-2 border-primary-accent">
-                        <div class="book-info p-6 flex flex-col flex-grow">
+                         
+                         <div class="book-info p-6 flex flex-col flex-grow">
                             <h3 class="text-xl font-heading font-bold mb-2 text-text-light">Domine as Técnicas do Judô</h3>
                             <p class="book-author text-text-lighter text-sm mb-3">50 páginas</p>
-                            <p class="book-description text-text-lighter mb-4 text-sm flex-grow">Corpo e Mente em Harmonia. Seu Guia Essencial para o Equilíbrio.</p>
+                             <p class="book-description text-text-lighter mb-4 text-sm flex-grow">Corpo e Mente em Harmonia. Seu Guia Essencial para o Equilíbrio.</p>
                             <p class="book-price text-primary-accent text-xl font-heading font-bold mb-4">R$ 19,90</p>
                             <div class="book-buttons">
-                                <a href="#" class="cta-soon w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-full cursor-not-allowed flex items-center justify-center gap-2">
+                                 <a href="#" class="cta-soon w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-full cursor-not-allowed flex items-center justify-center gap-2">
                                     <i data-feather="clock"></i> Em Breve
                                 </a>
-                            </div>
+                             </div>
                         </div>
                     </div>
                 </div>
@@ -193,10 +306,9 @@
         </section>
     </main>
 
-    <!-- Modal de Checkout - ID e classes MANTIDAS -->
-    <div id="checkout-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="modal-close" id="checkout-modal-close">&times;</span>
+  
+     <div id="checkout-modal" class="modal" style="display: none;">
+        <div class="modal-content bg-card-bg rounded-lg shadow-xl border border-primary-accent border-opacity-20"> <span class="modal-close" id="checkout-modal-close">&times;</span>
             <h2>Finalizar Compra</h2>
             
             <div id="checkout-produto-detalhes" style="margin-bottom: 1.5rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
@@ -206,16 +318,17 @@
                 <input type="hidden" id="checkout_product_id" name="product_id">
                 <div class="form-group">
                     <label for="checkout_nome">Nome Completo *</label>
-                    <input type="text" id="checkout_nome" name="nome" required minlength="2">
+                     <input type="text" id="checkout_nome" name="nome" required minlength="2">
                     <div class="field-error" style="display: none;"></div> 
                 </div>
                 <div class="form-group">
                     <label for="checkout_email">Email *</label>
-                    <input type="email" id="checkout_email" name="email" required>
+                     <input type="email" id="checkout_email" name="email" required>
                      <div class="field-error" style="display: none;"></div> 
                 </div>
+                
                 <button type="submit" class="btn-confirmar-pagamento">
-                    <i class="fas fa-lock"></i> Confirmar e Pagar com PIX
+                   <i data-feather="lock"></i> Confirmar e Pagar com PIX
                 </button>
             </form>
 
@@ -224,13 +337,11 @@
         </div>
     </div>
 
-    <!-- Toast de Feedback - ID e classes MANTIDAS -->
     <div id="feedback-toast" class="toast bg-gray-800"> 
         <span class="toast-icon"><i data-feather="info"></i></span>
         <span class="toast-message">Mensagem aqui</span>
     </div>
     
-    <!-- Script JS original MANTIDO -->
     <script src="script.js"></script>
     <script>
         // Inicializa os ícones do Feather Icons
