@@ -1,334 +1,296 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>R·READ - Nossa Estante</title> {/* Título Atualizado */}
+document.addEventListener('DOMContentLoaded', () => {
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        /* --- 1. Configuração Global e Paleta de Cores --- */
-        :root {
-            --black: #000000ff;
-            --oxford-blue: #14213dff;
-            --orange-web: #fca311ff;
-            --platinum: #e5e5e5ff;
-            --white: #ffffffff;
-            --success-green: #27ae60;
-            --error-red: #e74c3c;
-            --border-grey: #e0e0e0;
+    // --- SELETORES GLOBAIS (APENAS PARA O NOVO MODAL) ---
+    const checkoutModal = document.getElementById('checkout-modal');
+    const checkoutModalClose = document.getElementById('checkout-modal-close');
+    const checkoutProdutoDetalhes = document.getElementById('checkout-produto-detalhes');
+    const checkoutForm = document.getElementById('checkout-form');
+    const checkoutResultado = document.getElementById('checkout-resultado');
+    const checkoutProductIdInput = document.getElementById('checkout_product_id');
+    const checkoutNomeInput = document.getElementById('checkout_nome');
+    const checkoutEmailInput = document.getElementById('checkout_email');
+    
+    // Usa o novo ID para o toast, se você o renomeou no HTML
+    const feedbackToast = document.getElementById('feedback-toast'); 
+    
+    // --- EVENT LISTENERS ---
 
-            --font-heading: 'Poppins', sans-serif;
-            --font-body: 'Lato', sans-serif;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-        body { font-family: var(--font-body); background-color: var(--black); color: var(--white); overflow-x: hidden; }
-        a { text-decoration: none; color: inherit; transition: color 0.3s ease, background-color 0.3s ease; }
-        ul { list-style: none; }
-        .container { width: 90%; max-width: 1200px; margin: 0 auto; }
-        .section { padding: 6rem 5%; } /* Mantido padding para espaçamento */
-        .section-title { font-family: var(--font-heading); font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; color: var(--white); text-align: center; margin-bottom: 3.5rem; line-height: 1.3; }
-        .section-title .portal-dot { color: var(--orange-web); }
-        
-        /* Botão CTA Genérico (Usado nos cards) */
-        .cta-button { font-family: var(--font-heading); font-weight: 700; font-size: 0.9rem; color: var(--black); background-color: var(--orange-web); padding: 0.75rem 1.5rem; border: 2px solid var(--orange-web); border-radius: 50px; cursor: pointer; transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, color 0.3s ease; white-space: nowrap; display: inline-block; text-align: center; }
-        .cta-button:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(252, 163, 17, 0.5); }
-        .cta-secondary { background-color: transparent; color: var(--orange-web); }
-        .cta-secondary:hover { background-color: var(--orange-web); color: var(--black); }
-        
-        /* --- ESTILOS DA ESTANTE DE LIVROS --- */
-        #estante { background-color: var(--black); }
-        .bookshelf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; }
-        .book-card { background-color: var(--oxford-blue); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); transition: transform 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: column; }
-        .book-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(252, 163, 17, 0.3); }
-        .book-cover { width: 100%; height: 380px; object-fit: contain; /* Mudado para contain */ border-bottom: 3px solid var(--orange-web); background-color: var(--black); /* Fundo preto para contain */ }
-        .book-info { padding: 1.25rem; display: flex; flex-direction: column; flex-grow: 1; }
-        .book-info h3 { font-family: var(--font-heading); font-size: 1.25rem; color: var(--white); margin-bottom: 0.25rem; }
-        .book-info .book-author { font-size: 0.9rem; color: var(--platinum); margin-bottom: 0.75rem; }
-        .book-info .book-description { font-size: 0.9rem; color: var(--platinum); line-height: 1.5; flex-grow: 1; margin-bottom: 1rem; }
-        .book-info .book-price { font-family: var(--font-heading); font-size: 1.4rem; color: var(--orange-web); margin-bottom: 1rem; }
-        .book-buttons { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
-        /* Aplica estilo a <a> e <button> dentro de .book-buttons */
-        .book-buttons .cta-button, 
-        .book-buttons button.cta-button { 
-            width: 100%; 
-            font-size: 0.9rem; 
-            padding: 0.75rem 1rem; 
-            display: flex; /* Para alinhar ícone */
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        } 
-        .cta-soon { background-color: transparent; color: var(--platinum); border-color: var(--platinum); cursor: not-allowed; opacity: 0.6; } /* Estilo para Em Breve */
-        .cta-soon:hover { transform: none; box-shadow: none; background-color: transparent; color: var(--platinum); }
-
-        /* --- ESTILOS PARA O MODAL DE CHECKOUT --- */
-        .modal { 
-            display: none; /* Escondido por padrão */
-            position: fixed; 
-            z-index: 1000; 
-            left: 0; top: 0; 
-            width: 100%; height: 100%; 
-            overflow: auto; 
-            background-color: rgba(0, 0, 0, 0.7); 
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            animation: fadeInModal 0.3s ease-out;
-        }
-        @keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
-
-        .modal-content {
-            background-color: var(--oxford-blue); 
-            margin: 10% auto; 
-            padding: 2.5rem;
-            border: 1px solid rgba(252, 163, 17, 0.2); 
-            border-radius: 10px;
-            width: 90%;
-            max-width: 500px; 
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            animation: slideInModal 0.4s ease-out;
-        }
-        @keyframes slideInModal { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-
-        .modal-close {
-            color: var(--platinum);
-            position: absolute;
-            top: 1rem; right: 1.5rem;
-            font-size: 2rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: color 0.3s ease;
-        }
-        .modal-close:hover,
-        .modal-close:focus { color: var(--orange-web); }
-
-        .modal h2 {
-            font-family: var(--font-heading);
-            color: var(--white);
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        /* Estilos do formulário dentro do modal */
-        #checkout-form .form-group { margin-bottom: 1.25rem; }
-        #checkout-form label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--platinum); font-size: 0.9rem; }
-        #checkout-form input[type="text"],
-        #checkout-form input[type="email"] { 
-            width: 100%; 
-            padding: 0.85rem; 
-            border: 1px solid var(--border-grey); 
-            border-radius: 5px; 
-            background-color: rgba(0,0,0,0.2); /* Fundo um pouco mais escuro */
-            color: var(--white);
-            font-size: 1rem;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        #checkout-form input:focus {
-            border-color: var(--orange-web);
-            box-shadow: 0 0 0 3px rgba(252, 163, 17, 0.3);
-            outline: none;
-        }
-        #checkout-form .field-error { 
-            color: var(--error-red); 
-            font-size: 0.85rem; 
-            margin-top: 0.3rem; 
-            display: none; 
-        }
-        
-        /* ESTILO DO PREÇO NO MODAL */
-        #checkout-produto-detalhes .checkout-preco {
-            font-size: 1.4rem;        
-            font-weight: bold;        
-            color: var(--orange-web); 
-            margin-top: 0.5rem;       
-            margin-bottom: 0;       
-        }
-
-        .btn-confirmar-pagamento { 
-            width: 100%; 
-            padding: 1rem; 
-            background-color: var(--success-green); 
-            color: white; 
-            border: none; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-size: 1.1rem; 
-            font-weight: bold;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            margin-top: 1rem; 
-            display: flex; 
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-        .btn-confirmar-pagamento:hover { background-color: #239b54; transform: scale(1.02); }
-
-        /* Estilo para área de resultado (QR Code/Erro) */
-        #checkout-resultado { margin-top: 1.5rem; }
-        #checkout-resultado textarea { resize: none; } 
-
-        /* Loading Spinner */
-        .loading-spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 4px solid var(--orange-web);
-            width: 40px; height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* --- ESTILOS PARA O TOAST --- */
-        .toast {
-            display: none; 
-            position: fixed;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 1rem 1.5rem;
-            border-radius: 5px;
-            color: var(--white);
-            font-size: 0.9rem;
-            z-index: 2000;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            align-items: center; 
-            opacity: 0;
-            transition: opacity 0.3s ease, bottom 0.3s ease;
-        }
-        .toast.show {
-            display: flex; 
-            opacity: 1;
-            bottom: 3rem; 
-        }
-        .toast-icon { margin-right: 0.75rem; font-size: 1.2rem; }
-        .toast-message { }
-
-
-        /* --- RESPONSIVIDADE (Simplificada) --- */
-        @media (max-width: 992px) { .bookshelf-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 768px) { .modal-content { margin: 15% auto; width: 95%; padding: 1.5rem; } } /* Ajuste Modal */
-        @media (max-width: 480px) { .bookshelf-grid { grid-template-columns: 1fr; } .book-cover { height: 320px; } .section { padding: 4rem 5%; } .section-title { margin-bottom: 2.5rem; } /* Ajuste Modal */ .modal-content { margin: 10% auto; padding: 1rem; } .modal h2 { font-size: 1.5rem; margin-bottom: 1.5rem; } #checkout-form input { padding: 0.7rem; } .btn-confirmar-pagamento { font-size: 1rem; padding: 0.8rem; } }
-        
-    </style>
-</head>
-<body>
-
-    <main>
-        <section class="section" id="estante">
-            <div class="container">
-                <h2 class="section-title">Nossa <span class="portal-dot">Estante</span></h2>
-                
-                <div class="bookshelf-grid">
-                    
-                    <div class="book-card card-produto"> 
-                        <img src="https://i.imgur.com/mYIMzZ0.png" alt="História dos Jogos de Videogame" class="book-cover">
-                        <div class="book-info">
-                            <h3>História dos Jogos de Videogame</h3>
-                            <p class="book-author">32 páginas</p>
-                            <p class="book-description">Prepare-se para uma viagem eletrizante pela história dos videogames!</p>
-                            <p class="book-price">R$ 12,90</p>
-                            <div class="book-buttons">
-                                <button class="cta-button comprar-btn" data-product-id="1"> 
-                                    <i class="fas fa-shopping-cart"></i> Comprar Agora 
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="book-card card-produto"> 
-                        <img src="https://i.imgur.com/1kQWkWp.png" alt="Entre no Mercado de Tecnologia" class="book-cover">
-                        <div class="book-info">
-                            <h3>Entre no Mercado de Tecnologia</h3>
-                            <p class="book-author">32 páginas</p>
-                            <p class="book-description">Um roteiro prático para transformar o sonho do primeiro emprego em realidade.</p>
-                            <p class="book-price">R$ 12,90</p>
-                            <div class="book-buttons">
-                                <a href="#" class="cta-button cta-soon">[·] Em Breve</a> 
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="book-card card-produto">
-                        <img src="https://i.imgur.com/ENUO1U3.png" alt="O Resgate da Ordem pelo Amor" class="book-cover">
-                        <div class="book-info">
-                            <h3>O Resgate da Ordem pelo Amor</h3>
-                            <p class="book-author">42 páginas</p>
-                            <p class="book-description">A Constelação Familiar revela as dinâmicas ocultas que nos ligam ao nosso sistema.</p>
-                            <p class="book-price">R$ 19,90</p>
-                            <div class="book-buttons">
-                                <button class="cta-button comprar-btn" data-product-id="3"> 
-                                     <i class="fas fa-shopping-cart"></i> Comprar Agora
-                                 </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="book-card card-produto">
-                        <img src="https://i.imgur.com/d3pn0Da.png" alt="Domine as Técnicas do Judô" class="book-cover">
-                        <div class="book-info">
-                            <h3>Domine as Técnicas do Judô</h3>
-                            <p class="book-author">50 páginas</p>
-                            <p class="book-description">Corpo e Mente em Harmonia. Seu Guia Essencial para o Equilíbrio.</p>
-                            <p class="book-price">R$ 19,90</p>
-                            <div class="book-buttons">
-                                 <button class="cta-button comprar-btn" data-product-id="4"> 
-                                     <i class="fas fa-shopping-cart"></i> Comprar Agora
-                                 </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <div id="checkout-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="modal-close" id="checkout-modal-close">&times;</span>
-            <h2>Finalizar Compra</h2>
+    // 1. Ouvinte para os botões "Comprar Agora" na página principal
+    const comprarButtons = document.querySelectorAll('.comprar-btn');
+    console.log("DEBUG: Botões encontrados:", comprarButtons); // DEBUG
+    comprarButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            console.log("DEBUG: Botão Comprar clicado!"); // DEBUG
+            const productId = event.target.closest('.comprar-btn').dataset.productId;
             
-            <div id="checkout-produto-detalhes" style="margin-bottom: 1.5rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+            const card = event.target.closest('.book-card'); // Corrigido para .book-card
+            const imgSrc = card?.querySelector('img')?.src;
+            const nome = card?.querySelector('h3')?.textContent;
+            const preco = card?.querySelector('.book-price')?.textContent; // Corrigido para .book-price
+
+            if (productId) { // Só abre se tiver ID
+               openCheckoutModal(productId, imgSrc, nome, preco);
+            } else {
+               console.error("DEBUG: Product ID não encontrado no botão.");
+            }
+        });
+    });
+
+    // 2. Ouvinte para fechar o Modal de Checkout
+    if (checkoutModalClose) {
+        checkoutModalClose.addEventListener('click', closeCheckoutModal);
+    }
+    window.addEventListener('click', (event) => {
+        if (event.target == checkoutModal) {
+            closeCheckoutModal();
+        }
+    });
+
+    // 3. Ouvinte para o ENVIO do formulário DENTRO do Modal de Checkout
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', handleCheckoutSubmit);
+    } else {
+        console.error("DEBUG: Formulário de checkout (#checkout-form) não encontrado!"); // DEBUG
+    }
+
+    // --- FUNÇÕES DO FLUXO DE CHECKOUT ---
+
+    function openCheckoutModal(productId, imgSrc, nome, preco) {
+        console.log("DEBUG: Abrindo modal para produto ID:", productId); // DEBUG
+        resetCheckoutModal(); 
+        checkoutProdutoDetalhes.innerHTML = `
+            ${imgSrc ? `<img src="${imgSrc}" alt="${nome}" style="max-width: 80px; margin-bottom: 0.5rem; border-radius: 4px;">` : ''}
+            <h3 style="margin: 0.5rem 0;">${nome || 'Produto Selecionado'}</h3>            
+            <p class="checkout-preco">${preco || ''}</p> 
+        `;
+        checkoutProductIdInput.value = productId;
+        checkoutModal.style.display = 'block';
+    }
+
+    function closeCheckoutModal() {
+        checkoutModal.style.display = 'none';
+        resetCheckoutModal(); 
+    }
+
+    function resetCheckoutModal() {
+        checkoutProdutoDetalhes.innerHTML = '';
+        checkoutResultado.innerHTML = '';
+        if (checkoutForm) {
+           checkoutForm.reset(); 
+           checkoutForm.style.display = 'block'; 
+           clearFieldErrors(checkoutForm); 
+        }
+    }
+
+    async function handleCheckoutSubmit(event) {
+        event.preventDefault(); 
+        
+        if (!validateCheckoutForm()) {
+            return;
+        }
+
+        const nomeCliente = checkoutNomeInput.value;
+        const emailCliente = checkoutEmailInput.value;
+        const productId = checkoutProductIdInput.value; 
+
+        const dadosParaEnvio = {
+            email: emailCliente,
+            nome: nomeCliente,
+            product_id: parseInt(productId) 
+        };
+        console.log("DEBUG: Enviando para API:", dadosParaEnvio); // DEBUG
+
+        showLoadingInCheckoutResult();
+        checkoutForm.style.display = 'none'; 
+
+        try {
+            const response = await fetch('/api/cobrancas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosParaEnvio),
+            });
+
+            const result = await response.json();
+             console.log("DEBUG: Resposta da API:", result); // DEBUG
+
+            if (response.ok) {
+                showQrCodeInCheckoutResult(result);
+                showToast('Cobrança PIX gerada! Pague para receber.', 'success');
+            } else {
+                throw new Error(result.message || 'Erro ao gerar cobrança PIX.');
+            }
+
+        } catch (error) {
+            console.error('Erro no checkout:', error);
+            showErrorInCheckoutResult(error.message);
+            showToast(error.message, 'error');
+            checkoutForm.style.display = 'block'; 
+        }
+    }
+
+    function validateCheckoutForm() {
+        clearFieldErrors(checkoutForm); 
+        let isValid = true;
+
+        const nome = checkoutNomeInput.value.trim();
+        const email = checkoutEmailInput.value.trim();
+
+        if (nome.length < 2) {
+            showFieldError(checkoutNomeInput, 'Nome deve ter pelo menos 2 caracteres');
+            isValid = false;
+        }
+
+        if (!email) {
+            showFieldError(checkoutEmailInput, 'Email é obrigatório');
+            isValid = false;
+        } else if (!isValidEmail(email)) {
+            showFieldError(checkoutEmailInput, 'Por favor, insira um email válido');
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+
+    // --- FUNÇÕES AUXILIARES DE UI (MODAL E TOAST) ---
+    
+    function showLoadingInCheckoutResult() {
+        checkoutResultado.innerHTML = `
+            <div style="text-align: center; padding: 2rem;">
+                <div class="loading-spinner"></div>
+                <p style="margin-top: 1rem;">Gerando sua cobrança PIX, aguarde...</p>
+            </div>
+        `;
+    }
+
+    function showQrCodeInCheckoutResult(data) {
+        checkoutResultado.innerHTML = `
+            <div style="text-align: center;">
+                <h2 style="color: #27ae60; margin-bottom: 1rem;">
+                    <i class="fas fa-check-circle"></i>
+                    Pague com PIX para confirmar!
+                </h2>
+                <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                    <img src="data:image/jpeg;base64,${data.qr_code_base64}" 
+                         alt="PIX QR Code" 
+                         style="max-width: 100%; max-height: 250px; border: 2px solid #e0e0e0; border-radius: 8px;">
                 </div>
+                <p style="margin: 1rem 0; font-weight: bold;">Ou copie e cole o código PIX:</p>
+                <textarea readonly 
+                          style="width: 100%; min-height: 100px; font-family: monospace; font-size: 0.9rem; padding: 0.5rem; border: 2px solid #e0e0e0; border-radius: 5px; background: #f8f9fa; resize: none;"
+                          onclick="this.select(); document.execCommand('copy'); showToast('Código PIX copiado!', 'success');">${data.qr_code_text}</textarea>
+                <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i>
+                    Clique no código acima para copiá-lo
+                </p>
+                ${data.cobranca && data.cobranca.valor ? `<p style="margin-top: 1rem; font-size: 1.1rem; font-weight: bold; color: #27ae60;">Valor: R$ ${data.cobranca.valor.toFixed(2)}</p>` : ''}
+                 <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #555;">Após o pagamento, você receberá o produto no seu email.</p>
+            </div>
+        `;
+    }
 
-            <form id="checkout-form">
-                <input type="hidden" id="checkout_product_id" name="product_id">
-                <div class="form-group">
-                    <label for="checkout_nome">Nome Completo *</label>
-                    <input type="text" id="checkout_nome" name="nome" required minlength="2">
-                    <div class="field-error" style="display: none;"></div> 
-                </div>
-                <div class="form-group">
-                    <label for="checkout_email">Email *</label>
-                    <input type="email" id="checkout_email" name="email" required>
-                     <div class="field-error" style="display: none;"></div> 
-                </div>
-                {/* Removido o campo chave_associado por enquanto */}
-                <button type="submit" class="btn-confirmar-pagamento">
-                    <i class="fas fa-lock"></i> Confirmar e Pagar com PIX
-                </button>
-            </form>
+    function showErrorInCheckoutResult(message) {
+         checkoutResultado.innerHTML = `
+            <div style="text-align: center; padding: 2rem;">
+                <h2 style="color: #e74c3c; margin-bottom: 1rem;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Erro ao processar pagamento
+                </h2>
+                <p style="color: #e74c3c; font-weight: bold; margin-bottom: 1rem;">${message}</p>
+                <p style="color: #666; font-size: 0.9rem;">
+                    Por favor, verifique os dados e tente novamente. Se o problema persistir, entre em contato conosco.
+                </p>
+            </div>
+        `;
+    }
+    
+    // Funções de validação e UI 
+    
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
 
-            <div id="checkout-resultado" style="margin-top: 1.5rem;">
-                </div>
-        </div>
-    </div>
+    function showFieldError(fieldElement, message) {
+        if (!fieldElement) return;
+        const errorDiv = fieldElement.nextElementSibling; 
+        if (errorDiv && errorDiv.classList.contains('field-error')) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        fieldElement.style.borderColor = '#e74c3c'; 
+    }
 
-     <div id="feedback-toast" class="toast"> 
-        <span class="toast-icon"><i class="fas fa-info-circle"></i></span>
-        <span class="toast-message">Mensagem aqui</span>
-    </div>
+    function clearFieldErrors(form) {
+        if (!form) return;
+        const errorDivs = form.querySelectorAll('.field-error');
+        errorDivs.forEach(div => {
+            div.textContent = '';
+            div.style.display = 'none';
+        });
+        const inputs = form.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.style.borderColor = '#ccc'; 
+        });
+    }
 
+    function showToast(message, type = 'info') {
+        // Usa a variável feedbackToast definida no início
+        if (!feedbackToast) {
+            console.warn("Elemento Toast não encontrado com ID: feedback-toast"); // DEBUG
+            return; 
+        }
 
-    <script src="script.js"></script> 
+        const toastIcon = feedbackToast.querySelector('.toast-icon i'); 
+        const toastMessage = feedbackToast.querySelector('.toast-message');
 
-</body>
-</html>
+        let iconClass, color;
+        switch (type) {
+            case 'success': iconClass = 'fas fa-check-circle'; color = '#27ae60'; break;
+            case 'error': iconClass = 'fas fa-exclamation-circle'; color = '#e74c3c'; break;
+            default: iconClass = 'fas fa-info-circle'; color = '#3498db'; break;
+        }
+
+        if (toastIcon) toastIcon.className = iconClass; 
+        if (toastMessage) toastMessage.textContent = message;
+        feedbackToast.style.background = color;
+        
+        feedbackToast.classList.add('show'); 
+        feedbackToast.style.display = 'flex'; 
+
+        setTimeout(() => {
+            feedbackToast.classList.remove('show');
+            feedbackToast.style.display = 'none';
+        }, 5000);
+    }
+
+    // Fecha o toast ao clicar nele
+    if (feedbackToast) {
+        feedbackToast.addEventListener('click', () => {
+            feedbackToast.classList.remove('show');
+            feedbackToast.style.display = 'none';
+        });
+    }
+
+    // Validação em tempo real para o modal
+    const modalInputs = checkoutForm ? checkoutForm.querySelectorAll('input[required]') : [];
+    modalInputs.forEach(input => {
+        input.addEventListener('blur', () => { 
+            if (input.value.trim() === '') {
+                input.style.borderColor = '#e74c3c'; 
+            } else {
+                if (input.id === 'checkout_email' && !isValidEmail(input.value)) {
+                    input.style.borderColor = '#e74c3c';
+                } else {
+                    input.style.borderColor = '#ccc'; 
+                }
+            }
+        });
+        input.addEventListener('focus', () => { 
+            input.style.borderColor = '#667eea'; 
+        });
+    });
+
+    console.log("DEBUG: Script carregado e ouvintes configurados."); // DEBUG
+
+}); // Fim do DOMContentLoaded
