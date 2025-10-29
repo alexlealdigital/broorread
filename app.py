@@ -276,35 +276,6 @@ def create_cobranca():
         return jsonify({"status": "error", "message": f"Falha ao criar cobrança: {str(e)}"}), 500
 
 
-@app.route("/health", methods=["GET"])
-def health_check():
-   
-    try:
-        redis_conn.ping()
-        redis_status = "ok"
-    except Exception:
-        redis_status = "error"
-
-    try:
-        with app.app_context():
-            # Tenta consultar a nova tabela Produtos
-            Produto.query.limit(1).all()
-        db_status = "ok"
-    except Exception:
-        db_status = "error"
-        
-    status_code = 200 if redis_status == "ok" and db_status == "ok" else 503
-
-    return jsonify({
-        "status": "healthy" if status_code == 200 else "unhealthy", 
-        "service": "mercadopago-api",
-        "dependencies": {
-            "redis": redis_status,
-            "database": db_status
-        }
-    }), status_code
-    # ... (fim da função create_cobranca)...
-
 # --- [NOVA ROTA PARA FORMULÁRIO DE CONTATO] ---
 @app.route("/api/contato", methods=["POST"])
 def handle_contact_form():
@@ -379,10 +350,31 @@ Mensagem:
 
 @app.route("/health", methods=["GET"])
 def health_check():
-    # ... (código do health check) ...
+   
+    try:
+        redis_conn.ping()
+        redis_status = "ok"
+    except Exception:
+        redis_status = "error"
 
-if __name__ == "__main__":
-    # ... (código de inicialização) ...
+    try:
+        with app.app_context():
+            # Tenta consultar a nova tabela Produtos
+            Produto.query.limit(1).all()
+        db_status = "ok"
+    except Exception:
+        db_status = "error"
+        
+    status_code = 200 if redis_status == "ok" and db_status == "ok" else 503
+
+    return jsonify({
+        "status": "healthy" if status_code == 200 else "unhealthy", 
+        "service": "mercadopago-api",
+        "dependencies": {
+            "redis": redis_status,
+            "database": db_status
+        }
+    }), status_code
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
