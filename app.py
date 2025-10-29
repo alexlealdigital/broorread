@@ -303,6 +303,86 @@ def health_check():
             "database": db_status
         }
     }), status_code
+    # ... (fim da função create_cobranca)...
+
+# --- [NOVA ROTA PARA FORMULÁRIO DE CONTATO] ---
+@app.route("/api/contato", methods=["POST"])
+def handle_contact_form():
+    dados = request.get_json()
+
+    nome = dados.get("nome")
+    email_remetente = dados.get("email") # Email de quem preencheu o form
+    assunto = dados.get("assunto")
+    mensagem = dados.get("mensagem")
+
+    # Validação básica no backend
+    if not all([nome, email_remetente, assunto, mensagem]):
+        return jsonify({"status": "error", "message": "Todos os campos são obrigatórios."}), 400
+    if "@" not in email_remetente or "." not in email_remetente:
+         return jsonify({"status": "error", "message": "Email do remetente inválido."}), 400
+
+    # Configurações de envio (lidas das variáveis de ambiente)
+    try:
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
+        smtp_port = int(os.environ.get("SMTP_PORT", 465))
+        # USA AS MESMAS CREDENCIAIS DO WORKER (garanta que estão nas variáveis do app também)
+        email_user = os.environ["EMAIL_USER"] 
+        email_pass = os.environ["EMAIL_PASSWORD"] 
+        
+        # --- DESTINATÁRIO FINAL ---
+        email_destinatario = "gameslizards@gmail.com" # Seu email de destino
+        
+    except KeyError:
+        print("[CONTACT FORM] ERRO: Credenciais de e-mail (EMAIL_USER/EMAIL_PASSWORD) não configuradas.")
+        return jsonify({"status": "error", "message": "Erro interno do servidor ao configurar e-mail."}), 500
+    except Exception as config_err:
+        print(f"[CONTACT FORM] ERRO GERAL CONFIG: {config_err}")
+        return jsonify({"status": "error", "message": "Erro interno do servidor."}), 500
+
+    # Monta o corpo do e-mail
+    corpo_email_texto = f"""
+Nova mensagem recebida do formulário de contato R·READ:
+
+Nome: {nome}
+Email: {email_remetente}
+Assunto: {assunto}
+
+Mensagem:
+--------------------
+{mensagem}
+--------------------
+"""
+
+    msg = MIMEText(corpo_email_texto)
+    msg["Subject"] = f"Contato R·READ: {assunto}" # Assunto do email recebido
+    msg["From"] = email_user # Quem envia (seu email Zoho)
+    msg["To"] = email_destinatario # Para onde vai (seu Gmail)
+    msg["Reply-To"] = email_remetente # Para você poder responder diretamente ao cliente
+
+    # Envia o e-mail
+    try:
+        print(f"[CONTACT FORM] Tentando enviar e-mail de {email_remetente} para {email_destinatario} via {email_user}...")
+        # Usando SMTP_SSL para maior compatibilidade
+        with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=15) as server: 
+            server.login(email_user, email_pass)
+            server.send_message(msg)
+        print(f"[CONTACT FORM] E-mail enviado com sucesso!")
+        return jsonify({"status": "success", "message": "Mensagem enviada com sucesso! Responderemos em breve."}), 200
+    except smtplib.SMTPAuthenticationError:
+         print(f"[CONTACT FORM] ERRO SMTP: Falha na autenticação com {email_user}. Verifique EMAIL_USER/EMAIL_PASSWORD.")
+         return jsonify({"status": "error", "message": "Erro interno ao autenticar envio de e-mail."}), 500
+    except Exception as e:
+        print(f"[CONTACT FORM] ERRO SMTP GERAL: {e}")
+        return jsonify({"status": "error", "message": f"Não foi possível enviar a mensagem no momento."}), 500
+# --- FIM DA NOVA ROTA ---
+
+
+@app.route("/health", methods=["GET"])
+def health_check():
+    # ... (código do health check) ...
+
+if __name__ == "__main__":
+    # ... (código de inicialização) ...
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
