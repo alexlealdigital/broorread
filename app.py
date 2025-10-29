@@ -18,7 +18,15 @@ from sqlalchemy.orm import declarative_base
 app = Flask(__name__, static_folder='static')
 
 # Configuração de CORS
-CORS(app, origins='*')
+# Em app.py, substitua a linha do CORS
+
+# Defina explicitamente as origens que você confia
+NETLIFY_ORIGIN = "https://rread.netlify.app/"
+RENDER_ORIGIN = "https://broorread.onrender.com" 
+# (Adicione http://localhost:5500 ou similar se for testar localmente)
+
+# Inicializa o CORS permitindo *apenas* esses domínios
+CORS(app, origins=[NETLIFY_ORIGIN, RENDER_ORIGIN])
 
 # ---------- CONFIGURAÇÃO DO BANCO DE DADOS E EXTENSÕES ----------
 db_url = os.environ.get("DATABASE_URL", "sqlite:///cobrancas.db")
