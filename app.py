@@ -22,7 +22,7 @@ app = Flask(__name__, static_folder='static')
 
 # Defina explicitamente as origens que você confia
 NETLIFY_ORIGIN = "https://rread.netlify.app"
-RENDER_ORIGIN = "https://broorread.onrender.com" 
+RENDER_ORIGIN = "https://mercadopago-final.onrender.com" 
 # (Adicione http://localhost:5500 ou similar se for testar localmente)
 
 # Inicializa o CORS permitindo *apenas* esses domínios
