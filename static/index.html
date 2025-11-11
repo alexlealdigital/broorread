@@ -271,7 +271,7 @@
     </div>
 </div>
                     
-                    <div class="book-card card-produto" style="border: 2px solid var(--success-green);"> 
+                   <div class="book-card card-produto" style="border: 2px solid var(--success-green);"> 
     <img src="https://i.imgur.com/83pL77J.png" alt="App Agenda Estética" class="book-cover">
     <div class="book-info">
         <h3 style="color: var(--success-green);">App1 - Teste Chave</h3>
@@ -279,7 +279,12 @@
         <p class="book-description">Produto de teste para verificar a entrega automática da chave serial.</p>
         <p class="book-price">R$ 1,00</p>
         <div class="book-buttons">
-            <button class="cta-button comprar-btn" data-product-id="3"> 
+            <!-- BOTÃO CORRIGIDO: Adiciona o atributo data-product-price -->
+            <button 
+                class="cta-button comprar-btn" 
+                data-product-id="3"
+                data-product-name="App1 - Teste Chave"
+                data-product-price="1.00"> 
                 <i class="fas fa-key"></i> Adquirir Chave
             </button>
         </div>
