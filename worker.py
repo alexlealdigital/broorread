@@ -45,6 +45,7 @@ class Cobranca(db.Model):
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
     produto = db.relationship('Produto')
+    chave_usada = db.relationship('ChaveLicenca', backref='cobranca_rel', uselist=False) 
 
 class Produto(db.Model):
     __tablename__ = "produtos"
@@ -52,16 +53,35 @@ class Produto(db.Model):
     nome = db.Column(db.String(200), nullable=False)
     preco = db.Column(db.Float, nullable=False)
     link_download = db.Column(db.String(500), nullable=False)
+    # NOVO: Para diferenciar e-book de game/app
+    tipo = db.Column(db.String(50), default="ebook", nullable=False)
+
+
+# NOVO MODELO CHAVE_LICENCA
+class ChaveLicenca(db.Model):
+    __tablename__ = "chaves_licenca"
+    id = db.Column(db.Integer, primary_key=True)
+    chave_serial = db.Column(db.String(100), unique=True, nullable=False)
+    
+    produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=False)
+    produto = db.relationship('Produto', backref=db.backref('chaves', lazy=True))
+    
+    vendida = db.Column(db.Boolean, default=False, nullable=False)
+    
+    vendida_em = db.Column(db.DateTime, nullable=True)
+    cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), unique=True, nullable=True) 
+    
+    cliente_email = db.Column(db.String(200), nullable=True) 
 
 # Criação das tabelas
 with app.app_context():
     db.create_all()
 
 
-# ---------- FUNÇÃO DE ENVIO DE E-MAIL ----------
-# Certifique-se que a definição recebe 'nome_produto' e 'cobranca'
-def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, cobranca, nome_produto):
-    """ Envia e-mail, usando SMTP_SSL para máxima compatibilidade. """
+# ---------- FUNÇÃO DE ENVIO DE E-MAIL (ATUALIZADA) ----------
+
+def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, cobranca, nome_produto, chave_acesso=None):
+    """ Envia e-mail, usando SMTP_SSL para máxima compatibilidade. Suporta link (e-book) ou chave (game/app). """
     try:
         smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
         smtp_port = int(os.environ.get("SMTP_PORT", 465))
@@ -70,13 +90,53 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
     except KeyError:
         print("[WORKER] ERRO: Credenciais de e-mail não configuradas.")
         return False
+    
+    # 1. Assunto e Título dinâmicos
+    if chave_acesso:
+        assunto = f"R·READ: Sua chave de acesso para \"{nome_produto}\" chegou! 🚀"
+        titulo_principal = "Sua Chave de Acesso está aqui! 🔑"
+        
+        # Conteúdo para Game/App
+        instrucoes_entrega = f"""
+            <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao produto "<strong>{nome_produto}</strong>" foi confirmado.</p>
+            
+            <h2>{titulo_principal}</h2>
+            
+            <p>Sua chave de acesso (Serial Key) para o jogo/app é:</p>
+            <div style="background-color: #ffe0b2; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                <code style="font-size: 1.5em; font-weight: bold; color: #14213d; display: block; word-break: break-all;">{chave_acesso}</code>
+            </div>
+            
+            <p>Copie a chave acima e use-a no instalador. Se precisar baixar o instalador, clique abaixo:</p>
+            
+            <div class="button-container"> 
+                <a href="{link_produto}" class="button" target="_blank">[·] Baixar o Instalador</a>
+            </div>
+        """
+
+    else:
+        assunto = f"R·READ: Seu e-book \"{nome_produto}\" está pronto para devorar! 🎉"
+        titulo_principal = "Agora é hora de devorar o conteúdo!"
+
+        # Conteúdo para E-book
+        instrucoes_entrega = f"""
+            <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao e-book "<strong>{nome_produto}</strong>" foi confirmado.</p>
+            
+            <h2>{titulo_principal}</h2>
+            
+            <p>Clique no nosso <span class="brand-dot">·</span> (micro-portal!) abaixo para acessar seu e-book:</p>
+            
+            <div class="button-container"> 
+                <a href="{link_produto}" class="button" target="_blank">[·] Baixar Meu E-book Agora</a>
+            </div>
+        """
         
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"R·READ: Seu e-book \"{nome_produto}\" está pronto para devorar! 🎉" # Assunto dinâmico
+    msg["Subject"] = assunto
     msg["From"] = email_user
     msg["To"] = destinatario
     
-    # Bloco corpo_html 100% limpo, sem comentários /*...*/ internos
+    # Bloco corpo_html (Usando o conteúdo dinâmico)
     corpo_html = f"""
 <!doctype html>
 <html>
@@ -124,21 +184,13 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
       <div class="content">
         <p>Olá, {nome_cliente},</p>
         
-        <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao e-book "<strong>{nome_produto}</strong>" foi confirmado.</p>
+        {instrucoes_entrega}
         
-        <h2>Agora é hora de devorar o conteúdo!</h2>
-        
-        <p>Clique no nosso <span class="brand-dot">·</span> (micro-portal!) abaixo para acessar seu e-book:</p>
-        
-        <div class="button-container"> 
-          <a href="{link_produto}" class="button" target="_blank">[·] Baixar Meu E-book Agora</a>
-        </div>
-
-        <p style="font-size: 0.9em; color: #777;">Se o botão não funcionar, copie e cole o link abaixo no seu navegador:</p>
+        <p style="font-size: 0.9em; color: #777; margin-top: 30px;">Se o link do botão não funcionar, copie e cole este link no seu navegador:</p>
         <code class="link-copy">{link_produto}</code>
         
         <div class="footer-text">
-          Boas leituras!<br>
+          Boas leituras / Bom jogo!<br>
           Equipe <strong>R·READ / B·ROO banca digital</strong>
           <br><br>
           Pedido ID: {cobranca.id} <br> 
@@ -164,17 +216,17 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
     print(f"[WORKER] E-mail DE ENTREGA enviado para {destinatario}")
     return True
 
-# ---------- JOB DO "PLANO A" ----------
+# ---------- JOB DO "PLANO A" (ATUALIZADO) ----------
 def process_mercado_pago_webhook(payment_id):
     """
     PLANO A: Recebe o payment_id do webhook, consulta o MP, 
-    e se APROVADO, busca os dados REAIS no nosso DB para fazer a entrega.
+    e se APROVADO, busca os dados REAIS no nosso DB para fazer a entrega (E-book ou Chave).
     """
     with app.app_context():
         access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
         if not access_token:
              print("[WORKER] ERRO CRÍTICO: MERCADOPAGO_ACCESS_TOKEN não configurado.")
-             return # Não pode continuar sem token
+             return 
 
         sdk = mercadopago.SDK(access_token)
         
@@ -182,14 +234,10 @@ def process_mercado_pago_webhook(payment_id):
             resp = sdk.payment().get(payment_id)
         except Exception as e:
             print(f"[WORKER] Falha ao consultar MP para o ID {payment_id}: {e}")
-            # Considerar não retornar imediatamente, pode ser erro de rede. 
-            # O RQ tentará novamente por padrão. Se quiser falhar rápido: raise e
             return 
 
         if resp["status"] != 200:
-            # Erro na API do MP, logar e tentar novamente depois
             print(f"[WORKER] MP respondeu {resp['status']} para o ID {payment_id}. Detalhes: {resp.get('response')}")
-            # Lançar exceção para o RQ tentar novamente
             raise RuntimeError(f"MP respondeu {resp['status']} para o ID {payment_id}")
 
         payment = resp["response"]
@@ -202,54 +250,80 @@ def process_mercado_pago_webhook(payment_id):
         cobranca = Cobranca.query.filter_by(external_reference=str(payment_id)).first()
 
         if not cobranca:
-            # Isso é grave. O pagamento foi aprovado mas não achamos no nosso DB.
-            # Logar intensamente, talvez notificar um admin. Não reenfileirar.
             print(f"[WORKER] ERRO CRÍTICO: Cobranca {payment_id} aprovada, mas não encontrada no DB.")
             return
 
-        produto = cobranca.produto # Usando o relationship
+        produto = cobranca.produto 
         
         if not produto:
-             # Isso também é grave. A cobrança existe mas não tem produto associado?
             print(f"[WORKER] ERRO CRÍTICO: Produto não encontrado para a Cobranca ID {cobranca.id} (MP ID: {payment_id}).")
             return
+            
+        # --- LÓGICA DE ENTREGA DE PRODUTO/CHAVE ---
+        link_entrega = produto.link_download
+        chave_entregue = None
+        
+        if produto.tipo in ("game", "app"): # Verifica o novo campo 'tipo'
+            print(f"[WORKER] Tipo de produto é '{produto.tipo}'. Buscando chave de licença...")
 
+            # 1. Busca a primeira chave não vendida (usando with_for_update para lock)
+            chave_obj = ChaveLicenca.query.filter(
+                ChaveLicenca.produto_id == produto.id,
+                ChaveLicenca.vendida == False
+            ).order_by(ChaveLicenca.id.asc()).with_for_update().first() 
+
+            if chave_obj:
+                # 2. Marca a chave como vendida
+                chave_obj.vendida = True
+                chave_obj.vendida_em = datetime.utcnow()
+                chave_obj.cobranca_id = cobranca.id
+                chave_obj.cliente_email = cobranca.cliente_email
+                chave_entregue = chave_obj.chave_serial
+                link_entrega = produto.link_download # O link_download passa a ser o link do instalador
+                print(f"[WORKER] CHAVE encontrada e marcada como vendida: {chave_entregue}")
+            else:
+                # 3. ERRO: Não há chaves disponíveis! O job será re-tentado.
+                print(f"[WORKER] ERRO CRÍTICO: Produto '{produto.nome}' esgotou as chaves de licença.")
+                db.session.rollback() 
+                raise Exception(f"FALHA DE ESTOQUE: Chaves esgotadas para o produto {produto.id}")
+        
         # Dados reais do banco
         destinatario = cobranca.cliente_email
         nome_cliente = cobranca.cliente_nome
         valor_real = cobranca.valor
-        link_real = produto.link_download
         nome_produto = produto.nome
 
-        print(f"[WORKER] Enviando produto '{nome_produto}' para {destinatario}...")
+        print(f"[WORKER] Enviando produto '{nome_produto}' (Tipo: {produto.tipo}) para {destinatario}...")
 
-        # Chama a função de envio passando todos os parâmetros necessários
+        # Chama a função de envio, passando a chave se houver
         sucesso = enviar_email_confirmacao(
             destinatario=destinatario,
             nome_cliente=nome_cliente,
             valor=valor_real,
-            link_produto=link_real,
+            link_produto=link_entrega,
             cobranca=cobranca, 
-            nome_produto=nome_produto 
+            nome_produto=nome_produto,
+            chave_acesso=chave_entregue # Novo parâmetro
         )
         
         if sucesso:
             print(f"[WORKER] E-mail (Plano A) enviado com sucesso para {destinatario}.")
             try:
                 cobranca.status = "delivered" 
-                db.session.commit()
+                db.session.commit() # Commit final para Cobrança e, se for o caso, a Chave Licença
                 print(f"[WORKER] Status da Cobranca {cobranca.id} atualizado para 'delivered'.")
             except Exception as db_exc:
                  print(f"[WORKER] ALERTA: Falha ao atualizar status da Cobranca {cobranca.id} para 'delivered': {db_exc}")
-                 db.session.rollback() # Desfaz a tentativa de commit
+                 db.session.rollback() 
         else:
             print(f"[WORKER] Falha no envio de e-mail (Plano A) para {destinatario}. O job será re-tentado pelo RQ.")
-            # Lançar exceção para sinalizar ao RQ que o job falhou e deve ser re-tentado
+            # Se o e-mail falhou, DESFAZ A MARCAÇÃO DA CHAVE.
+            db.session.rollback() 
             raise Exception(f"Falha no envio SMTP para {destinatario}")
 
 # ---------- INICIALIZAÇÃO DO WORKER ----------
 if __name__ == "__main__":
-    redis_url = os.environ.get("REDIS_URL") # Não precisa de default aqui, se não tiver URL, vai falhar (correto)
+    redis_url = os.environ.get("REDIS_URL") 
     if not redis_url:
         raise ValueError("Variável de ambiente REDIS_URL não configurada.")
 
@@ -261,17 +335,16 @@ if __name__ == "__main__":
         print("[WORKER] Conexão com Redis OK.")
     except redis.exceptions.ConnectionError as redis_err:
         print(f"[WORKER] ERRO CRÍTICO: Não foi possível conectar ao Redis em {redis_url}. Erro: {redis_err}")
-        exit(1) # Impede o worker de iniciar sem Redis
+        exit(1) 
 
     # Verifica conexão com DB antes de iniciar
     try:
         with app.app_context():
-            # Tenta uma operação simples no DB
              db.session.execute(db.text('SELECT 1'))
         print("[WORKER] Conexão com Banco de Dados OK.")
     except Exception as db_init_err:
          print(f"[WORKER] ERRO CRÍTICO: Não foi possível conectar ao Banco de Dados. Verifique DATABASE_URL. Erro: {db_init_err}")
-         exit(1) # Impede o worker de iniciar sem DB
+         exit(1) 
 
     # Cria tabelas (agora que sabemos que o DB conecta)
     with app.app_context():
@@ -280,12 +353,10 @@ if __name__ == "__main__":
             print("[WORKER] Tabelas verificadas/criadas no DB.")
         except Exception as create_err:
              print(f"[WORKER] ALERTA: Erro ao executar db.create_all(): {create_err}")
-             # Pode ser um problema de permissão ou esquema, mas permite continuar
 
     # Inicia o worker
-    worker_queues = ["default"] # Pode adicionar mais filas se precisar
+    worker_queues = ["default"]
     worker = Worker(worker_queues, connection=redis_conn)
     print(f"[WORKER] Worker iniciado – aguardando jobs nas filas: {', '.join(worker_queues)}...")
     
-    # worker.work() precisa estar fora do app_context geralmente
     worker.work()
