@@ -4,7 +4,6 @@ from flask_cors import CORS
 from datetime import datetime
 import os
 import mercadopago
-# Imports de e-mail foram mantidos, mas a função em si é um placeholder, o worker é o responsável.
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -18,14 +17,8 @@ from sqlalchemy.orm import declarative_base
 app = Flask(__name__, static_folder='static')
 
 # Configuração de CORS
-# Em app.py, substitua a linha do CORS
-
-# Defina explicitamente as origens que você confia
 NETLIFY_ORIGIN = "https://rread.netlify.app"
 RENDER_ORIGIN = "https://mercadopago-final.onrender.com" 
-# (Adicione http://localhost:5500 ou similar se for testar localmente)
-
-# Inicializa o CORS permitindo *apenas* esses domínios
 CORS(app, origins=[NETLIFY_ORIGIN, RENDER_ORIGIN])
 
 # ---------- CONFIGURAÇÃO DO BANCO DE DADOS E EXTENSÕES ----------
@@ -52,7 +45,8 @@ redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 redis_conn = redis.from_url(redis_url)
 q = Queue(connection=redis_conn)
 
-# ---------- MODELO DE DADOS (CORRIGIDO PARA PLANO A) ----------
+# ---------- MODELO DE DADOS (ATUALIZADO PARA SUPORTAR CHAVES) ----------
+
 class Cobranca(db.Model):
     __tablename__ = "cobrancas"
     id = db.Column(db.Integer, primary_key=True)
@@ -63,10 +57,11 @@ class Cobranca(db.Model):
     status = db.Column(db.String(50), default="pending", nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
-    # --- ADIÇÃO CORRETA ---
     product_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
     produto = db.relationship('Produto')
-    # --- FIM DA ADIÇÃO ---
+    
+    # Adicionando relationship de volta para a chave (opcional, mas útil)
+    chave_usada = db.relationship('ChaveLicenca', backref='cobranca_rel', uselist=False) 
     
     def to_dict(self):
         return {
@@ -79,13 +74,32 @@ class Cobranca(db.Model):
             "data_criacao": self.data_criacao.isoformat() if self.data_criacao else None
         }
 
-# --- NOVO MODELO PRODUTO ---
 class Produto(db.Model):
     __tablename__ = "produtos"
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(200), nullable=False)
     preco = db.Column(db.Float, nullable=False)
     link_download = db.Column(db.String(500), nullable=False)
+    # NOVO: Para diferenciar e-book de game/app
+    tipo = db.Column(db.String(50), default="ebook", nullable=False) 
+
+
+# NOVO MODELO CHAVE_LICENCA
+class ChaveLicenca(db.Model):
+    __tablename__ = "chaves_licenca"
+    id = db.Column(db.Integer, primary_key=True)
+    chave_serial = db.Column(db.String(100), unique=True, nullable=False)
+    
+    produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=False)
+    # 'backref' já está definido no modelo Produto, mas a relação direta é útil
+    
+    vendida = db.Column(db.Boolean, default=False, nullable=False)
+    
+    vendida_em = db.Column(db.DateTime, nullable=True)
+    # LIGAÇÃO UNICA: Uma chave só pode ser ligada a uma cobrança
+    cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), unique=True, nullable=True) 
+    
+    cliente_email = db.Column(db.String(200), nullable=True) 
 
 
 # Criação das tabelas
@@ -138,7 +152,7 @@ def validar_assinatura_webhook(request):
         return False
 
 
-# ---------- ROTAS DA API ----------
+# ---------- ROTAS DA API (Nenhuma alteração aqui é necessária para a lógica de chave, pois a entrega é feita no Worker) ----------
 
 @app.route("/")
 def index():
@@ -148,7 +162,6 @@ def index():
 def serve_static(path):
     return send_from_directory('static', path)
 
-# --- [ROTA DO WEBHOOK CORRIGIDA] ---
 @app.route("/api/webhook", methods=["POST"])
 def webhook_mercadopago():
     
@@ -169,10 +182,7 @@ def webhook_mercadopago():
         payment_id = dados.get("data", {}).get("id")
         
         if payment_id:
-            # --- CORREÇÃO: Linha reativada ---
-            # O Worker agora só recebe o ID e busca o resto no DB.
             q.enqueue('worker.process_mercado_pago_webhook', payment_id)
-            # --- FIM DA CORREÇÃO ---
 
             print(f"Job (Plano A) para payment_id {payment_id} enfileirado pelo Webhook.")
 
@@ -183,7 +193,6 @@ def webhook_mercadopago():
         return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 200
 
 
-# --- [ROTA DE COBRANÇAS CORRIGIDA] ---
 @app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
     
@@ -198,10 +207,7 @@ def create_cobranca():
             return jsonify({"status": "error", "message": "Nenhum dado foi enviado."}), 400
             
         email_cliente = dados.get("email")
-        nome_cliente = dados.get("nome", "Cliente") # Mudado de "Cliente do E-book"
-
-        # --- [CORREÇÃO 1] ---
-        # Recebemos o 'product_id' do frontend
+        nome_cliente = dados.get("nome", "Cliente") 
         product_id_recebido = dados.get("product_id")
         
         if not product_id_recebido:
@@ -210,15 +216,12 @@ def create_cobranca():
         if not email_cliente or "@" not in email_cliente or "." not in email_cliente:
             return jsonify({"status": "error", "message": "Por favor, insira um email válido e obrigatório."}), 400
 
-        # --- [CORREÇÃO 2] ---
-        # Buscamos o produto e o preço no DB (Mais seguro!)
         produto = db.session.get(Produto, int(product_id_recebido))
         if not produto:
             return jsonify({"status": "error", "message": "Produto não encontrado."}), 404
 
         valor_correto = produto.preco
         descricao_correta = produto.nome
-        # --- FIM DAS CORREÇÕES ---
 
         access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
         if not access_token:
@@ -227,8 +230,8 @@ def create_cobranca():
         sdk = mercadopago.SDK(access_token)
 
         payment_data = {
-            "transaction_amount": valor_correto,     # Usa o valor do DB
-            "description": descricao_correta,        # Usa a descrição do DB
+            "transaction_amount": valor_correto,
+            "description": descricao_correta,
             "payment_method_id": "pix",
             "payer": {"email": email_cliente}
         }
@@ -244,15 +247,13 @@ def create_cobranca():
         qr_code_base64 = payment["point_of_interaction"]["transaction_data"]["qr_code_base64"]
         qr_code_text = payment["point_of_interaction"]["transaction_data"]["qr_code"]
 
-        # --- [CORREÇÃO 3] ---
-        # Salva a cobrança LIGADA ao product_id
         nova_cobranca = Cobranca(
             external_reference=str(payment["id"]),
             cliente_nome=nome_cliente,
             cliente_email=email_cliente,
             valor=valor_correto,
             status=payment["status"],
-            product_id=produto.id  # <-- A LIGAÇÃO IMPORTANTE!
+            product_id=produto.id
         )
         
         cobranca_dict = nova_cobranca.to_dict() 
@@ -263,10 +264,6 @@ def create_cobranca():
         db.session.remove()
         
         print(f"Cobrança {payment['id']} SALVA COM SUCESSO (Plano A).")
-        
-        # --- [CORREÇÃO 4] ---
-        # A linha q.enqueue() foi REMOVIDA daqui.
-        # O webhook é quem vai enfileirar o job agora.
         
         return jsonify({
             "status": "success",
@@ -284,32 +281,27 @@ def create_cobranca():
         return jsonify({"status": "error", "message": f"Falha ao criar cobrança: {str(e)}"}), 500
 
 
-# --- [NOVA ROTA PARA FORMULÁRIO DE CONTATO] ---
 @app.route("/api/contato", methods=["POST"])
 def handle_contact_form():
     dados = request.get_json()
 
     nome = dados.get("nome")
-    email_remetente = dados.get("email") # Email de quem preencheu o form
+    email_remetente = dados.get("email")
     assunto = dados.get("assunto")
     mensagem = dados.get("mensagem")
 
-    # Validação básica no backend
     if not all([nome, email_remetente, assunto, mensagem]):
         return jsonify({"status": "error", "message": "Todos os campos são obrigatórios."}), 400
     if "@" not in email_remetente or "." not in email_remetente:
          return jsonify({"status": "error", "message": "Email do remetente inválido."}), 400
 
-    # Configurações de envio (lidas das variáveis de ambiente)
     try:
         smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
         smtp_port = int(os.environ.get("SMTP_PORT", 465))
-        # USA AS MESMAS CREDENCIAIS DO WORKER (garanta que estão nas variáveis do app também)
         email_user = os.environ["EMAIL_USER"] 
         email_pass = os.environ["EMAIL_PASSWORD"] 
         
-        # --- DESTINATÁRIO FINAL ---
-        email_destinatario = "gameslizards@gmail.com" # Seu email de destino
+        email_destinatario = "gameslizards@gmail.com"
         
     except KeyError:
         print("[CONTACT FORM] ERRO: Credenciais de e-mail (EMAIL_USER/EMAIL_PASSWORD) não configuradas.")
@@ -318,7 +310,6 @@ def handle_contact_form():
         print(f"[CONTACT FORM] ERRO GERAL CONFIG: {config_err}")
         return jsonify({"status": "error", "message": "Erro interno do servidor."}), 500
 
-    # Monta o corpo do e-mail
     corpo_email_texto = f"""
 Nova mensagem recebida do formulário de contato R·READ:
 
@@ -333,15 +324,13 @@ Mensagem:
 """
 
     msg = MIMEText(corpo_email_texto)
-    msg["Subject"] = f"Contato R·READ: {assunto}" # Assunto do email recebido
-    msg["From"] = email_user # Quem envia (seu email Zoho)
-    msg["To"] = email_destinatario # Para onde vai (seu Gmail)
-    msg["Reply-To"] = email_remetente # Para você poder responder diretamente ao cliente
+    msg["Subject"] = f"Contato R·READ: {assunto}"
+    msg["From"] = email_user
+    msg["To"] = email_destinatario
+    msg["Reply-To"] = email_remetente
 
-    # Envia o e-mail
     try:
         print(f"[CONTACT FORM] Tentando enviar e-mail de {email_remetente} para {email_destinatario} via {email_user}...")
-        # Usando SMTP_SSL para maior compatibilidade
         with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=15) as server: 
             server.login(email_user, email_pass)
             server.send_message(msg)
@@ -353,7 +342,6 @@ Mensagem:
     except Exception as e:
         print(f"[CONTACT FORM] ERRO SMTP GERAL: {e}")
         return jsonify({"status": "error", "message": f"Não foi possível enviar a mensagem no momento."}), 500
-# --- FIM DA NOVA ROTA ---
 
 
 @app.route("/health", methods=["GET"])
@@ -367,7 +355,6 @@ def health_check():
 
     try:
         with app.app_context():
-            # Tenta consultar a nova tabela Produtos
             Produto.query.limit(1).all()
         db_status = "ok"
     except Exception:
