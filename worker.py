@@ -15,7 +15,7 @@ from rq import Worker, Queue
 from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-import time
+from sqlalchemy.ext.declarative import declarative_base
 
 # --- CONFIGURAÇÃO DO FLASK / DB ---
 app = Flask(__name__)
@@ -53,7 +53,6 @@ class Produto(db.Model):
     nome = db.Column(db.String(200), nullable=False)
     preco = db.Column(db.Float, nullable=False)
     link_download = db.Column(db.String(500), nullable=False)
-    # NOVO: Para diferenciar e-book de game/app
     tipo = db.Column(db.String(50), default="ebook", nullable=False)
 
 
@@ -78,7 +77,7 @@ with app.app_context():
     db.create_all()
 
 
-# ---------- FUNÇÃO DE ENVIO DE E-MAIL (ATUALIZADA) ----------
+# ---------- FUNÇÃO DE ENVIO DE E-MAIL (CORRIGIDA) ----------
 
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, cobranca, nome_produto, chave_acesso=None):
     """ Envia e-mail, usando SMTP_SSL para máxima compatibilidade. Suporta link (e-book) ou chave (game/app). """
@@ -91,38 +90,36 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
         print("[WORKER] ERRO: Credenciais de e-mail não configuradas.")
         return False
     
-    # 1. Assunto e Título dinâmicos
+    # 1. Configuração do Assunto e Conteúdo Dinâmico
     if chave_acesso:
         assunto = f"R·READ: Sua chave de acesso para \"{nome_produto}\" chegou! 🚀"
-        titulo_principal = "Sua Chave de Acesso está aqui! 🔑"
         
-        # Conteúdo para Game/App
+        # Conteúdo para Game/App (Com bloco de chave serial)
         instrucoes_entrega = f"""
             <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao produto "<strong>{nome_produto}</strong>" foi confirmado.</p>
             
-            <h2>{titulo_principal}</h2>
+            <h2 style="color: #27ae60;">Sua Chave de Acesso está aqui! 🔑</h2>
             
             <p>Sua chave de acesso (Serial Key) para o jogo/app é:</p>
-            <div style="background-color: #ffe0b2; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+            <div style="background-color: #e0f2f1; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px dashed #27ae60;">
                 <code style="font-size: 1.5em; font-weight: bold; color: #14213d; display: block; word-break: break-all;">{chave_acesso}</code>
             </div>
             
             <p>Copie a chave acima e use-a no instalador. Se precisar baixar o instalador, clique abaixo:</p>
             
             <div class="button-container"> 
-                <a href="{link_produto}" class="button" target="_blank">[·] Baixar o Instalador</a>
+                <a href="{link_produto}" class="button" target="_blank" style="background-color: #27ae60;">[·] Baixar o Instalador</a>
             </div>
         """
 
     else:
         assunto = f"R·READ: Seu e-book \"{nome_produto}\" está pronto para devorar! 🎉"
-        titulo_principal = "Agora é hora de devorar o conteúdo!"
-
-        # Conteúdo para E-book
+        
+        # Conteúdo para E-book (Com bloco de link de download)
         instrucoes_entrega = f"""
             <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao e-book "<strong>{nome_produto}</strong>" foi confirmado.</p>
             
-            <h2>{titulo_principal}</h2>
+            <h2>Agora é hora de devorar o conteúdo!</h2>
             
             <p>Clique no nosso <span class="brand-dot">·</span> (micro-portal!) abaixo para acessar seu e-book:</p>
             
@@ -153,6 +150,7 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
     p {{ margin-bottom: 15px; font-size: 1em; color: #555; }}
     strong {{ color: #14213d; }}
     .button-container {{ text-align: center; margin: 25px 0; }}
+    /* ESTILOS PADRÃO DO BOTÃO (Laranja para E-book) */
     .button {{ 
         background-color: #fca311;
         color: #14213d !important;
@@ -281,6 +279,11 @@ def process_mercado_pago_webhook(payment_id):
                 chave_entregue = chave_obj.chave_serial
                 link_entrega = produto.link_download # O link_download passa a ser o link do instalador
                 print(f"[WORKER] CHAVE encontrada e marcada como vendida: {chave_entregue}")
+                
+                # --- NOVO: Adicionar à sessão explicitamente para garantir rastreamento ---
+                db.session.add(chave_obj) 
+                # --------------------------------------------------------------------------
+
             else:
                 # 3. ERRO: Não há chaves disponíveis! O job será re-tentado.
                 print(f"[WORKER] ERRO CRÍTICO: Produto '{produto.nome}' esgotou as chaves de licença.")
@@ -310,6 +313,7 @@ def process_mercado_pago_webhook(payment_id):
             print(f"[WORKER] E-mail (Plano A) enviado com sucesso para {destinatario}.")
             try:
                 cobranca.status = "delivered" 
+                db.session.add(cobranca) # Adicionar explicitamente
                 db.session.commit() # Commit final para Cobrança e, se for o caso, a Chave Licença
                 print(f"[WORKER] Status da Cobranca {cobranca.id} atualizado para 'delivered'.")
             except Exception as db_exc:
