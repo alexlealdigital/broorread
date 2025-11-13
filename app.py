@@ -45,7 +45,7 @@ redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 redis_conn = redis.from_url(redis_url)
 q = Queue(connection=redis_conn)
 
-# ---------- MODELO DE DADOS (ATUALIZADO PARA SUPORTAR CHAVES) ----------
+# ---------- MODELO DE DADOS (ATUALIZADO PARA SUPORTAR VALIDAÇÃO) ----------
 
 class Cobranca(db.Model):
     __tablename__ = "cobrancas"
@@ -80,7 +80,7 @@ class Produto(db.Model):
     nome = db.Column(db.String(200), nullable=False)
     preco = db.Column(db.Float, nullable=False)
     link_download = db.Column(db.String(500), nullable=False)
-    # NOVO: Para diferenciar e-book de game/app
+    # Para diferenciar e-book de game/app
     tipo = db.Column(db.String(50), default="ebook", nullable=False) 
 
 
@@ -91,25 +91,23 @@ class ChaveLicenca(db.Model):
     chave_serial = db.Column(db.String(100), unique=True, nullable=False)
     
     produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=False)
-    # 'backref' já está definido no modelo Produto, mas a relação direta é útil
     
     vendida = db.Column(db.Boolean, default=False, nullable=False)
     
     vendida_em = db.Column(db.DateTime, nullable=True)
-    # LIGAÇÃO UNICA: Uma chave só pode ser ligada a uma cobrança
     cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), unique=True, nullable=True) 
     
-    cliente_email = db.Column(db.String(200), nullable=True) 
+    cliente_email = db.Column(db.String(200), nullable=True)
+    
+    # NOVO: Para controle de uso real no App
+    ativa_no_app = db.Column(db.Boolean, default=False, nullable=False) 
 
 
 # Criação das tabelas
 with app.app_context():
     db.create_all()
 
-# --- FUNÇÕES AUXILIARES (Sem mudanças) ---
-
-def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto):
-    pass 
+# --- FUNÇÕES AUXILIARES ---
 
 def validar_assinatura_webhook(request):
     try:
@@ -152,7 +150,79 @@ def validar_assinatura_webhook(request):
         return False
 
 
-# ---------- ROTAS DA API (Nenhuma alteração aqui é necessária para a lógica de chave, pois a entrega é feita no Worker) ----------
+# ---------- NOVA ROTA DE VALIDAÇÃO DE CHAVE (PARA O SEU APP) ----------
+
+@app.route("/api/validar_chave", methods=["POST"])
+def validar_chave():
+    """ Rota que o App (Agenda_Estetica) chama para verificar se a chave é válida e ativá-la. """
+    
+    db.session.autoflush = False
+    db.session.autocommit = False
+    
+    dados = request.get_json()
+    chave_serial = dados.get("chave_serial", "").strip().upper()
+    product_id_app = dados.get("product_id") # O ID que o App está tentando ativar
+    
+    if not chave_serial or not product_id_app:
+        return jsonify({"status": "error", "message": "Dados da chave ou ID do produto incompletos."}), 400
+
+    try:
+        # 1. Busca a chave no DB
+        chave = ChaveLicenca.query.filter_by(chave_serial=chave_serial).first()
+        
+        if not chave:
+            # Chave não existe ou está incorreta
+            return jsonify({"status": "invalid", "message": "Chave não encontrada."}), 404
+
+        # 2. Verifica se a chave pertence ao produto
+        if chave.produto_id != int(product_id_app):
+            # A chave é válida, mas para outro produto (ex: tentou usar chave de E-book em App)
+            return jsonify({"status": "invalid", "message": "Chave válida, mas para um produto diferente."}), 403
+
+        # 3. Verifica se a chave foi vendida (status básico de ativação)
+        if not chave.vendida:
+            # A chave existe, mas o pagamento não foi aprovado/entregue corretamente
+            return jsonify({"status": "invalid", "message": "Pagamento pendente ou chave não ativada."}), 403
+
+        # 4. Verifica se a chave já está marcada como ativa em outro App (Controle de uso único)
+        if chave.ativa_no_app:
+             # Se for um App de uso único, a chave já está em uso, mesmo que seja a correta.
+             return jsonify({"status": "invalid", "message": "Chave já ativa em outro dispositivo."}), 403
+        
+        # --- Chave VÁLIDA e NUNCA USADA ANTES (neste ponto) ---
+        
+        # 5. Marca a chave como ativa no App (Ativação da Licença)
+        chave.ativa_no_app = True
+        db.session.add(chave)
+        db.session.commit()
+        db.session.remove()
+        
+        # 6. Retorna o sucesso.
+        
+        # Exemplo de cálculo de expiração (Se você usar a coluna vendida_em)
+        data_venda = chave.vendida_em or datetime.utcnow()
+        # Se a validade é de 12 meses a partir da venda, você deve calcular aqui
+        # (usando dateutil.relativedelta se precisar)
+
+        return jsonify({
+            "status": "valid",
+            "message": "Chave de licença ativada com sucesso!",
+            "licenca": {
+                "chave": chave_serial,
+                "cliente": chave.cliente_email,
+                "data_ativacao": data_venda.isoformat(),
+                "status_uso": "Ativa"
+                # Você pode adicionar "data_expiracao" aqui se calcular a validade
+            }
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        db.session.remove()
+        print(f"ERRO CRÍTICO (VALIDAR CHAVE): {str(e)}")
+        return jsonify({"status": "error", "message": f"Erro interno na validação: {str(e)}"}), 500
+
+# ---------- ROTAS EXISTENTES (CHECKOUT, WEBHOOK, HEALTH) ----------
 
 @app.route("/")
 def index():
@@ -167,13 +237,8 @@ def webhook_mercadopago():
     
     try:
         dados = request.get_json()
-        print("=" * 50)
-        print("Webhook recebido do Mercado Pago")
-        print(f"Body: {dados}")
-        print("=" * 50)
         
         if not validar_assinatura_webhook(request):
-            print("Assinatura do webhook inválida - Requisição rejeitada")
             return jsonify({"status": "error", "message": "Assinatura inválida"}), 401
         
         if dados.get("type") != "payment":
@@ -182,15 +247,14 @@ def webhook_mercadopago():
         payment_id = dados.get("data", {}).get("id")
         
         if payment_id:
+            # Enfileira o job para o worker (que agora também lida com o novo campo ativa_no_app no modelo)
             q.enqueue('worker.process_mercado_pago_webhook', payment_id)
-
-            print(f"Job (Plano A) para payment_id {payment_id} enfileirado pelo Webhook.")
 
         return jsonify({"status": "success", "message": "Webhook recebido e processamento enfileirado"}), 200
         
     except Exception as e:
         print(f"Erro ao processar webhook: {str(e)}")
-        return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 200
+        return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 500
 
 
 @app.route("/api/cobrancas", methods=["POST"])
@@ -201,7 +265,6 @@ def create_cobranca():
     
     try:
         dados = request.get_json()
-        print(f"Dados recebidos: {dados}")
         
         if not dados:
             return jsonify({"status": "error", "message": "Nenhum dado foi enviado."}), 400
@@ -263,7 +326,6 @@ def create_cobranca():
         db.session.expire_all()
         db.session.remove()
         
-        print(f"Cobrança {payment['id']} SALVA COM SUCESSO (Plano A).")
         
         return jsonify({
             "status": "success",
