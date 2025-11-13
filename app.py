@@ -1,4 +1,4 @@
-# Importações existentes
+# Importações existentes (e 'func' do SQLAlchemy para contar)
 from flask import Flask, jsonify, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -13,6 +13,7 @@ import hashlib
 import redis
 from rq import Queue
 from sqlalchemy.orm import declarative_base
+from sqlalchemy import func # <--- ADICIONADO PARA CONTAR VENDAS
 
 # Inicialização do Flask
 app = Flask(__name__, static_folder='static')
@@ -50,8 +51,9 @@ q = Queue(connection=redis_conn)
 
 # ---------- MODELOS DE DADOS (Gamificação Adicionada) ----------
 
-# NOVO MODELO: VENDEDOR (Gamificação RKD)
+# MODELO: VENDEDOR (Gamificação RKD)
 class Vendedor(db.Model):
+# ... (código do modelo Vendedor existente) ...
     __tablename__ = "vendedores"
     # Código único (Ex: NKD00101) que é a Chave Primária
     codigo_ranking = db.Column(db.String(50), primary_key=True) 
@@ -66,6 +68,7 @@ class Vendedor(db.Model):
         }
 
 class Cobranca(db.Model):
+# ... (código do modelo Cobranca existente) ...
     __tablename__ = "cobrancas"
     id = db.Column(db.Integer, primary_key=True)
     external_reference = db.Column(db.String(100), unique=True, nullable=False)
@@ -97,6 +100,7 @@ class Cobranca(db.Model):
         }
 
 class Produto(db.Model):
+# ... (código do modelo Produto existente) ...
     __tablename__ = "produtos"
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(200), nullable=False)
@@ -106,6 +110,7 @@ class Produto(db.Model):
 
 
 class ChaveLicenca(db.Model):
+# ... (código do modelo ChaveLicenca existente) ...
     __tablename__ = "chaves_licenca"
     id = db.Column(db.Integer, primary_key=True)
     chave_serial = db.Column(db.String(100), unique=True, nullable=False)
@@ -128,7 +133,7 @@ with app.app_context():
     db.create_all()
 
 # --- FUNÇÕES AUXILIARES ---
-
+# ... (código da função validar_assinatura_webhook existente) ...
 def validar_assinatura_webhook(request):
     try:
         x_signature = request.headers.get("x-signature")
@@ -172,6 +177,7 @@ def validar_assinatura_webhook(request):
 
 # ---------- ROTAS DA API ----------
 
+# ... (código das rotas /, /<path>, /api/vendedores, /api/validar_chave, /api/webhook, /api/cobrancas, /api/contato existentes) ...
 @app.route("/")
 def index():
     return send_from_directory('static', 'index.html')
@@ -181,7 +187,7 @@ def serve_static(path):
     return send_from_directory('static', path)
 
 
-# NOVO: ROTA DE GAMIFICAÇÃO (Para o Dropdown)
+# ROTA DE GAMIFICAÇÃO (Para o Dropdown)
 @app.route("/api/vendedores", methods=["GET"])
 def get_vendedores():
     """ Rota para o frontend buscar a lista de vendedores (para o dropdown) """
@@ -195,7 +201,7 @@ def get_vendedores():
         return jsonify({"status": "error", "message": "Não foi possível carregar a lista de vendedores."}), 500
 
 
-# PRESERVADO: ROTA DE VALIDAÇÃO DE CHAVE (PARA O SEU APP)
+# ROTA DE VALIDAÇÃO DE CHAVE (PARA O SEU APP)
 @app.route("/api/validar_chave", methods=["POST"])
 def validar_chave():
     """ API chamada pelo App (Agenda_Estetica) para verificar se a chave é válida e ativá-la. """
@@ -257,7 +263,7 @@ def validar_chave():
         return jsonify({"status": "error", "message": f"Erro interno na validação: {str(e)}"}), 500
 
 
-# PRESERVADO: ROTA DE WEBHOOK
+# ROTA DE WEBHOOK
 @app.route("/api/webhook", methods=["POST"])
 def webhook_mercadopago():
     
@@ -283,7 +289,7 @@ def webhook_mercadopago():
         return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 500
 
 
-# ATUALIZADO: ROTA DE CRIAÇÃO DE COBRANÇA (com Vendedor)
+# ROTA DE CRIAÇÃO DE COBRANÇA (com Vendedor)
 @app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
     
@@ -308,13 +314,13 @@ def create_cobranca():
         
         # Opcional: Verifica se o código do vendedor existe (para integridade de dados)
         if vendedor_codigo_recebido: # Se o cliente selecionou algo (não é "")
-            vendedor_existente = Vendedor.query.filter_by(codigo_ranking=vendedor_codigo_recebido).first()
+            vendedor_existente = Vendedor.query.get(vendedor_codigo_recebido) # .get() é mais rápido para Chave Primária
             if not vendedor_existente:
                  # Avisa que o código é inválido, mas não impede a compra (não é crítico)
                  print(f"ALERTA: Código de vendedor inválido: {vendedor_codigo_recebido}. Prosseguindo sem afiliação.")
                  vendedor_codigo_recebido = None # Define como None se for inválido
         else:
-            vendedor_codigo_recebido = None # Garante que "" seja salvo como NULL
+            vendedor_codigo_recebido = None # Garante que "" (string vazia do dropdown) seja salvo como NULL
 
         produto = db.session.get(Produto, int(product_id_recebido))
         if not produto:
@@ -378,11 +384,11 @@ def create_cobranca():
         return jsonify({"status": "error", "message": f"Falha ao criar cobrança: {str(e)}"}), 500
 
 
-# PRESERVADO: ROTA DE CONTATO
+# ROTA DE CONTATO
 @app.route("/api/contato", methods=["POST"])
 def handle_contact_form():
     dados = request.get_json()
-
+# ... (código da função handle_contact_form existente) ...
     nome = dados.get("nome")
     email_remetente = dados.get("email")
     assunto = dados.get("assunto")
@@ -442,9 +448,10 @@ Mensagem:
         return jsonify({"status": "error", "message": f"Não foi possível enviar a mensagem no momento."}), 500
 
 
-# PRESERVADO: ROTA DE HEALTH CHECK
+# ROTA DE HEALTH CHECK
 @app.route("/health", methods=["GET"])
 def health_check():
+# ... (código da função health_check existente) ...
    
     try:
         redis_conn.ping()
@@ -469,6 +476,104 @@ def health_check():
             "database": db_status
         }
     }), status_code
+
+
+# --- NOVA ROTA DA API DE RANKING ---
+@app.route("/api/ranking", methods=["GET"])
+def get_ranking():
+    """
+    Nova API para o dashboard de 'Ranked Sales'.
+    Calcula pontos (vendas entregues) e comissões.
+    """
+    try:
+        # Define suas regras de negócio
+        PRECO_BASE_EBOOK = 15.90
+        META_VENDAS_DIA = 1000 # Meta Diária
+        
+        # Define as comissões do Top 3
+        # (índice 0 = 1º lugar, 1 = 2º lugar, 2 = 3º lugar)
+        COMISSOES = {
+            0: 0.25,  # 25%
+            1: 0.10,  # 10%
+            2: 0.05   # 5%
+        }
+
+        with app.app_context():
+            
+            # 1. Conta apenas vendas ENTREGUES (status == 'delivered')
+            #    Agrupa por vendedor_codigo
+            vendas_entregues_query = db.session.query(
+                Cobranca.vendedor_codigo,
+                func.count(Cobranca.id).label('pontos')
+            ).filter(
+                Cobranca.status == 'delivered',
+                Cobranca.vendedor_codigo != None
+            ).group_by(
+                Cobranca.vendedor_codigo
+            ).subquery() # Transforma em subconsulta
+
+            # 2. Junta com a tabela de Vendedores para pegar os nomes
+            #    Usa LEFT JOIN (outerjoin) para incluir vendedores com 0 pontos
+            ranking_query = db.session.query(
+                Vendedor.nome_vendedor,
+                Vendedor.codigo_ranking,
+                # Usa func.coalesce para tratar 0 vendas (pontos = NULL)
+                func.coalesce(vendas_entregues_query.c.pontos, 0).label('pontos') 
+            ).outerjoin(
+                vendas_entregues_query,
+                Vendedor.codigo_ranking == vendas_entregues_query.c.vendedor_codigo
+            ).order_by(
+                # Ordena por pontos (descendente)
+                func.coalesce(vendas_entregues_query.c.pontos, 0).desc() 
+            )
+            
+            ranking_db = ranking_query.all()
+
+            # 3. Processa os dados em Python para calcular comissões
+            ranking_final = []
+            total_vendas_geral = 0
+
+            for i, (nome, codigo, pontos) in enumerate(ranking_db):
+                
+                total_vendas_geral += pontos
+                valor_vendido_bruto = pontos * PRECO_BASE_EBOOK
+                
+                # Pega a comissão (25, 10, 5) ou 0 se for 4º lugar ou abaixo
+                percentual_comissao = COMISSOES.get(i, 0)
+                valor_comissao_calculado = valor_vendido_bruto * percentual_comissao
+                
+                ranking_final.append({
+                    "rank": i + 1,
+                    "nome": nome,
+                    "codigo": codigo,
+                    "pontos": pontos,
+                    # Formata os valores para exibição direta no frontend
+                    "valor_comissao_brl": f"R$ {valor_comissao_calculado:,.2f}",
+                    "percentual_comissao": f"{percentual_comissao * 100:.0f}%"
+                })
+
+            # 4. Prepara o JSON da Meta Diária
+            meta = {
+                "objetivo": META_VENDAS_DIA,
+                "atual": total_vendas_geral,
+                "percentual_meta": min((total_vendas_geral / META_VENDAS_DIA) * 100, 100) # Trava em 100%
+            }
+
+            # 5. Retorna o JSON completo
+            return jsonify({
+                "status": "success",
+                "ranking": ranking_final,
+                "meta_diaria": meta
+            }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERRO CRÍTICO (RANKING): {str(e)}")
+        return jsonify({"status": "error", "message": f"Erro interno ao calcular ranking: {str(e)}"}), 500
+
+
+# --- FIM DA NOVA ROTA ---
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
