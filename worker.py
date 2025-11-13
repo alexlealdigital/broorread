@@ -266,7 +266,6 @@ def process_mercado_pago_webhook(payment_id):
 
             # 1. Busca a primeira chave não vendida (usando with_for_update para lock)
             chave_obj = ChaveLicenca.query.filter(
-              chave_obj = ChaveLicenca.query.filter(
 	                ChaveLicenca.produto_id == produto.id,
 	                ChaveLicenca.vendida == False
 	            ).order_by(ChaveLicenca.id.asc()).with_for_update().first()
