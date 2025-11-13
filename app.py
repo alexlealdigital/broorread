@@ -1,3 +1,4 @@
+# Importações existentes
 from flask import Flask, jsonify, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -20,7 +21,6 @@ app = Flask(__name__, static_folder='static')
 NETLIFY_ORIGIN_PROD = "https://rread.netlify.app"
 RENDER_ORIGIN = "https://mercadopago-final.onrender.com" 
 NETLIFY_ORIGIN_TEST = "https://soft-parfait-5fefdc.netlify.app" 
-
 # ADICIONA TODOS OS DOMÍNIOS CONHECIDOS
 CORS(app, origins=[NETLIFY_ORIGIN_PROD, RENDER_ORIGIN, NETLIFY_ORIGIN_TEST])
 
@@ -48,7 +48,20 @@ redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 redis_conn = redis.from_url(redis_url)
 q = Queue(connection=redis_conn)
 
-# ---------- MODELO DE DADOS (ATUALIZADO PARA SUPORTAR VALIDAÇÃO) ----------
+# ---------- MODELOS DE DADOS (Gamificação Adicionada) ----------
+
+class Vendedor(db.Model):
+    __tablename__ = "vendedores"
+    # Código único (Ex: NKD00101) que é a Chave Primária
+    codigo_ranking = db.Column(db.String(50), primary_key=True) 
+    nome_vendedor = db.Column(db.String(200), nullable=False)
+    email_contato = db.Column(db.String(200), nullable=True)
+
+    def to_dict(self):
+        return {
+            "codigo_ranking": self.codigo_ranking,
+            "nome_vendedor": self.nome_vendedor
+        }
 
 class Cobranca(db.Model):
     __tablename__ = "cobrancas"
@@ -63,9 +76,12 @@ class Cobranca(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
     produto = db.relationship('Produto')
     
-    # Adicionando relationship de volta para a chave (opcional, mas útil)
     chave_usada = db.relationship('ChaveLicenca', backref='cobranca_rel', uselist=False) 
     
+    # NOVO: Chave Estrangeira para rastrear o vendedor
+    vendedor_codigo = db.Column(db.String(50), db.ForeignKey('vendedores.codigo_ranking'), nullable=True)
+    vendedor = db.relationship('Vendedor', backref='vendas') # Adiciona relacionamento para facilitar a consulta
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -74,7 +90,8 @@ class Cobranca(db.Model):
             "cliente_email": self.cliente_email,
             "valor": self.valor,
             "status": self.status,
-            "data_criacao": self.data_criacao.isoformat() if self.data_criacao else None
+            "data_criacao": self.data_criacao.isoformat() if self.data_criacao else None,
+            "vendedor_codigo": self.vendedor_codigo # Inclui o código do vendedor no retorno
         }
 
 class Produto(db.Model):
@@ -83,11 +100,9 @@ class Produto(db.Model):
     nome = db.Column(db.String(200), nullable=False)
     preco = db.Column(db.Float, nullable=False)
     link_download = db.Column(db.String(500), nullable=False)
-    # Para diferenciar e-book de game/app
     tipo = db.Column(db.String(50), default="ebook", nullable=False) 
 
 
-# NOVO MODELO CHAVE_LICENCA
 class ChaveLicenca(db.Model):
     __tablename__ = "chaves_licenca"
     id = db.Column(db.Integer, primary_key=True)
@@ -102,7 +117,6 @@ class ChaveLicenca(db.Model):
     
     cliente_email = db.Column(db.String(200), nullable=True)
     
-    # NOVO: Para controle de uso real no App
     ativa_no_app = db.Column(db.Boolean, default=False, nullable=False) 
 
 
@@ -153,22 +167,39 @@ def validar_assinatura_webhook(request):
         return False
 
 
-# ---------- NOVA ROTA DE VALIDAÇÃO DE CHAVE (PARA O SEU APP) ----------
+# ---------- ROTAS DA API ----------
+
+@app.route("/")
+def index():
+    return send_from_directory('static', 'index.html')
+
+@app.route("/<path:path>")
+def serve_static(path):
+    return send_from_directory('static', path)
+
+
+@app.route("/api/vendedores", methods=["GET"])
+def get_vendedores():
+    """ Rota para o frontend buscar a lista de vendedores (para o dropdown) """
+    with app.app_context():
+        vendedores = Vendedor.query.all()
+        # Retorna apenas o código e o nome do vendedor
+        return jsonify([v.to_dict() for v in vendedores]), 200
+
 
 @app.route("/api/validar_chave", methods=["POST"])
 def validar_chave():
-    """ Rota que o App (Agenda_Estetica) chama para verificar se a chave é válida e ativá-la. """
+    """ API chamada pelo App (Agenda_Estetica) para verificar se a chave é válida e ativá-la. """
     
     dados = request.get_json()
     chave_serial = dados.get("chave_serial", "").strip().upper()
     product_id_app = dados.get("product_id") 
     
     if not chave_serial or not product_id_app:
-        return jsonify({"status": "error", "message": "Dados da chave ou ID do produto incompletos."}), 400
+        return jsonify({"status": "error", "message": "Chave serial e ID do produto incompletos."}), 400
 
     try:
         # 1. Busca a chave no DB (com with_for_update para garantir o lock durante a modificação)
-        # CORREÇÃO DE SESSÃO: Garante que o objeto está ligado à transação ativa
         chave = ChaveLicenca.query.filter_by(chave_serial=chave_serial).with_for_update().first()
         
         if not chave:
@@ -215,15 +246,6 @@ def validar_chave():
         # Usamos 500 para erro interno do servidor
         return jsonify({"status": "error", "message": f"Erro interno na validação: {str(e)}"}), 500
 
-# ---------- ROTAS EXISTENTES (CHECKOUT, WEBHOOK, HEALTH) ----------
-
-@app.route("/")
-def index():
-    return send_from_directory('static', 'index.html')
-
-@app.route("/<path:path>")
-def serve_static(path):
-    return send_from_directory('static', path)
 
 @app.route("/api/webhook", methods=["POST"])
 def webhook_mercadopago():
@@ -240,7 +262,7 @@ def webhook_mercadopago():
         payment_id = dados.get("data", {}).get("id")
         
         if payment_id:
-            # Enfileira o job para o worker (que agora também lida com o novo campo ativa_no_app no modelo)
+            # Enfileira o job para o worker 
             q.enqueue('worker.process_mercado_pago_webhook', payment_id)
 
         return jsonify({"status": "success", "message": "Webhook recebido e processamento enfileirado"}), 200
@@ -263,11 +285,22 @@ def create_cobranca():
         nome_cliente = dados.get("nome", "Cliente") 
         product_id_recebido = dados.get("product_id")
         
+        # NOVO CAMPO: Código do Vendedor
+        vendedor_codigo_recebido = dados.get("vendedor_codigo") 
+
         if not product_id_recebido:
             return jsonify({"status": "error", "message": "ID do produto é obrigatório."}), 400
         
         if not email_cliente or "@" not in email_cliente or "." not in email_cliente:
             return jsonify({"status": "error", "message": "Por favor, insira um email válido e obrigatório."}), 400
+        
+        # Opcional: Verifica se o código do vendedor existe (para integridade de dados)
+        if vendedor_codigo_recebido:
+            vendedor_existente = Vendedor.query.filter_by(codigo_ranking=vendedor_codigo_recebido).first()
+            if not vendedor_existente:
+                 # Avisa que o código é inválido, mas não impede a compra (não é crítico)
+                 print(f"ALERTA: Código de vendedor inválido: {vendedor_codigo_recebido}. Prosseguindo sem afiliação.")
+                 vendedor_codigo_recebido = None # Define como None se for inválido
 
         produto = db.session.get(Produto, int(product_id_recebido))
         if not produto:
@@ -306,7 +339,8 @@ def create_cobranca():
             cliente_email=email_cliente,
             valor=valor_correto,
             status=payment["status"],
-            product_id=produto.id
+            product_id=produto.id,
+            vendedor_codigo=vendedor_codigo_recebido # NOVO: Salva o código do vendedor
         )
         
         cobranca_dict = nova_cobranca.to_dict() 
