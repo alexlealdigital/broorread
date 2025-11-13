@@ -261,7 +261,7 @@ def process_mercado_pago_webhook(payment_id):
         link_entrega = produto.link_download
         chave_entregue = None
         
-        if produto.tipo in ("game", "app"): # Verifica o novo campo 'tipo'
+        if produto.tipo in ("game", "app", "apps"): # Verifica o novo campo 'tipo'
             print(f"[WORKER] Tipo de produto é '{produto.tipo}'. Buscando chave de licença...")
 
             # 1. Busca a primeira chave não vendida (usando with_for_update para lock)
