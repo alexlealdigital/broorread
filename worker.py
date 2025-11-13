@@ -15,7 +15,7 @@ from rq import Worker, Queue
 from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 # --- CONFIGURAÇÃO DO FLASK / DB ---
 app = Flask(__name__)
@@ -34,6 +34,12 @@ db = SQLAlchemy(app)
 
 # --- MODELOS DE DADOS (SINCRONIZADOS COM APP.PY) ---
 
+class Vendedor(db.Model):
+    __tablename__ = "vendedores"
+    codigo_ranking = db.Column(db.String(50), primary_key=True) 
+    nome_vendedor = db.Column(db.String(200), nullable=False)
+    email_contato = db.Column(db.String(200), nullable=True)
+
 class Cobranca(db.Model):
     __tablename__ = "cobrancas"
     id = db.Column(db.Integer, primary_key=True)
@@ -46,6 +52,10 @@ class Cobranca(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
     produto = db.relationship('Produto')
     chave_usada = db.relationship('ChaveLicenca', backref='cobranca_rel', uselist=False) 
+    
+    # NOVO: Chave Estrangeira para rastrear o vendedor
+    vendedor_codigo = db.Column(db.String(50), db.ForeignKey('vendedores.codigo_ranking'), nullable=True)
+    vendedor = db.relationship('Vendedor', backref='vendas')
 
 class Produto(db.Model):
     __tablename__ = "produtos"
@@ -56,7 +66,6 @@ class Produto(db.Model):
     tipo = db.Column(db.String(50), default="ebook", nullable=False)
 
 
-# NOVO MODELO CHAVE_LICENCA
 class ChaveLicenca(db.Model):
     __tablename__ = "chaves_licenca"
     id = db.Column(db.Integer, primary_key=True)
@@ -70,7 +79,9 @@ class ChaveLicenca(db.Model):
     vendida_em = db.Column(db.DateTime, nullable=True)
     cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), unique=True, nullable=True) 
     
-    cliente_email = db.Column(db.String(200), nullable=True) 
+    cliente_email = db.Column(db.String(200), nullable=True)
+    
+    ativa_no_app = db.Column(db.Boolean, default=False, nullable=False)
 
 # Criação das tabelas
 with app.app_context():
@@ -94,7 +105,7 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
     if chave_acesso:
         assunto = f"R·READ: Sua chave de acesso para \"{nome_produto}\" chegou! 🚀"
         
-        # Conteúdo para Game/App (Com bloco de chave serial)
+        # Conteúdo para App/Game (Com bloco de chave serial)
         instrucoes_entrega = f"""
             <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao produto "<strong>{nome_produto}</strong>" foi confirmado.</p>
             
@@ -266,9 +277,9 @@ def process_mercado_pago_webhook(payment_id):
 
             # 1. Busca a primeira chave não vendida (usando with_for_update para lock)
             chave_obj = ChaveLicenca.query.filter(
-	                ChaveLicenca.produto_id == produto.id,
-	                ChaveLicenca.vendida == False
-	            ).order_by(ChaveLicenca.id.asc()).with_for_update().first()
+                ChaveLicenca.produto_id == produto.id,
+                ChaveLicenca.vendida == False
+            ).order_by(ChaveLicenca.id.asc()).with_for_update().first() 
 
             if chave_obj:
                 # 2. Marca a chave como vendida
