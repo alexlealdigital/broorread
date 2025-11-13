@@ -21,7 +21,7 @@ app = Flask(__name__, static_folder='static')
 # Configuração de CORS - Inclui todos os seus domínios para evitar bloqueios
 NETLIFY_ORIGIN_PROD = "https://rread.netlify.app"
 RENDER_ORIGIN = "https://mercadopago-final.onrender.com" 
-NETLIFY_ORIGIN_TEST = "https://soft-parfait-5fefdc.netlify.app" 
+NETLIFY_ORIGIN_TEST = "https://rankedsale.netlify.app" 
 # ADICIONA TODOS OS DOMÍNIOS CONHECIDOS
 CORS(app, origins=[NETLIFY_ORIGIN_PROD, RENDER_ORIGIN, NETLIFY_ORIGIN_TEST])
 
