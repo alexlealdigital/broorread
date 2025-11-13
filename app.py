@@ -50,6 +50,7 @@ q = Queue(connection=redis_conn)
 
 # ---------- MODELOS DE DADOS (Gamificação Adicionada) ----------
 
+# NOVO MODELO: VENDEDOR (Gamificação RKD)
 class Vendedor(db.Model):
     __tablename__ = "vendedores"
     # Código único (Ex: NKD00101) que é a Chave Primária
@@ -58,6 +59,7 @@ class Vendedor(db.Model):
     email_contato = db.Column(db.String(200), nullable=True)
 
     def to_dict(self):
+        # Retorna apenas o que o dropdown precisa
         return {
             "codigo_ranking": self.codigo_ranking,
             "nome_vendedor": self.nome_vendedor
@@ -78,7 +80,7 @@ class Cobranca(db.Model):
     
     chave_usada = db.relationship('ChaveLicenca', backref='cobranca_rel', uselist=False) 
     
-    # NOVO: Chave Estrangeira para rastrear o vendedor
+    # ATUALIZADO: Chave Estrangeira para rastrear o vendedor
     vendedor_codigo = db.Column(db.String(50), db.ForeignKey('vendedores.codigo_ranking'), nullable=True)
     vendedor = db.relationship('Vendedor', backref='vendas') # Adiciona relacionamento para facilitar a consulta
 
@@ -117,6 +119,7 @@ class ChaveLicenca(db.Model):
     
     cliente_email = db.Column(db.String(200), nullable=True)
     
+    # Campo preservado da funcionalidade anterior
     ativa_no_app = db.Column(db.Boolean, default=False, nullable=False) 
 
 
@@ -178,15 +181,21 @@ def serve_static(path):
     return send_from_directory('static', path)
 
 
+# NOVO: ROTA DE GAMIFICAÇÃO (Para o Dropdown)
 @app.route("/api/vendedores", methods=["GET"])
 def get_vendedores():
     """ Rota para o frontend buscar a lista de vendedores (para o dropdown) """
-    with app.app_context():
-        vendedores = Vendedor.query.all()
-        # Retorna apenas o código e o nome do vendedor
-        return jsonify([v.to_dict() for v in vendedores]), 200
+    try:
+        with app.app_context():
+            vendedores = Vendedor.query.order_by(Vendedor.nome_vendedor).all()
+            # Retorna apenas o código e o nome do vendedor
+            return jsonify([v.to_dict() for v in vendedores]), 200
+    except Exception as e:
+        print(f"ERRO (VENDEDORES): {str(e)}")
+        return jsonify({"status": "error", "message": "Não foi possível carregar a lista de vendedores."}), 500
 
 
+# PRESERVADO: ROTA DE VALIDAÇÃO DE CHAVE (PARA O SEU APP)
 @app.route("/api/validar_chave", methods=["POST"])
 def validar_chave():
     """ API chamada pelo App (Agenda_Estetica) para verificar se a chave é válida e ativá-la. """
@@ -223,6 +232,7 @@ def validar_chave():
         chave.ativa_no_app = True
         
         # 6. Commit final: Persiste a mudança de 'ativa_no_app' para TRUE
+        db.session.add(chave) # Garante que a sessão rastreie a mudança
         db.session.commit()
         
         # 7. Retorna o sucesso.
@@ -247,6 +257,7 @@ def validar_chave():
         return jsonify({"status": "error", "message": f"Erro interno na validação: {str(e)}"}), 500
 
 
+# PRESERVADO: ROTA DE WEBHOOK
 @app.route("/api/webhook", methods=["POST"])
 def webhook_mercadopago():
     
@@ -272,6 +283,7 @@ def webhook_mercadopago():
         return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 500
 
 
+# ATUALIZADO: ROTA DE CRIAÇÃO DE COBRANÇA (com Vendedor)
 @app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
     
@@ -285,7 +297,7 @@ def create_cobranca():
         nome_cliente = dados.get("nome", "Cliente") 
         product_id_recebido = dados.get("product_id")
         
-        # NOVO CAMPO: Código do Vendedor
+        # NOVO CAMPO: Código do Vendedor (vem do dropdown)
         vendedor_codigo_recebido = dados.get("vendedor_codigo") 
 
         if not product_id_recebido:
@@ -295,12 +307,14 @@ def create_cobranca():
             return jsonify({"status": "error", "message": "Por favor, insira um email válido e obrigatório."}), 400
         
         # Opcional: Verifica se o código do vendedor existe (para integridade de dados)
-        if vendedor_codigo_recebido:
+        if vendedor_codigo_recebido: # Se o cliente selecionou algo (não é "")
             vendedor_existente = Vendedor.query.filter_by(codigo_ranking=vendedor_codigo_recebido).first()
             if not vendedor_existente:
                  # Avisa que o código é inválido, mas não impede a compra (não é crítico)
                  print(f"ALERTA: Código de vendedor inválido: {vendedor_codigo_recebido}. Prosseguindo sem afiliação.")
                  vendedor_codigo_recebido = None # Define como None se for inválido
+        else:
+            vendedor_codigo_recebido = None # Garante que "" seja salvo como NULL
 
         produto = db.session.get(Produto, int(product_id_recebido))
         if not produto:
@@ -364,6 +378,7 @@ def create_cobranca():
         return jsonify({"status": "error", "message": f"Falha ao criar cobrança: {str(e)}"}), 500
 
 
+# PRESERVADO: ROTA DE CONTATO
 @app.route("/api/contato", methods=["POST"])
 def handle_contact_form():
     dados = request.get_json()
@@ -427,6 +442,7 @@ Mensagem:
         return jsonify({"status": "error", "message": f"Não foi possível enviar a mensagem no momento."}), 500
 
 
+# PRESERVADO: ROTA DE HEALTH CHECK
 @app.route("/health", methods=["GET"])
 def health_check():
    
