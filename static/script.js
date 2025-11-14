@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const vendedores = await response.json();
             
             // Limpa opções antigas (exceto a primeira "Opcional")
-            checkoutVendedorSelect.innerHTML = '<option value="">-- Opcional (Compra direta) --</option>';
+            checkoutVendedorSelect.innerHTML = '<option value="">-- Vendedor --</option>';
             
             // Adiciona os vendedores ao dropdown
             vendedores.forEach(vendedor => {
