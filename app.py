@@ -14,6 +14,7 @@ import redis
 from rq import Queue
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import func # <--- ADICIONADO PARA CONTAR VENDAS
+import resend
 
 # Inicialização do Flask
 app = Flask(__name__, static_folder='static')
@@ -388,64 +389,41 @@ def create_cobranca():
 @app.route("/api/contato", methods=["POST"])
 def handle_contact_form():
     dados = request.get_json()
-# ... (código da função handle_contact_form existente) ...
     nome = dados.get("nome")
-    email_remetente = dados.get("email")
+    email_remetente = dados.get("email") # Email do cliente
     assunto = dados.get("assunto")
     mensagem = dados.get("mensagem")
 
     if not all([nome, email_remetente, assunto, mensagem]):
         return jsonify({"status": "error", "message": "Todos os campos são obrigatórios."}), 400
-    if "@" not in email_remetente or "." not in email_remetente:
-         return jsonify({"status": "error", "message": "Email do remetente inválido."}), 400
 
     try:
-        smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
-        smtp_port = int(os.environ.get("SMTP_PORT", 465))
-        email_user = os.environ["EMAIL_USER"] 
-        email_pass = os.environ["EMAIL_PASSWORD"] 
+        # 1. Pegue sua API Key do Render
+        resend.api_key = os.environ.get("RESEND_API_KEY")
+        if not resend.api_key:
+             return jsonify({"status": "error", "message": "API de email não configurada."}), 500
+
+        # 2. Formate o email
+        params = {
+            "from": "RREAD <contato@seu-dominio-verificado.com>", # Seu email verificado no Resend
+            "to": "gameslizards@gmail.com", # Seu email de destino
+            "reply_to": email_remetente, # Responde direto para o cliente
+            "subject": f"Contato R·READ: {assunto}",
+            "html": f"<p>De: {nome} ({email_remetente})</p><hr><p>{mensagem}</p>"
+        }
         
-        email_destinatario = "gameslizards@gmail.com"
+        # 3. Envie!
+        email = resend.Emails.send(params)
         
-    except KeyError:
-        print("[CONTACT FORM] ERRO: Credenciais de e-mail (EMAIL_USER/EMAIL_PASSWORD) não configuradas.")
-        return jsonify({"status": "error", "message": "Erro interno do servidor ao configurar e-mail."}), 500
-    except Exception as config_err:
-        print(f"[CONTACT FORM] ERRO GERAL CONFIG: {config_err}")
-        return jsonify({"status": "error", "message": "Erro interno do servidor."}), 500
+        if email.get("id"):
+            return jsonify({"status": "success", "message": "Mensagem enviada com sucesso!"}), 200
+        else:
+            # Se o Resend retornar um erro
+            return jsonify({"status": "error", "message": "Falha ao enviar e-mail."}), 500
 
-    corpo_email_texto = f"""
-Nova mensagem recebida do formulário de contato R·READ:
-
-Nome: {nome}
-Email: {email_remetente}
-Assunto: {assunto}
-
-Mensagem:
---------------------
-{mensagem}
---------------------
-"""
-
-    msg = MIMEText(corpo_email_texto)
-    msg["Subject"] = f"Contato R·READ: {assunto}"
-    msg["From"] = email_user
-    msg["To"] = email_destinatario
-    msg["Reply-To"] = email_remetente
-
-    try:
-        print(f"[CONTACT FORM] Tentando enviar e-mail de {email_remetente} para {email_destinatario} via {email_user}...")
-        with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=15) as server: 
-            server.login(email_user, email_pass)
-            server.send_message(msg)
-        print(f"[CONTACT FORM] E-mail enviado com sucesso!")
-        return jsonify({"status": "success", "message": "Mensagem enviada com sucesso! Responderemos em breve."}), 200
-    except smtplib.SMTPAuthenticationError:
-         print(f"[CONTACT FORM] ERRO SMTP: Falha na autenticação com {email_user}. Verifique EMAIL_USER/EMAIL_PASSWORD.")
-         return jsonify({"status": "error", "message": "Erro interno ao autenticar envio de e-mail."}), 500
     except Exception as e:
-        print(f"[CONTACT FORM] ERRO SMTP GERAL: {e}")
-        return jsonify({"status": "error", "message": f"Não foi possível enviar a mensagem no momento."}), 500
+        print(f"[CONTACT FORM] ERRO RESEND: {e}")
+        return jsonify({"status": "error", "message": "Não foi possível enviar a mensagem no momento."}), 500
 
 
 # ROTA DE HEALTH CHECK
