@@ -53,6 +53,7 @@ q = Queue(connection=redis_conn)
 
 # MODELO: VENDEDOR (Gamificação RKD)
 class Vendedor(db.Model):
+# ... (código do modelo Vendedor existente) ...
     __tablename__ = "vendedores"
     # Código único (Ex: NKD00101) que é a Chave Primária
     codigo_ranking = db.Column(db.String(50), primary_key=True) 
@@ -67,6 +68,7 @@ class Vendedor(db.Model):
         }
 
 class Cobranca(db.Model):
+# ... (código do modelo Cobranca existente) ...
     __tablename__ = "cobrancas"
     id = db.Column(db.Integer, primary_key=True)
     external_reference = db.Column(db.String(100), unique=True, nullable=False)
@@ -98,16 +100,17 @@ class Cobranca(db.Model):
         }
 
 class Produto(db.Model):
+# ... (código do modelo Produto existente) ...
     __tablename__ = "produtos"
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(200), nullable=False)
     preco = db.Column(db.Float, nullable=False)
     link_download = db.Column(db.String(500), nullable=False)
-    # Para diferenciar e-book de game/app
     tipo = db.Column(db.String(50), default="ebook", nullable=False) 
 
 
 class ChaveLicenca(db.Model):
+# ... (código do modelo ChaveLicenca existente) ...
     __tablename__ = "chaves_licenca"
     id = db.Column(db.Integer, primary_key=True)
     chave_serial = db.Column(db.String(100), unique=True, nullable=False)
@@ -130,6 +133,7 @@ with app.app_context():
     db.create_all()
 
 # --- FUNÇÕES AUXILIARES ---
+# ... (código da função validar_assinatura_webhook existente) ...
 def validar_assinatura_webhook(request):
     try:
         x_signature = request.headers.get("x-signature")
@@ -173,6 +177,7 @@ def validar_assinatura_webhook(request):
 
 # ---------- ROTAS DA API ----------
 
+# ... (código das rotas /, /<path>, /api/vendedores, /api/validar_chave, /api/webhook, /api/cobrancas, /api/contato existentes) ...
 @app.route("/")
 def index():
     return send_from_directory('static', 'index.html')
@@ -307,8 +312,7 @@ def create_cobranca():
         if not email_cliente or "@" not in email_cliente or "." not in email_cliente:
             return jsonify({"status": "error", "message": "Por favor, insira um email válido e obrigatório."}), 400
         
-        # --- CORREÇÃO (ForeignKeyViolation) ---
-        # Verifica se o código do vendedor existe (para integridade de dados)
+        # Opcional: Verifica se o código do vendedor existe (para integridade de dados)
         if vendedor_codigo_recebido: # Se o cliente selecionou algo (não é "")
             vendedor_existente = Vendedor.query.get(vendedor_codigo_recebido) # .get() é mais rápido para Chave Primária
             if not vendedor_existente:
@@ -316,9 +320,7 @@ def create_cobranca():
                  print(f"ALERTA: Código de vendedor inválido: {vendedor_codigo_recebido}. Prosseguindo sem afiliação.")
                  vendedor_codigo_recebido = None # Define como None se for inválido
         else:
-            # CORREÇÃO: Garante que "" (string vazia do dropdown) seja salvo como NULL
-            vendedor_codigo_recebido = None 
-        # --- FIM DA CORREÇÃO ---
+            vendedor_codigo_recebido = None # Garante que "" (string vazia do dropdown) seja salvo como NULL
 
         produto = db.session.get(Produto, int(product_id_recebido))
         if not produto:
@@ -386,6 +388,7 @@ def create_cobranca():
 @app.route("/api/contato", methods=["POST"])
 def handle_contact_form():
     dados = request.get_json()
+# ... (código da função handle_contact_form existente) ...
     nome = dados.get("nome")
     email_remetente = dados.get("email")
     assunto = dados.get("assunto")
@@ -448,6 +451,7 @@ Mensagem:
 # ROTA DE HEALTH CHECK
 @app.route("/health", methods=["GET"])
 def health_check():
+# ... (código da função health_check existente) ...
    
     try:
         redis_conn.ping()
