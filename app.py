@@ -405,7 +405,7 @@ def handle_contact_form():
 
         # 2. Formate o email
         params = {
-            "from": "RREAD <contato@seu-dominio-verificado.com>", # Seu email verificado no Resend
+            "from": "RREAD <onboarding@resend.dev>", # Seu email verificado no Resend
             "to": "gameslizards@gmail.com", # Seu email de destino
             "reply_to": email_remetente, # Responde direto para o cliente
             "subject": f"Contato R·READ: {assunto}",
