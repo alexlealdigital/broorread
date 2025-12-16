@@ -1,6 +1,6 @@
-// Arquivo: script.js (Atualizado para Checkout com Dropdown de Vendedor)
+// Arquivo: script.js (Atualizado para Checkout Lendo Dados do Botão)
 
-// --- Seletores Globais ---
+const API_URL = "https://mercadopago-final.onrender.com/api/cobrancas"; // Sua URL da API no Render
 const checkoutModal = document.getElementById('checkout-modal');
 const checkoutModalClose = document.getElementById('checkout-modal-close');
 const checkoutProdutoDetalhes = document.getElementById('checkout-produto-detalhes');
@@ -10,10 +10,6 @@ const checkoutProductIdInput = document.getElementById('checkout_product_id');
 const checkoutNomeInput = document.getElementById('checkout_nome');
 const checkoutEmailInput = document.getElementById('checkout_email');
 const feedbackToast = document.getElementById('feedback-toast');
-
-// NOVO: Seletor para o Dropdown de Vendedores
-const checkoutVendedorSelect = document.getElementById('checkout_vendedor');
-
 
 // --- FUNÇÕES AUXILIARES DE UI (MODAL E TOAST) ---
 
@@ -34,10 +30,9 @@ function clearFieldErrors(form) {
         div.textContent = '';
         div.style.display = 'none';
     });
-    const inputs = form.querySelectorAll('input, textarea, select'); // Inclui select
+    const inputs = form.querySelectorAll('input, textarea');
     inputs.forEach(input => {
-        // Reseta a borda para o padrão do input/select
-        input.style.borderColor = 'var(--border-grey)'; 
+        input.style.borderColor = '#ccc'; 
     });
 }
 
@@ -57,8 +52,8 @@ function showToast(message, type = 'info') {
 
     let iconClass, color;
     switch (type) {
-        case 'success': iconClass = 'fas fa-check-circle'; color = 'var(--success-green)'; break;
-        case 'error': iconClass = 'fas fa-exclamation-circle'; color = 'var(--error-red)'; break;
+        case 'success': iconClass = 'fas fa-check-circle'; color = '#27ae60'; break;
+        case 'error': iconClass = 'fas fa-exclamation-circle'; color = '#e74c3c'; break;
         default: iconClass = 'fas fa-info-circle'; color = '#3498db'; break;
     }
 
@@ -82,6 +77,7 @@ function openCheckoutModal(productId, imgSrc, nome, preco) {
     console.log("DEBUG: Abrindo modal para produto ID:", productId);
     resetCheckoutModal(); 
 
+    // O preço deve ser um FLOAT para formatação correta
     const precoFloat = parseFloat(preco);
     
     checkoutProdutoDetalhes.innerHTML = `
@@ -120,15 +116,11 @@ async function handleCheckoutSubmit(event) {
     const nomeCliente = checkoutNomeInput.value;
     const emailCliente = checkoutEmailInput.value;
     const productId = checkoutProductIdInput.value; 
-    
-    // NOVO: Captura o código do vendedor selecionado
-    const vendedorCodigo = checkoutVendedorSelect.value;
 
     const dadosParaEnvio = {
         email: emailCliente,
         nome: nomeCliente,
-        product_id: parseInt(productId),
-        vendedor_codigo: vendedorCodigo // Envia o código (será "" se "Opcional" for selecionado)
+        product_id: parseInt(productId) 
     };
     console.log("DEBUG: Enviando para API:", dadosParaEnvio);
 
@@ -136,8 +128,7 @@ async function handleCheckoutSubmit(event) {
     checkoutForm.style.display = 'none'; 
 
     try {
-        // A rota é relativa, pois o script.js está no mesmo domínio do app.py
-        const response = await fetch('/api/cobrancas', { 
+        const response = await fetch('/api/cobrancas', { // Usando rota relativa
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dadosParaEnvio),
@@ -180,8 +171,6 @@ function validateCheckoutForm() {
         showFieldError(checkoutEmailInput, 'Por favor, insira um email válido');
         isValid = false;
     }
-
-    // O campo vendedor é opcional, não precisa de validação
 
     return isValid;
 }
@@ -236,47 +225,9 @@ function showErrorInCheckoutResult(message) {
         `;
 }
 
-
 // --- LÓGICA DO DOMContentLoaded (ATUALIZADA) ---
 
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // --- NOVO: Buscar e Preencher Vendedores ---
-    async function carregarVendedores() {
-        if (!checkoutVendedorSelect) return; // Sai se o dropdown não existir
-        
-        try {
-            // Busca os vendedores da nova API (rota relativa)
-            const response = await fetch('/api/vendedores');
-            if (!response.ok) {
-                throw new Error('Falha ao carregar lista de vendedores.');
-            }
-            const vendedores = await response.json();
-            
-            // Limpa opções antigas (exceto a primeira "Opcional")
-            checkoutVendedorSelect.innerHTML = '<option value="">-- Vendedor --</option>';
-            
-            // Adiciona os vendedores ao dropdown
-            vendedores.forEach(vendedor => {
-                const option = document.createElement('option');
-                option.value = vendedor.codigo_ranking; // Ex: 'NKD00101'
-                option.textContent = vendedor.nome_vendedor; // Ex: 'Vendedor 1 - João'
-                checkoutVendedorSelect.appendChild(option);
-            });
-            console.log("DEBUG: Dropdown de vendedores preenchido.");
-
-        } catch (error) {
-            console.error("DEBUG: Erro ao carregar vendedores:", error);
-            // Mesmo se falhar, o checkout continua funcionando sem o vendedor
-        }
-    }
-    
-    // Carrega os vendedores assim que a página é carregada
-    carregarVendedores();
-    
-    // --- FIM DO NOVO BLOCO ---
-
-
     // SELETORES GLOBAIS
     const comprarButtons = document.querySelectorAll('.comprar-btn');
     
@@ -285,15 +236,18 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', (event) => {
             const btn = event.target.closest('.comprar-btn');
             
+            // Lendo TODOS os dados diretamente dos atributos do botão
             const productId = btn.dataset.productId;
             const card = btn.closest('.book-card');
             
             const imgSrc = card?.querySelector('img')?.src;
             const nome = card?.querySelector('h3')?.textContent;
             
+            // PREÇO: Lendo do atributo data-product-price (SE EXISTIR) ou do elemento book-price (Fallback)
             let preco = btn.dataset.productPrice;
 
             if (!preco) {
+                // Fallback para ler do elemento visível (como era antes)
                 const precoText = card?.querySelector('.book-price')?.textContent.replace('R$', '').replace(',', '.').trim();
                 preco = precoText;
             }
