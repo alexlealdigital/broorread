@@ -28,11 +28,11 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
-        body { font-family: var(--font-body); background-color: var(--black); color: var(--white); overflow-x: hidden; padding: 2rem 0; }
+        body { font-family: var(--font-body); background-color: var(--black); color: var(--white); overflow-x: hidden; padding: 2rem 0; } /* Adicionado padding para centralizar */
         a { text-decoration: none; color: inherit; transition: color 0.3s ease, background-color 0.3s ease; }
         ul { list-style: none; }
         .container { width: 90%; max-width: 1200px; margin: 0 auto; }
-        .section { padding: 4rem 5%; }
+        .section { padding: 4rem 5%; } /* Reduzido padding do original */
         .section-title { font-family: var(--font-heading); font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; color: var(--white); text-align: center; margin-bottom: 3.5rem; line-height: 1.3; }
         .section-title .portal-dot { color: var(--orange-web); }
         
@@ -47,8 +47,8 @@
             position: fixed;
             top: 2rem;
             left: 2rem;
-            z-index: 999;
-            background-color: rgba(20, 33, 61, 0.8);
+            z-index: 999; /* Abaixo do modal (1000) mas acima do resto */
+            background-color: rgba(20, 33, 61, 0.8); /* var(--oxford-blue) com alpha */
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
             color: var(--orange-web);
@@ -126,9 +126,7 @@
         #checkout-form .form-group { margin-bottom: 1.25rem; }
         #checkout-form label { display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--platinum); font-size: 0.9rem; }
         #checkout-form input[type="text"],
-        #checkout-form input[type="email"],
-        /* NOVO ESTILO: Para o Dropdown */
-        #checkout-form select.form-control-dropdown { 
+        #checkout-form input[type="email"] { 
             width: 100%; 
             padding: 0.85rem; 
             border: 1px solid var(--border-grey); 
@@ -137,17 +135,8 @@
             color: var(--white);
             font-size: 1rem;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            -webkit-appearance: none; /* Remove a aparência padrão do iOS */
-            -moz-appearance: none; /* Remove a aparência padrão do Firefox */
-            appearance: none; /* Remove a aparência padrão */
-            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23E5E5E5%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.6-3.6%205.4-7.9%205.4-12.9%200-5-1.8-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E');
-            background-repeat: no-repeat;
-            background-position: right 1rem center;
-            background-size: 0.65em auto;
-            padding-right: 2.5rem; /* Espaço para a seta */
         }
-        #checkout-form input:focus,
-        #checkout-form select.form-control-dropdown:focus {
+        #checkout-form input:focus {
             border-color: var(--orange-web);
             box-shadow: 0 0 0 3px rgba(252, 163, 17, 0.3);
             outline: none;
@@ -253,26 +242,13 @@
                 <h2 class="section-title">Nossa <span class="portal-dot">Estante</span></h2>
                 
                 <div class="bookshelf-grid">
-
-                     <div class="book-card card-produto"> <img src="https://i.imgur.com/YcXARjZ.jpeg" alt="Publicidade no ROBLOX" class="book-cover">
-                        <div class="book-info">
-                            <h3>Shopping Rescue: Natal Mágico</h3>
-                            <p class="book-author">Fachada de Loja Digital</p>
-                            <p class="book-description">Roblox: Sua vitrine digital para milhares de jogadores neste Natal.</p>
-                            <p class="book-price">R$ 300</p>
-                            <div class="book-buttons">
-                                <button class="cta-button comprar-btn" data-product-id="6"> <i class="fas fa-shopping-cart"></i> Comprar Agora 
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                     
                      <div class="book-card card-produto"> <img src="https://i.imgur.com/mYIMzZ0.png" alt="História dos Jogos de Videogame" class="book-cover">
                         <div class="book-info">
                             <h3>História dos Jogos de Videogame</h3>
                             <p class="book-author">32 páginas</p>
                             <p class="book-description">Prepare-se para uma viagem eletrizante pela história dos videogames!</p>
-                            <p class="book-price">R$ 15,90</p>
+                            <p class="book-price">R$ 12,90</p>
                             <div class="book-buttons">
                                 <button class="cta-button comprar-btn" data-product-id="1"> <i class="fas fa-shopping-cart"></i> Comprar Agora 
                                 </button>
@@ -286,7 +262,7 @@
         <h3>Entre no Mercado de Tecnologia</h3>
         <p class="book-author">26 páginas</p>
         <p class="book-description">Um roteiro prático para transformar o sonho do primeiro emprego em realidade.</p>
-        <p class="book-price">R$ 15,90</p>
+        <p class="book-price">R$ 12,90</p>
         <div class="book-buttons">
             <button class="cta-button comprar-btn" data-product-id="2"> 
                 <i class="fas fa-shopping-cart"></i> Comprar Agora
@@ -294,28 +270,16 @@
         </div>
     </div>
 </div>
-                     <div class="book-card card-produto"> <img src="https://i.imgur.com/gXF8VUk.png" alt="IA Sem Complicações" class="book-cover">
-                        <div class="book-info">
-                            <h3>IA Sem Complicações</h3>
-                            <p class="book-author">24 páginas</p>
-                            <p class="book-description">Assuma o domínio das ferramentas de IA que redefinem sua carreira.</p>
-                            <p class="book-price">R$ 15,90</p>
-                            <div class="book-buttons">
-                                <button class="cta-button comprar-btn" data-product-id="4"> <i class="fas fa-shopping-cart"></i> Comprar Agora 
-                                </button>
-                            </div>
-                        </div>
-                    </div>                   
                     
-                    
-                  <!-- <div class="book-card card-produto" style="border: 2px solid var(--success-green);"> 
+                   <div class="book-card card-produto" style="border: 2px solid var(--success-green);"> 
     <img src="https://i.imgur.com/83pL77J.png" alt="App Agenda Estética" class="book-cover">
     <div class="book-info">
         <h3 style="color: var(--success-green);">App1 - Teste Chave</h3>
         <p class="book-author">Licença Digital</p>
         <p class="book-description">Produto de teste para verificar a entrega automática da chave serial.</p>
         <p class="book-price">R$ 1,00</p>
-        <div class="book-buttons">           
+        <div class="book-buttons">
+            <!-- BOTÃO CORRIGIDO: Adiciona o atributo data-product-price -->
             <button 
                 class="cta-button comprar-btn" 
                 data-product-id="3"
@@ -325,22 +289,9 @@
             </button>
         </div>
     </div>
-</div>-->
-                    <div class="book-card card-produto">
-                        <img src="https://i.imgur.com/2DnyZFw.png" alt="O Resgate da Ordem pelo Amor" class="book-cover">
-                        <div class="book-info">
-                            <h3>O Resgate da Ordem pelo Amor</h3>
-                            <p class="book-author">42 páginas</p>
-                            <p class="book-description">A Constelação Familiar revela as dinâmicas ocultas que nos ligam ao nosso sistema.</p>
-                            <p class="book-price">R$ 15,90</p>
-                           <div class="book-buttons">
-                                <button class="cta-button comprar-btn" data-product-id="5"> <i class="fas fa-shopping-cart"></i> Comprar Agora 
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+</div>
                     
-                    <!--<div class="book-card card-produto">
+                    <div class="book-card card-produto">
                         <img src="https://i.imgur.com/d3pn0Da.png" alt="Domine as Técnicas do Judô" class="book-cover">
                         <div class="book-info">
                             <h3>Domine as Técnicas do Judô</h3>
@@ -351,7 +302,7 @@
                                 <a href="#" class="cta-button cta-soon">[·] Em Breve</a> 
                             </div>
                         </div>
-                    </div>-->
+                    </div>
                     
                 </div>
             </div>
@@ -381,17 +332,6 @@
                     <input type="email" id="checkout_email" name="email" required>
                     <div class="field-error">Por favor, insira um email válido.</div> 
                 </div>
-                
-                <!-- NOVO CAMPO: Dropdown Vendedores (Gamificação) -->
-                <div class="form-group">
-                    <label for="checkout_vendedor">Seu Vendedor</label>
-                    <select id="checkout_vendedor" name="vendedor_codigo" class="form-control-dropdown">
-                        <option value="">-- Seu Vendedor --</option>
-                        <!-- JavaScript irá preencher esta lista dinamicamente -->
-                    </select>
-                    <p style="font-size: 0.8rem; color: #999; margin-top: 5px;">Selecione o vendedor que indicou esta compra.</p>
-                </div>
-
                 <button type="submit" class="btn-confirmar-pagamento" id="btn-submit-checkout">
                     <i class="fas fa-lock"></i> Confirmar e Pagar com PIX
                 </button>
