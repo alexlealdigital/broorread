@@ -349,12 +349,9 @@ if __name__ == "__main__":
 
     # Verifica conexão com DB antes de iniciar
     try:
-        with app.app_context():
-             db.session.execute(db.text('SELECT 1'))
-        print("[WORKER] Conexão com Banco de Dados OK.")
-    except Exception as db_init_err:
-         print(f"[WORKER] ERRO CRÍTICO: Não foi possível conectar ao Banco de Dados. Verifique DATABASE_URL. Erro: {db_init_err}")
-         exit(1) 
+    with app.app_context():
+		try:  # Corrigido: 4 espaços a mais que a linha 360
+			db.create_all()
 
     # Cria tabelas (agora que sabemos que o DB conecta)
     with app.app_context():
@@ -370,3 +367,4 @@ if __name__ == "__main__":
     print(f"[WORKER] Worker iniciado – aguardando jobs nas filas: {', '.join(worker_queues)}...")
     
     worker.work()
+
