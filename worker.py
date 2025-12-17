@@ -203,7 +203,7 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
 """
     msg.attach(MIMEText(corpo_html, "html"))
     
-       try:
+    try:
         # Usa a porta 587 com STARTTLS, que é o padrão moderno
         smtp_port = int(os.environ.get("SMTP_PORT", 587)) # Define 587 como padrão
         
@@ -229,16 +229,16 @@ def process_mercado_pago_webhook(payment_id):
     with app.app_context():
         access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
         if not access_token:
-             print("[WORKER] ERRO CRÍTICO: MERCADOPAGO_ACCESS_TOKEN não configurado.")
-             return 
+            print("[WORKER] ERRO CRÍTICO: MERCADOPAGO_ACCESS_TOKEN não configurado.")
+            return 
 
         sdk = mercadopago.SDK(access_token)
         
-        try:
-            resp = sdk.payment().get(payment_id)
-        except Exception as e:
-            print(f"[WORKER] Falha ao consultar MP para o ID {payment_id}: {e}")
-            return 
+    try:
+        resp = sdk.payment().get(payment_id)
+    except Exception as e:
+        print(f"[WORKER] Falha ao consultar MP para o ID {payment_id}: {e}")
+        return 
 
         if resp["status"] != 200:
             print(f"[WORKER] MP respondeu {resp['status']} para o ID {payment_id}. Detalhes: {resp.get('response')}")
@@ -258,7 +258,7 @@ def process_mercado_pago_webhook(payment_id):
             return
 
         produto = cobranca.produto 
-               if not produto:
+        if not produto:
             print(f"[WORKER] ERRO CRÍTICO: Produto não encontrado para a Cobranca ID {cobranca.id} (MP ID: {payment_id}).")
             return
 
@@ -323,8 +323,8 @@ def process_mercado_pago_webhook(payment_id):
                 db.session.commit() # Commit final para Cobrança e, se for o caso, a Chave Licença
                 print(f"[WORKER] Status da Cobranca {cobranca.id} atualizado para 'delivered'.")
             except Exception as db_exc:
-                 print(f"[WORKER] ALERTA: Falha ao atualizar status da Cobranca {cobranca.id} para 'delivered': {db_exc}")
-                 db.session.rollback() 
+                print(f"[WORKER] ALERTA: Falha ao atualizar status da Cobranca {cobranca.id} para 'delivered': {db_exc}")
+                db.session.rollback() 
         else:
             print(f"[WORKER] Falha no envio de e-mail (Plano A) para {destinatario}. O job será re-tentado pelo RQ.")
             # Se o e-mail falhou, DESFAZ A MARCAÇÃO DA CHAVE.
@@ -358,11 +358,11 @@ if __name__ == "__main__":
 
     # Cria tabelas (agora que sabemos que o DB conecta)
     with app.app_context():
-        try:
+    try:
             db.create_all()
             print("[WORKER] Tabelas verificadas/criadas no DB.")
         except Exception as create_err:
-             print(f"[WORKER] ALERTA: Erro ao executar db.create_all(): {create_err}")
+            print(f"[WORKER] ALERTA: Erro ao executar db.create_all(): {create_err}")}],path:},{all:true,find:
 
     # Inicia o worker
     worker_queues = ["default"]
