@@ -258,16 +258,16 @@ def process_mercado_pago_webhook(payment_id):
             return
 
         produto = cobranca.produto 
-        
-        if not produto:
+               if not produto:
             print(f"[WORKER] ERRO CRÍTICO: Produto não encontrado para a Cobranca ID {cobranca.id} (MP ID: {payment_id}).")
             return
-            
+
         # --- LÓGICA DE ENTREGA DE PRODUTO/CHAVE ---
         link_entrega = produto.link_download
         chave_entregue = None
-        
-        if produto.tipo in ("game", "app", "apps"): # Verifica o novo campo 'tipo'
+
+        # A lógica de busca de chave só deve ser acionada para produtos que a exigem.
+        if produto.tipo in ["game", "app"]:
             print(f"[WORKER] Tipo de produto é '{produto.tipo}'. Buscando chave de licença...")
 
             # 1. Busca a primeira chave não vendida (usando with_for_update para lock)
