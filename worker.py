@@ -226,7 +226,7 @@ def process_mercado_pago_webhook(payment_id):
         link_entrega = produto.link_download
         chave_entregue = None
 
-        if produto.tipo in ["game", "app"]:
+        if produto.tipo in ["game", "app"] or produto.nome == "8 PERSONAGENS do Game Chinelo Voador":
             print(f"[WORKER] Produto '{produto.tipo}'. Buscando chave de licença...")
             
             # Lock de linha para evitar venda duplicada (concorrência)
@@ -313,3 +313,4 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
