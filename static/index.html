@@ -1,4 +1,382 @@
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R·READ - Store</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        /* =========================================================
+           1. CONFIGURAÇÕES GLOBAIS
+           ========================================================= */
+        :root {
+            --black: #000000;
+            --oxford-blue: #14213d;
+            --orange-web: #fca311;
+            --platinum: #e5e5e5;
+            --white: #ffffff;
+            --success-green: #27ae60;
+            --error-red: #e74c3c;
+            --border-grey: #333333;
+            --font-heading: 'Poppins', sans-serif;
+            --font-body: 'Lato', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body { 
+            font-family: var(--font-body); 
+            background-color: var(--black); 
+            color: var(--white); 
+            overflow-x: hidden;
+        }
+
+        a { text-decoration: none; color: inherit; transition: 0.3s; }
+        ul { list-style: none; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--orange-web); }
+
+        /* =========================================================
+           2. COMPONENTES
+           ========================================================= */
+        /* Botão Voltar */
+        .back-button {
+            position: fixed; top: 2rem; left: 2rem; z-index: 999;
+            background-color: rgba(20, 33, 61, 0.8);
+            backdrop-filter: blur(5px);
+            color: var(--orange-web);
+            width: 45px; height: 45px;
+            border-radius: 50%;
+            border: 2px solid var(--orange-web);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+        }
+        .back-button:hover { transform: scale(1.1); background-color: var(--orange-web); color: var(--black); }
+
+        /* Botão CTA */
+        .cta-button {
+            width: 100%; padding: 0.8rem; border: none; border-radius: 5px;
+            background-color: var(--orange-web); color: var(--black);
+            font-weight: bold; font-family: var(--font-heading); cursor: pointer;
+            transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .cta-button:hover { background-color: #ffb700; transform: translateY(-2px); }
+
+        /* Utilitários */
+        .hidden { display: none !important; }
+        .container { width: 90%; max-width: 1200px; margin: 0 auto; }
+        .section { padding: 4rem 5%; }
+        .section-title { 
+            font-family: var(--font-heading); font-size: clamp(2rem, 5vw, 3rem); 
+            text-align: center; margin-bottom: 3rem; 
+        }
+        .portal-dot { color: var(--orange-web); }
+
+        /* =========================================================
+           3. ESTANTE (GRID)
+           ========================================================= */
+        .bookshelf-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); 
+            gap: 2rem; 
+        }
+
+        .book-card { 
+            background-color: var(--oxford-blue); border-radius: 10px; overflow: hidden; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: transform 0.3s ease; 
+            display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .book-card:hover { transform: translateY(-8px); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+
+        .book-cover { 
+            width: 100%; height: 300px; object-fit: contain; background: #0a1120; 
+            border-bottom: 2px solid var(--orange-web); padding: 10px;
+        }
+
+        .book-info { padding: 1.5rem; display: flex; flex-direction: column; flex-grow: 1; }
+        .book-info h3 { font-family: var(--font-heading); font-size: 1.1rem; margin-bottom: 0.5rem; line-height: 1.4; }
+        .book-description { font-size: 0.9rem; color: var(--platinum); margin-bottom: 1rem; flex-grow: 1; opacity: 0.8; }
+        .book-price { font-size: 1.4rem; color: var(--orange-web); font-weight: bold; margin-bottom: 1rem; font-family: var(--font-heading); }
+
+        /* =========================================================
+           4. MODO SPOTLIGHT (Página Focada)
+           ========================================================= */
+        #spotlight-container {
+            display: none; min-height: 100vh;
+            align-items: center; justify-content: center;
+            background: radial-gradient(circle at center, #1a2c50 0%, #000000 100%);
+            padding: 2rem;
+        }
+
+        .spotlight-wrapper {
+            display: flex; flex-direction: column;
+            background: rgba(20, 33, 61, 0.7); backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+            overflow: hidden; max-width: 1100px; width: 100%;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+        }
+
+        .spotlight-image {
+            flex: 1; background: rgba(0,0,0,0.3);
+            display: flex; align-items: center; justify-content: center;
+            padding: 3rem; border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .spotlight-image img {
+            max-width: 100%; max-height: 450px; object-fit: contain;
+            filter: drop-shadow(0 15px 30px rgba(0,0,0,0.5)); transition: transform 0.5s ease;
+        }
+        .spotlight-image img:hover { transform: scale(1.05) rotate(2deg); }
+
+        .spotlight-details { flex: 1; padding: 3rem; display: flex; flex-direction: column; justify-content: center; }
+        
+        .spotlight-tag {
+            display: inline-block; background: var(--orange-web); color: var(--black);
+            padding: 0.4rem 1.2rem; border-radius: 50px; font-size: 0.85rem; font-weight: 800;
+            text-transform: uppercase; align-self: flex-start; margin-bottom: 1.5rem; letter-spacing: 1px;
+        }
+        .spotlight-title { font-family: var(--font-heading); font-size: 2.8rem; line-height: 1.1; margin-bottom: 1.5rem; }
+        .spotlight-desc { font-size: 1.1rem; color: var(--platinum); line-height: 1.6; margin-bottom: 2rem; opacity: 0.9; }
+        .spotlight-price { 
+            font-size: 3.5rem; color: var(--success-green); font-weight: 700; 
+            margin-bottom: 2.5rem; font-family: var(--font-heading); 
+            text-shadow: 0 0 20px rgba(39, 174, 96, 0.3); 
+        }
+
+        .spotlight-btn {
+            background: var(--success-green); color: white; font-size: 1.3rem; padding: 1.2rem;
+            border: none; border-radius: 8px; cursor: pointer; font-family: var(--font-heading);
+            font-weight: bold; transition: all 0.3s; box-shadow: 0 0 20px rgba(39, 174, 96, 0.4);
+            text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 12px;
+        }
+        .spotlight-btn:hover { background: #2ecc71; transform: translateY(-3px); box-shadow: 0 10px 40px rgba(39, 174, 96, 0.6); }
+
+        /* =========================================================
+           5. MODAL CHECKOUT
+           ========================================================= */
+        .modal { 
+            display: none; position: fixed; z-index: 2000; left: 0; top: 0; 
+            width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+
+        .modal-content { 
+            background-color: var(--oxford-blue); margin: 5vh auto; padding: 2.5rem; 
+            border: 1px solid var(--orange-web); border-radius: 15px; width: 90%; max-width: 480px; 
+            position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.7); animation: slideUp 0.4s;
+        }
+        @keyframes slideUp { from {transform: translateY(50px); opacity:0;} to {transform: translateY(0); opacity:1;} }
+
+        .modal-close { position: absolute; top: 1rem; right: 1.5rem; color: var(--platinum); font-size: 2rem; cursor: pointer; }
+        .modal-close:hover { color: var(--orange-web); }
+
+        .modal h2 { text-align: center; color: var(--white); margin-bottom: 2rem; font-family: var(--font-heading); }
+
+        .form-group { margin-bottom: 1.5rem; }
+        label { display: block; margin-bottom: 0.5rem; color: var(--orange-web); font-weight: bold; font-size: 0.9rem; }
+        input { 
+            width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-grey); 
+            color: white; border-radius: 6px; font-size: 1rem; transition: 0.3s;
+        }
+        input:focus { border-color: var(--orange-web); outline: none; box-shadow: 0 0 0 3px rgba(252, 163, 17, 0.2); }
+
+        .btn-confirmar-pagamento { 
+            width: 100%; padding: 15px; background: var(--success-green); color: white; 
+            border: none; font-weight: bold; cursor: pointer; border-radius: 6px; font-size: 1.1rem; 
+            transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-confirmar-pagamento:hover { background: #2ecc71; transform: scale(1.02); }
+
+        #checkout-resultado { text-align: center; margin-top: 20px; }
+        #checkout-resultado img { max-width: 100%; border-radius: 8px; border: 4px solid white; }
+        #checkout-resultado textarea { width: 100%; background: #111; color: #aaa; border: 1px dashed #444; padding: 10px; margin-top: 10px; border-radius: 6px; resize: none; }
+
+        .loading-spinner { 
+            border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--orange-web); 
+            border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; 
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Toast */
+        .toast {
+            display: none; position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); 
+            padding: 1rem 2rem; border-radius: 50px; color: white; font-weight: bold; z-index: 3000; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); align-items: center; gap: 10px; opacity: 0; transition: all 0.4s ease;
+        }
+        .toast.show { display: flex; opacity: 1; bottom: 3rem; }
+
+        /* Responsividade */
+        @media(min-width: 768px) { .spotlight-wrapper { flex-direction: row; } }
+        @media(max-width: 768px) {
+            .spotlight-title { font-size: 2rem; }
+            .spotlight-price { font-size: 2.5rem; }
+            .spotlight-image { padding: 2rem; }
+            .spotlight-details { padding: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <a href="https://rread.netlify.app/" class="back-button" title="Voltar ao início">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <main id="main-store">
+        <section class="section">
+            <div class="container">
+                <h2 class="section-title">Nossa <span class="portal-dot">Estante</span></h2>
+                
+                <div class="bookshelf-grid">
+                    
+                    <div class="book-card" style="border: 2px solid var(--success-green);" 
+                         data-id="3" 
+                         data-name="PACK NÃO ENTRE COM O PÉ DIREITO!" 
+                         data-price="4.90" 
+                         data-desc="Quebre a maldição! Libere TODOS OS 8 PERSONAGENS e comece o ano com o pé direito. Bônus: Munição Infinita!"
+                         data-img="https://i.imgur.com/WwtY0Xh.jpeg">
+                        
+                        <img src="https://i.imgur.com/WwtY0Xh.jpeg" alt="Pack Game" class="book-cover">
+                        <div class="book-info">
+                            <h3 style="color: var(--success-green);">PACK DO GAME</h3>
+                            <p class="book-description">Todos personagens + Munição Infinita.</p>
+                            <p class="book-price">R$ 4,90</p>
+                            <button class="cta-button comprar-btn">
+                                <i class="fas fa-key"></i> Comprar Pack
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="book-card" data-id="6" 
+                         data-name="Sua marca no Roblox" 
+                         data-price="300.00" 
+                         data-desc="Tenha uma vitrine virtual no Roblox e conecte-se com a nova geração de consumidores."
+                         data-img="https://i.imgur.com/qKMRpX9.jpeg">
+                        <img src="https://i.imgur.com/qKMRpX9.jpeg" class="book-cover">
+                        <div class="book-info">
+                            <h3>Sua marca no Roblox</h3>
+                            <p class="book-description">Vitrine virtual para sua empresa.</p>
+                            <p class="book-price">R$ 300,00</p>
+                            <button class="cta-button comprar-btn"><i class="fas fa-shopping-cart"></i> Comprar</button>
+                        </div>
+                    </div>
+
+                    <div class="book-card" data-id="1" 
+                         data-name="História dos Jogos de Videogame" 
+                         data-price="15.90" 
+                         data-desc="Uma viagem eletrizante pela evolução dos consoles e jogos que marcaram gerações."
+                         data-img="https://i.imgur.com/mYIMzZ0.png">
+                        <img src="https://i.imgur.com/mYIMzZ0.png" class="book-cover">
+                        <div class="book-info">
+                            <h3>História dos Games</h3>
+                            <p class="book-description">Uma viagem eletrizante.</p>
+                            <p class="book-price">R$ 15,90</p>
+                            <button class="cta-button comprar-btn"><i class="fas fa-shopping-cart"></i> Comprar</button>
+                        </div>
+                    </div>
+
+                    <div class="book-card" data-id="2" 
+                         data-name="Entre no Mercado de Tecnologia" 
+                         data-price="15.90" 
+                         data-desc="Um roteiro prático para transformar o sonho do primeiro emprego em TI em realidade."
+                         data-img="https://i.imgur.com/lcBXZvo.png">
+                        <img src="https://i.imgur.com/lcBXZvo.png" class="book-cover">
+                        <div class="book-info">
+                            <h3>Carreira Tech</h3>
+                            <p class="book-description">Roteiro para o primeiro emprego.</p>
+                            <p class="book-price">R$ 15,90</p>
+                            <button class="cta-button comprar-btn"><i class="fas fa-shopping-cart"></i> Comprar</button>
+                        </div>
+                    </div>
+
+                    <div class="book-card" data-id="5" 
+                         data-name="O Resgate da Ordem pelo Amor" 
+                         data-price="15.90" 
+                         data-desc="A Constelação Familiar revela as dinâmicas ocultas que nos ligam ao nosso sistema."
+                         data-img="https://i.imgur.com/2DnyZFw.png">
+                        <img src="https://i.imgur.com/2DnyZFw.png" class="book-cover">
+                        <div class="book-info">
+                            <h3>Constelação Familiar</h3>
+                            <p class="book-description">O resgate da ordem pelo amor.</p>
+                            <p class="book-price">R$ 15,90</p>
+                            <button class="cta-button comprar-btn"><i class="fas fa-shopping-cart"></i> Comprar</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="spotlight-container">
+        <div class="spotlight-wrapper">
+            <div class="spotlight-image">
+                <img id="spot-img" src="" alt="Produto">
+            </div>
+            <div class="spotlight-details">
+                <span class="spotlight-tag">Oferta Especial</span>
+                <h1 id="spot-title" class="spotlight-title">Nome do Produto</h1>
+                <p id="spot-desc" class="spotlight-desc">Descrição detalhada do produto.</p>
+                <div id="spot-price" class="spotlight-price">R$ 0,00</div>
+                
+                <button id="spot-btn" class="spotlight-btn">
+                    <i class="fas fa-rocket"></i> GARANTIR AGORA
+                </button>
+                
+                <p style="margin-top: 1rem; color: #888; font-size: 0.8rem;">
+                    <i class="fas fa-lock"></i> Pagamento seguro via Mercado Pago
+                </p>
+                
+                <a href="?" style="margin-top: 2rem; color: var(--orange-web); text-decoration: underline; font-size: 0.9rem;">
+                    Ver outros produtos da loja
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div id="checkout-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="checkout-modal-close">&times;</span>
+            <h2>Finalizar Compra</h2>
+            <div id="checkout-produto-detalhes" style="margin-bottom: 1.5rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;"></div>
+            <form id="checkout-form">
+                <input type="hidden" id="checkout_product_id" name="product_id">
+                <input type="hidden" id="checkout_product_name" name="product_name">
+                <input type="hidden" id="checkout_product_price" name="product_price">
+                <div class="form-group">
+                    <label>Nome Completo *</label>
+                    <input type="text" id="checkout_nome" name="nome" required minlength="2">
+                </div>
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="checkout_email" name="email" required>
+                </div>
+                <button type="submit" class="btn-confirmar-pagamento" id="btn-submit-checkout">
+                    <i class="fas fa-lock"></i> Pagar com PIX
+                </button>
+            </form>
+            <div id="checkout-resultado">
+                 <div class="loading-spinner" id="checkout-spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="feedback-toast" class="toast"> 
+        <span class="toast-icon"><i class="fas fa-info-circle"></i></span>
+        <span class="toast-message"></span>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script src="script.js"></script>
 </body>
