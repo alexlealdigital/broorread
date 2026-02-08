@@ -82,7 +82,7 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
     if chave_acesso:
         assunto = f"R·READ: Sua chave de acesso para \"{nome_produto}\" chegou! 🚀"
         instrucoes_entrega = f"""
-            <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao produto "<strong>{nome_produto}</strong>" foi confirmado.</p>
+            <p>Agradecemos por escolher a <strong>BrooStore</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao produto "<strong>{nome_produto}</strong>" foi confirmado.</p>
             <h2 style="color: #27ae60;">Sua Chave de Acesso está aqui! 🔑</h2>
             <p>Sua chave de acesso (Serial Key) para o jogo/app é:</p>
             <div style="background-color: #e0f2f1; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px dashed #27ae60;">
@@ -313,4 +313,5 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
 
