@@ -168,6 +168,7 @@
             display: none; position: fixed; z-index: 2000; left: 0; top: 0; 
             width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
             animation: fadeIn 0.3s;
+            overflow-y: auto;
         }
         @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
 
@@ -216,6 +217,119 @@
         }
         .toast.show { display: flex; opacity: 1; bottom: 3rem; }
 
+        /* =========================================================
+           6. SEÇÃO DE CUPOM (NOVO)
+           ========================================================= */
+        .cupom-section {
+            background: rgba(0,0,0,0.2);
+            border: 1px dashed var(--orange-web);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .cupom-section label {
+            color: var(--orange-web);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .cupom-input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .cupom-input-group input {
+            flex: 1;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .btn-aplicar-cupom {
+            padding: 10px 16px;
+            background: transparent;
+            border: 2px solid var(--orange-web);
+            color: var(--orange-web);
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .btn-aplicar-cupom:hover {
+            background: var(--orange-web);
+            color: var(--black);
+        }
+
+        .btn-aplicar-cupom:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .cupom-status {
+            margin-top: 0.8rem;
+            font-size: 0.9rem;
+            min-height: 20px;
+        }
+
+        .cupom-status.sucesso {
+            color: var(--success-green);
+        }
+
+        .cupom-status.erro {
+            color: var(--error-red);
+        }
+
+        /* Resumo de preços com desconto */
+        .preco-resumo {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .preco-linha {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .preco-linha.original {
+            color: #888;
+            text-decoration: line-through;
+        }
+
+        .preco-linha.desconto {
+            color: var(--success-green);
+        }
+
+        .preco-linha.final {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--success-green);
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .tag-desconto {
+            display: inline-block;
+            background: var(--success-green);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-left: 5px;
+        }
+
         /* Responsividade */
         @media(min-width: 768px) { .spotlight-wrapper { flex-direction: row; } }
         @media(max-width: 768px) {
@@ -223,6 +337,7 @@
             .spotlight-price { font-size: 2.5rem; }
             .spotlight-image { padding: 2rem; }
             .spotlight-details { padding: 2rem; }
+            .modal-content { margin: 2vh auto; padding: 1.5rem; }
         }
     </style>
 </head>
@@ -356,7 +471,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE CHECKOUT ATUALIZADO COM TELEFONE -->
+    <!-- MODAL DE CHECKOUT COM CUPOM -->
     <div id="checkout-modal" class="modal">
         <div class="modal-content">
             <span class="modal-close" id="checkout-modal-close">&times;</span>
@@ -365,10 +480,12 @@
                 <span style="margin-left: 10px;">Pagamento Seguro</span>
             </h2>
             <div id="checkout-produto-detalhes" style="margin-bottom: 1.5rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;"></div>
+            
             <form id="checkout-form">
                 <input type="hidden" id="checkout_product_id" name="product_id">
                 <input type="hidden" id="checkout_product_name" name="product_name">
                 <input type="hidden" id="checkout_product_price" name="product_price">
+                <input type="hidden" id="checkout_cupom_id" name="cupom_id"> <!-- NOVO -->
                 
                 <div class="form-group">
                     <label>Nome Completo *</label>
@@ -380,10 +497,39 @@
                     <input type="email" id="checkout_email" name="email" required placeholder="seu@email.com">
                 </div>
                 
-                <!-- NOVO CAMPO: TELEFONE -->
                 <div class="form-group">
                     <label>Telefone *</label>
                     <input type="tel" id="checkout_telefone" name="telefone" required placeholder="(11) 99999-9999" maxlength="15">
+                </div>
+
+                <!-- NOVO: SEÇÃO DE CUPOM -->
+                <div class="cupom-section">
+                    <label>
+                        <i class="fas fa-ticket-alt"></i> CUPOM DE DESCONTO (Opcional)
+                    </label>
+                    <div class="cupom-input-group">
+                        <input type="text" id="checkout_cupom" name="cupom" placeholder="Ex: VIDEO70" maxlength="20">
+                        <button type="button" class="btn-aplicar-cupom" id="btn-aplicar-cupom">
+                            Aplicar
+                        </button>
+                    </div>
+                    <div class="cupom-status" id="cupom-status"></div>
+                </div>
+
+                <!-- NOVO: RESUMO DE PREÇOS -->
+                <div class="preco-resumo" id="preco-resumo" style="display: none;">
+                    <div class="preco-linha original">
+                        <span>Preço Original:</span>
+                        <span id="preco-original">R$ 0,00</span>
+                    </div>
+                    <div class="preco-linha desconto">
+                        <span>Desconto:</span>
+                        <span id="valor-desconto">-R$ 0,00</span>
+                    </div>
+                    <div class="preco-linha final">
+                        <span>Total a Pagar:</span>
+                        <span id="preco-final">R$ 0,00</span>
+                    </div>
                 </div>
                 
                 <button type="submit" class="btn-confirmar-pagamento" id="btn-submit-checkout">
