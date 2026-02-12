@@ -261,4 +261,212 @@ async function handleCheckoutSubmit(event) {
 
     const nomeCliente = checkoutNomeInput.value;
     const emailCliente = checkoutEmailInput.value;
-    const telefoneCliente =
+    const telefoneCliente = checkoutTelefoneInput.value;
+    const productId = checkoutProductIdInput.value;
+    const cupomId = checkoutCupomIdInput.value; // Pega o ID do cupom se houver
+
+    const dadosParaEnvio = {
+        email: emailCliente,
+        nome: nomeCliente,
+        telefone: telefoneCliente,
+        product_id: parseInt(productId),
+        cupom_id: cupomId ? parseInt(cupomId) : null // Envia o cupom
+    };
+
+    showLoadingInCheckoutResult();
+    checkoutForm.style.display = 'none'; 
+
+    try {
+        const response = await fetch(API_URL, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dadosParaEnvio),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showQrCodeInCheckoutResult(result);
+            
+            // Mensagem personalizada se teve desconto
+            if (result.desconto_aplicado) {
+                showToast(`PIX gerado com ${result.desconto_aplicado.cupom_codigo}! Economia de R$ ${result.desconto_aplicado.valor_desconto.toFixed(2)}`, 'success');
+            } else {
+                showToast('Cobrança PIX gerada! Verifique os dados.', 'success');
+            }
+        } else {
+            throw new Error(result.message || 'Erro ao gerar cobrança.');
+        }
+
+    } catch (error) {
+        console.error('Erro no checkout:', error);
+        showErrorInCheckoutResult(error.message);
+        showToast('Erro ao processar. Tente novamente.', 'error');
+        checkoutForm.style.display = 'block'; 
+    }
+}
+
+function validateCheckoutForm() {
+    clearFieldErrors(checkoutForm); 
+    let isValid = true;
+    const nome = checkoutNomeInput.value.trim();
+    const email = checkoutEmailInput.value.trim();
+    const telefone = checkoutTelefoneInput.value.trim();
+
+    if (nome.length < 2) {
+        showFieldError(checkoutNomeInput, 'Nome muito curto');
+        isValid = false;
+    }
+    if (!email || !isValidEmail(email)) {
+        showFieldError(checkoutEmailInput, 'Email inválido');
+        isValid = false;
+    }
+    if (!telefone || !isValidTelefone(telefone)) {
+        showFieldError(checkoutTelefoneInput, 'Telefone inválido');
+        isValid = false;
+    }
+    return isValid;
+}
+
+function showLoadingInCheckoutResult() {
+    checkoutResultado.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+            <div class="loading-spinner" style="display:block"></div>
+            <p style="margin-top: 1rem; color: #ccc;">Gerando PIX${cupomAplicado ? ' com desconto...' : '...'}</p>
+        </div>
+    `;
+}
+
+function showQrCodeInCheckoutResult(data) {
+    let descontoHtml = '';
+    
+    // Se teve desconto, mostra no resultado
+    if (data.desconto_aplicado) {
+        descontoHtml = `
+            <div style="background: rgba(39, 174, 96, 0.1); border: 1px solid #27ae60; border-radius: 8px; padding: 10px; margin-bottom: 15px;">
+                <p style="color: #27ae60; margin: 0; font-size: 0.9rem;">
+                    <i class="fas fa-tag"></i> Cupom ${data.desconto_aplicado.cupom_codigo} aplicado!<br>
+                    <small>Você economizou R$ ${data.desconto_aplicado.valor_desconto.toFixed(2).replace('.', ',')}</small>
+                </p>
+            </div>
+        `;
+    }
+    
+    checkoutResultado.innerHTML = `
+        <div style="text-align: center;">
+            <h2 style="color: #27ae60; margin-bottom: 1rem;"><i class="fas fa-check-circle"></i> Pague com PIX!</h2>
+            ${descontoHtml}
+            <div style="background: #fff; padding: 10px; border-radius: 8px; display:inline-block; margin: 10px 0;">
+                <img src="data:image/jpeg;base64,${data.qr_code_base64}" alt="QR Code" style="max-width: 100%; display:block;">
+            </div>
+            <p style="margin: 10px 0; font-weight: bold; color: #fff;">Copia e Cola:</p>
+            <textarea readonly onclick="this.select(); document.execCommand('copy'); showToast('Copiado!', 'success');" 
+                style="width: 100%; height: 80px; font-size: 0.8rem; padding: 5px; border-radius: 5px; color: #000;">${data.qr_code_text}</textarea>
+            <p style="margin-top: 10px; font-size: 0.9rem; color: #bbb;">O produto chegará no seu e-mail após o pagamento.</p>
+        </div>
+    `;
+}
+
+function showErrorInCheckoutResult(message) {
+      checkoutResultado.innerHTML = `<p style="color: #e74c3c; text-align: center;">${message}</p>`;
+}
+
+// =========================================================
+// 5. INICIALIZAÇÃO E CONTROLE DE MODO (SPOTLIGHT vs LOJA)
+// =========================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // Aplica máscara no campo de telefone
+    if (checkoutTelefoneInput) {
+        aplicarMascaraTelefone(checkoutTelefoneInput);
+    }
+
+    // Evento do botão de aplicar cupom
+    if (btnAplicarCupom) {
+        btnAplicarCupom.addEventListener('click', aplicarCupom);
+    }
+    
+    // Permite aplicar cupom com Enter
+    if (checkoutCupomInput) {
+        checkoutCupomInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                aplicarCupom();
+            }
+        });
+    }
+
+    // --- Lógica do MODO FOCO (Spotlight) ---
+    const params = new URLSearchParams(window.location.search);
+    const urlProductId = params.get('id');
+
+    if (urlProductId) {
+        activateSpotlightMode(urlProductId);
+    } else {
+        initStoreButtons();
+    }
+
+    // Configura eventos globais (Modal e Form)
+    if (checkoutModalClose) checkoutModalClose.addEventListener('click', closeCheckoutModal);
+    
+    window.addEventListener('click', (event) => {
+        if (event.target == checkoutModal) closeCheckoutModal();
+    });
+
+    if (checkoutForm) checkoutForm.addEventListener('submit', handleCheckoutSubmit);
+    
+    if (feedbackToast) {
+        feedbackToast.addEventListener('click', () => {
+            feedbackToast.classList.remove('show');
+            feedbackToast.style.display = 'none';
+        });
+    }
+});
+
+function activateSpotlightMode(id) {
+    const sourceCard = document.querySelector(`.book-card[data-id="${id}"]`);
+    
+    if (sourceCard && mainStore && spotlightContainer) {
+        mainStore.style.display = 'none'; 
+        mainStore.classList.add('hidden');
+        
+        spotlightContainer.style.display = 'flex';
+
+        const img = sourceCard.dataset.img;
+        const name = sourceCard.dataset.name;
+        const price = sourceCard.dataset.price;
+        const desc = sourceCard.dataset.desc;
+
+        document.getElementById('spot-img').src = img;
+        document.getElementById('spot-title').innerText = name;
+        document.getElementById('spot-desc').innerText = desc;
+        document.getElementById('spot-price').innerText = `R$ ${price.replace('.', ',')}`;
+
+        const spotBtn = document.getElementById('spot-btn');
+        spotBtn.onclick = () => {
+            openCheckoutModal(id, name, price);
+        };
+    } else {
+        console.warn("Produto não encontrado para o ID:", id);
+        initStoreButtons();
+    }
+}
+
+function initStoreButtons() {
+    if(mainStore) mainStore.style.display = 'block';
+    if(spotlightContainer) spotlightContainer.style.display = 'none';
+
+    const buttons = document.querySelectorAll('.comprar-btn');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const card = e.target.closest('.book-card');
+            if(card) {
+                const id = card.dataset.id;
+                const name = card.dataset.name;
+                const price = card.dataset.price;
+                openCheckoutModal(id, name, price);
+            }
+        });
+    });
+}
