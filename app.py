@@ -2,7 +2,7 @@
 from flask import Flask, jsonify, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, date
 import os
 import mercadopago
 import smtplib
@@ -13,17 +13,16 @@ import hashlib
 import redis
 from rq import Queue
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import func # <--- ADICIONADO PARA CONTAR VENDAS
+from sqlalchemy import func
 import resend
 
 # Inicialização do Flask
 app = Flask(__name__, static_folder='static')
 
-# Configuração de CORS - Inclui todos os seus domínios para evitar bloqueios
+# Configuração de CORS
 NETLIFY_ORIGIN_PROD = "https://rread.netlify.app"
 RENDER_ORIGIN = "https://mercadopago-final.onrender.com" 
 NETLIFY_ORIGIN_TEST = "https://rankedsale.netlify.app" 
-# ADICIONA TODOS OS DOMÍNIOS CONHECIDOS
 CORS(app, origins=[NETLIFY_ORIGIN_PROD, RENDER_ORIGIN, NETLIFY_ORIGIN_TEST])
 
 # ---------- CONFIGURAÇÃO DO BANCO DE DADOS E EXTENSÕES ----------
@@ -50,9 +49,8 @@ redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
 redis_conn = redis.from_url(redis_url)
 q = Queue(connection=redis_conn)
 
-# ---------- MODELOS DE DADOS (Gamificação Adicionada) ----------
+# ---------- MODELOS DE DADOS ----------
 
-# MODELO: VENDEDOR (Gamificação RKD)
 class Vendedor(db.Model):
     __tablename__ = "vendedores"
     codigo_ranking = db.Column(db.String(50), primary_key=True) 
@@ -65,14 +63,76 @@ class Vendedor(db.Model):
             "nome_vendedor": self.nome_vendedor
         }
 
+# NOVO: Modelo de Cupom
+class Cupom(db.Model):
+    __tablename__ = "cupons"
+    id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(50), unique=True, nullable=False)
+    tipo = db.Column(db.String(20), nullable=False, default='percentual')  # 'percentual' ou 'valor_fixo'
+    valor = db.Column(db.Float, nullable=False)  # 70 (%) ou 10 (R$)
+    produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)  # NULL = todos
+    produto = db.relationship('Produto')
+    valido_de = db.Column(db.Date, default=date.today)
+    valido_ate = db.Column(db.Date, nullable=True)
+    usos_maximos = db.Column(db.Integer, nullable=True)  # NULL = ilimitado
+    usos_atuais = db.Column(db.Integer, default=0)
+    ativo = db.Column(db.Boolean, default=True)
+    criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "codigo": self.codigo,
+            "tipo": self.tipo,
+            "valor": self.valor,
+            "produto_id": self.produto_id,
+            "valido_ate": self.valido_ate.isoformat() if self.valido_ate else None,
+            "usos_maximos": self.usos_maximos,
+            "usos_atuais": self.usos_atuais,
+            "ativo": self.ativo
+        }
+
+    def esta_valido(self):
+        """Verifica se o cupom está ativo e dentro da validade"""
+        if not self.ativo:
+            return False, "Cupom inativo"
+        
+        hoje = date.today()
+        if self.valido_de and hoje < self.valido_de:
+            return False, "Cupom ainda não está válido"
+        if self.valido_ate and hoje > self.valido_ate:
+            return False, "Cupom expirado"
+        
+        if self.usos_maximos is not None and self.usos_atuais >= self.usos_maximos:
+            return False, "Limite de usos atingido"
+        
+        return True, "Válido"
+
+    def calcular_desconto(self, valor_original):
+        """Calcula o valor com desconto aplicado"""
+        if self.tipo == 'percentual':
+            desconto = valor_original * (self.valor / 100)
+        else:  # valor_fixo
+            desconto = min(self.valor, valor_original)  # Não permite valor negativo
+        
+        valor_final = max(0, valor_original - desconto)
+        return {
+            "valor_original": valor_original,
+            "desconto": desconto,
+            "valor_final": valor_final,
+            "percentual_aplicado": self.valor if self.tipo == 'percentual' else (desconto / valor_original * 100)
+        }
+
+
 class Cobranca(db.Model):
     __tablename__ = "cobrancas"
     id = db.Column(db.Integer, primary_key=True)
     external_reference = db.Column(db.String(100), unique=True, nullable=False)
     cliente_nome = db.Column(db.String(200), nullable=False)
     cliente_email = db.Column(db.String(200), nullable=False)
-    cliente_telefone = db.Column(db.String(20), nullable=True)  # NOVO: Campo telefone
+    cliente_telefone = db.Column(db.String(20), nullable=True)
     valor = db.Column(db.Float, nullable=False)
+    valor_original = db.Column(db.Float, nullable=True)  # NOVO: Valor antes do desconto
     status = db.Column(db.String(50), default="pending", nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
@@ -83,6 +143,9 @@ class Cobranca(db.Model):
     
     vendedor_codigo = db.Column(db.String(50), db.ForeignKey('vendedores.codigo_ranking'), nullable=True)
     vendedor = db.relationship('Vendedor', backref='vendas')
+    
+    cupom_id = db.Column(db.Integer, db.ForeignKey('cupons.id'), nullable=True)  # NOVO
+    cupom = db.relationship('Cupom')
 
     def to_dict(self):
         return {
@@ -90,12 +153,15 @@ class Cobranca(db.Model):
             "external_reference": self.external_reference,
             "cliente_nome": self.cliente_nome,
             "cliente_email": self.cliente_email,
-            "cliente_telefone": self.cliente_telefone,  # NOVO: Inclui telefone no retorno
+            "cliente_telefone": self.cliente_telefone,
             "valor": self.valor,
+            "valor_original": self.valor_original,
             "status": self.status,
             "data_criacao": self.data_criacao.isoformat() if self.data_criacao else None,
-            "vendedor_codigo": self.vendedor_codigo
+            "vendedor_codigo": self.vendedor_codigo,
+            "cupom_id": self.cupom_id
         }
+
 
 class Produto(db.Model):
     __tablename__ = "produtos"
@@ -110,16 +176,11 @@ class ChaveLicenca(db.Model):
     __tablename__ = "chaves_licenca"
     id = db.Column(db.Integer, primary_key=True)
     chave_serial = db.Column(db.String(100), unique=True, nullable=False)
-    
     produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=False)
-    
     vendida = db.Column(db.Boolean, default=False, nullable=False)
-    
     vendida_em = db.Column(db.DateTime, nullable=True)
     cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), unique=True, nullable=True) 
-    
     cliente_email = db.Column(db.String(200), nullable=True)
-    
     ativa_no_app = db.Column(db.Boolean, default=False, nullable=False) 
 
 
@@ -180,7 +241,7 @@ def serve_static(path):
     return send_from_directory('static', path)
 
 
-# ROTA DE GAMIFICAÇÃO (Para o Dropdown)
+# ROTA DE GAMIFICAÇÃO
 @app.route("/api/vendedores", methods=["GET"])
 def get_vendedores():
     try:
@@ -192,7 +253,61 @@ def get_vendedores():
         return jsonify({"status": "error", "message": "Não foi possível carregar a lista de vendedores."}), 500
 
 
-# ROTA DE VALIDAÇÃO DE CHAVE (PARA O SEU APP)
+# NOVO: ROTA PARA VALIDAR CUPOM
+@app.route("/api/validar-cupom", methods=["POST"])
+def validar_cupom():
+    """Valida um cupom de desconto e retorna o valor calculado"""
+    try:
+        dados = request.get_json()
+        codigo = dados.get("codigo", "").strip().upper()
+        produto_id = dados.get("produto_id")
+        valor_original = dados.get("valor_original")
+
+        if not codigo:
+            return jsonify({"status": "error", "message": "Código do cupom é obrigatório"}), 400
+        
+        if not produto_id or not valor_original:
+            return jsonify({"status": "error", "message": "Dados do produto incompletos"}), 400
+
+        # Busca o cupom
+        cupom = Cupom.query.filter_by(codigo=codigo).first()
+        
+        if not cupom:
+            return jsonify({"status": "error", "message": "Cupom não encontrado"}), 404
+
+        # Verifica validade
+        valido, mensagem = cupom.esta_valido()
+        if not valido:
+            return jsonify({"status": "error", "message": mensagem}), 400
+
+        # Verifica se é válido para este produto (se tiver restrição)
+        if cupom.produto_id is not None and cupom.produto_id != int(produto_id):
+            return jsonify({
+                "status": "error", 
+                "message": f"Este cupom não é válido para este produto"
+            }), 400
+
+        # Calcula o desconto
+        resultado = cupom.calcular_desconto(float(valor_original))
+        
+        return jsonify({
+            "status": "success",
+            "cupom": {
+                "id": cupom.id,
+                "codigo": cupom.codigo,
+                "tipo": cupom.tipo,
+                "valor": cupom.valor,
+                "descricao": f"{cupom.valor}{'%' if cupom.tipo == 'percentual' else ' R$ OFF'}"
+            },
+            "calculo": resultado
+        }), 200
+
+    except Exception as e:
+        print(f"ERRO (VALIDAR CUPOM): {str(e)}")
+        return jsonify({"status": "error", "message": f"Erro ao validar cupom: {str(e)}"}), 500
+
+
+# ROTA DE VALIDAÇÃO DE CHAVE
 @app.route("/api/validar_chave", methods=["POST"])
 def validar_chave():
     dados = request.get_json()
@@ -265,7 +380,7 @@ def webhook_mercado_pago():
         return jsonify({"status": "error", "message": f"Erro interno ao processar webhook: {str(e)}"}), 500
 
 
-# ROTA DE CRIAÇÃO DE COBRANÇA (com Telefone e Vendedor)
+# ROTA DE CRIAÇÃO DE COBRANÇA (com Cupom e Telefone)
 @app.route("/api/cobrancas", methods=["POST"])
 def create_cobranca():
     
@@ -277,9 +392,10 @@ def create_cobranca():
             
         email_cliente = dados.get("email")
         nome_cliente = dados.get("nome", "Cliente")
-        telefone_cliente = dados.get("telefone")  # NOVO: Recebe telefone
+        telefone_cliente = dados.get("telefone")
         product_id_recebido = dados.get("product_id")
-        vendedor_codigo_recebido = dados.get("vendedor_codigo") 
+        vendedor_codigo_recebido = dados.get("vendedor_codigo")
+        cupom_id_recebido = dados.get("cupom_id")  # NOVO: ID do cupom aplicado
 
         if not product_id_recebido:
             return jsonify({"status": "error", "message": "ID do produto é obrigatório."}), 400
@@ -287,9 +403,7 @@ def create_cobranca():
         if not email_cliente or "@" not in email_cliente or "." not in email_cliente:
             return jsonify({"status": "error", "message": "Por favor, insira um email válido e obrigatório."}), 400
         
-        # Validação do telefone (opcional mas recomendado)
         if telefone_cliente:
-            # Remove caracteres não numéricos para padronizar
             telefone_limpo = ''.join(filter(str.isdigit, telefone_cliente))
             if len(telefone_limpo) < 10:
                 return jsonify({"status": "error", "message": "Telefone inválido."}), 400
@@ -306,8 +420,25 @@ def create_cobranca():
         if not produto:
             return jsonify({"status": "error", "message": "Produto não encontrado."}), 404
 
-        valor_correto = produto.preco
+        valor_original = produto.preco
+        valor_final = valor_original
+        cupom_obj = None
+
+        # NOVO: Se tiver cupom, valida e aplica desconto
+        if cupom_id_recebido:
+            cupom_obj = Cupom.query.get(int(cupom_id_recebido))
+            if cupom_obj:
+                valido, _ = cupom_obj.esta_valido()
+                if valido and (cupom_obj.produto_id is None or cupom_obj.produto_id == int(product_id_recebido)):
+                    resultado = cupom_obj.calcular_desconto(valor_original)
+                    valor_final = resultado["valor_final"]
+                    # Incrementa o contador de usos
+                    cupom_obj.usos_atuais += 1
+                    db.session.add(cupom_obj)
+
         descricao_correta = produto.nome
+        if cupom_obj:
+            descricao_correta += f" (Cupom: {cupom_obj.codigo})"
 
         access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
         if not access_token:
@@ -316,13 +447,11 @@ def create_cobranca():
         sdk = mercadopago.SDK(access_token)
 
         payment_data = {
-            "transaction_amount": valor_correto,
+            "transaction_amount": round(valor_final, 2),
             "description": descricao_correta,
             "payment_method_id": "pix",
             "payer": {
                 "email": email_cliente,
-                # Opcional: enviar telefone para o Mercado Pago se quiser
-                # "phone": {"number": telefone_limpo} if telefone_cliente else None
             }
         }
 
@@ -341,11 +470,13 @@ def create_cobranca():
             external_reference=str(payment["id"]),
             cliente_nome=nome_cliente,
             cliente_email=email_cliente,
-            cliente_telefone=telefone_cliente,  # NOVO: Salva telefone
-            valor=valor_correto,
+            cliente_telefone=telefone_cliente,
+            valor=round(valor_final, 2),
+            valor_original=round(valor_original, 2),  # NOVO: Salva valor original
             status=payment["status"],
             product_id=produto.id,
-            vendedor_codigo=vendedor_codigo_recebido
+            vendedor_codigo=vendedor_codigo_recebido,
+            cupom_id=cupom_obj.id if cupom_obj else None  # NOVO
         )
         
         cobranca_dict = nova_cobranca.to_dict() 
@@ -353,15 +484,27 @@ def create_cobranca():
         db.session.add(nova_cobranca)
         db.session.commit()
         
-        
-        return jsonify({
+        # Prepara resposta com informações do desconto
+        resposta = {
             "status": "success",
             "message": "Cobrança PIX criada com sucesso!",
             "qr_code_base64": qr_code_base64,
             "qr_code_text": qr_code_text,
             "payment_id": payment["id"],
-            "cobranca": cobranca_dict 
-        }), 201
+            "cobranca": cobranca_dict
+        }
+        
+        # Adiciona info do desconto se houver
+        if cupom_obj:
+            resposta["desconto_aplicado"] = {
+                "cupom_codigo": cupom_obj.codigo,
+                "tipo": cupom_obj.tipo,
+                "valor_desconto": round(valor_original - valor_final, 2),
+                "valor_original": round(valor_original, 2),
+                "valor_final": round(valor_final, 2)
+            }
+        
+        return jsonify(resposta), 201
         
     except Exception as e:
         db.session.rollback()
