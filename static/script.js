@@ -12,6 +12,7 @@ const checkoutResultado = document.getElementById('checkout-resultado');
 const checkoutProductIdInput = document.getElementById('checkout_product_id');
 const checkoutNomeInput = document.getElementById('checkout_nome');
 const checkoutEmailInput = document.getElementById('checkout_email');
+const checkoutTelefoneInput = document.getElementById('checkout_telefone'); // NOVO
 const feedbackToast = document.getElementById('feedback-toast');
 
 // Elementos do Modo Spotlight (Foco)
@@ -45,6 +46,36 @@ function clearFieldErrors(form) {
 
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// NOVO: Validação de telefone brasileiro
+function isValidTelefone(telefone) {
+    // Remove tudo que não é número
+    const numeros = telefone.replace(/\D/g, '');
+    // Valida se tem 10 ou 11 dígitos (com ou sem 9)
+    return numeros.length >= 10 && numeros.length <= 11;
+}
+
+// NOVO: Máscara de telefone
+function aplicarMascaraTelefone(input) {
+    input.addEventListener('input', function(e) {
+        let valor = e.target.value.replace(/\D/g, '');
+        
+        if (valor.length > 11) {
+            valor = valor.slice(0, 11);
+        }
+        
+        // Aplica a máscara (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+        if (valor.length > 7) {
+            valor = `(${valor.slice(0, 2)}) ${valor.slice(2, 7)}-${valor.slice(7)}`;
+        } else if (valor.length > 2) {
+            valor = `(${valor.slice(0, 2)}) ${valor.slice(2)}`;
+        } else if (valor.length > 0) {
+            valor = `(${valor}`;
+        }
+        
+        e.target.value = valor;
+    });
 }
 
 function showToast(message, type = 'info') {
@@ -114,11 +145,13 @@ async function handleCheckoutSubmit(event) {
 
     const nomeCliente = checkoutNomeInput.value;
     const emailCliente = checkoutEmailInput.value;
+    const telefoneCliente = checkoutTelefoneInput.value; // NOVO
     const productId = checkoutProductIdInput.value; 
 
     const dadosParaEnvio = {
         email: emailCliente,
         nome: nomeCliente,
+        telefone: telefoneCliente, // NOVO: Envia telefone para API
         product_id: parseInt(productId) 
     };
 
@@ -126,7 +159,6 @@ async function handleCheckoutSubmit(event) {
     checkoutForm.style.display = 'none'; 
 
     try {
-        // Usa fetch relativo ou absoluto conforme sua config
         const response = await fetch(API_URL, { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -155,6 +187,7 @@ function validateCheckoutForm() {
     let isValid = true;
     const nome = checkoutNomeInput.value.trim();
     const email = checkoutEmailInput.value.trim();
+    const telefone = checkoutTelefoneInput.value.trim(); // NOVO
 
     if (nome.length < 2) {
         showFieldError(checkoutNomeInput, 'Nome muito curto');
@@ -162,6 +195,11 @@ function validateCheckoutForm() {
     }
     if (!email || !isValidEmail(email)) {
         showFieldError(checkoutEmailInput, 'Email inválido');
+        isValid = false;
+    }
+    // NOVO: Validação do telefone
+    if (!telefone || !isValidTelefone(telefone)) {
+        showFieldError(checkoutTelefoneInput, 'Telefone inválido');
         isValid = false;
     }
     return isValid;
@@ -201,15 +239,18 @@ function showErrorInCheckoutResult(message) {
 
 document.addEventListener('DOMContentLoaded', () => {
     
+    // NOVO: Aplica máscara no campo de telefone
+    if (checkoutTelefoneInput) {
+        aplicarMascaraTelefone(checkoutTelefoneInput);
+    }
+
     // --- Lógica do MODO FOCO (Spotlight) ---
     const params = new URLSearchParams(window.location.search);
     const urlProductId = params.get('id');
 
     if (urlProductId) {
-        // Se tem ID na URL, ativa o modo foco
         activateSpotlightMode(urlProductId);
     } else {
-        // Se não tem, ativa os botões da loja normal
         initStoreButtons();
     }
 
@@ -231,21 +272,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function activateSpotlightMode(id) {
-    // Tenta achar os dados do produto no HTML da loja (mesmo escondido)
     const sourceCard = document.querySelector(`.book-card[data-id="${id}"]`);
     
     if (sourceCard && mainStore && spotlightContainer) {
-        // Esconde a loja
         mainStore.style.display = 'none'; 
         mainStore.classList.add('hidden');
         
-        // Mostra o Spotlight
         spotlightContainer.style.display = 'flex';
 
-        // Preenche os dados
         const img = sourceCard.dataset.img;
         const name = sourceCard.dataset.name;
-        const price = sourceCard.dataset.price; // Vem como string "4.90"
+        const price = sourceCard.dataset.price;
         const desc = sourceCard.dataset.desc;
 
         document.getElementById('spot-img').src = img;
@@ -253,28 +290,23 @@ function activateSpotlightMode(id) {
         document.getElementById('spot-desc').innerText = desc;
         document.getElementById('spot-price').innerText = `R$ ${price.replace('.', ',')}`;
 
-        // Configura o botão do Spotlight
         const spotBtn = document.getElementById('spot-btn');
         spotBtn.onclick = () => {
             openCheckoutModal(id, name, price);
         };
     } else {
-        // Se o ID não existe, volta pra loja normal
         console.warn("Produto não encontrado para o ID:", id);
         initStoreButtons();
     }
 }
 
 function initStoreButtons() {
-    // Garante que a loja está visível
     if(mainStore) mainStore.style.display = 'block';
     if(spotlightContainer) spotlightContainer.style.display = 'none';
 
-    // Adiciona evento nos botões da grade
     const buttons = document.querySelectorAll('.comprar-btn');
     buttons.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            // Acha o card pai
             const card = e.target.closest('.book-card');
             if(card) {
                 const id = card.dataset.id;
