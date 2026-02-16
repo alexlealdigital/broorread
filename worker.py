@@ -81,7 +81,7 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
     
     # Configuração do Assunto e Conteúdo Dinâmico
     if chave_acesso:
-        assunto = f"R·READ: Sua chave de acesso para \"{nome_produto}\" chegou! 🚀"
+        assunto = f"Broo Store: Sua chave de acesso para \"{nome_produto}\" chegou! 🚀"
         instrucoes_entrega = f"""
             <p>Agradecemos por escolher a <strong>BrooStore</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao produto "<strong>{nome_produto}</strong>" foi confirmado.</p>
             <h2 style="color: #27ae60;">Sua Chave de Acesso está aqui! 🔑</h2>
@@ -95,9 +95,9 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
             </div>
         """
     else:
-        assunto = f"R·READ: Seu e-book \"{nome_produto}\" está pronto para devorar! 🎉"
+        assunto = f"Broo Store: Seu e-book \"{nome_produto}\" está pronto para devorar! 🎉"
         instrucoes_entrega = f"""
-            <p>Agradecemos por escolher a <strong>R·READ</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao e-book "<strong>{nome_produto}</strong>" foi confirmado.</p>
+            <p>Agradecemos por escolher a <strong>Broo Store</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao e-book "<strong>{nome_produto}</strong>" foi confirmado.</p>
             <h2>Agora é hora de devorar o conteúdo!</h2>
             <p>Clique no nosso <span class="brand-dot">·</span> (micro-portal!) abaixo para acessar seu e-book:</p>
             <div class="button-container"> 
@@ -150,7 +150,7 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
         <p style="font-size: 0.9em; color: #777; margin-top: 30px;">Se o link do botão não funcionar, copie e cole este link no seu navegador:</p>
         <code class="link-copy">{link_produto}</code>
         <div class="footer-text">
-          Boas leituras / Bom jogo!<br>Equipe <strong>R·READ / B·ROO banca digital</strong>
+          Boas leituras / Bom jogo!<br>Equipe <strong>Broo Store / B·ROO banca digital</strong>
           <br><br>Pedido ID: {cobranca.id} <br> 
           Lembre-se: nosso <span class="brand-dot">·</span> não é só um ponto, é uma experiência! <br>
           Em caso de dúvidas, responda a este e-mail.
@@ -371,6 +371,7 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
 
 
 
