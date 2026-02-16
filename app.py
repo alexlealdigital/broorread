@@ -382,6 +382,7 @@ def webhook_mercado_pago():
 
 # ROTA DE CRIAÇÃO DE COBRANÇA (com Cupom e Telefone)
 @app.route("/api/cobrancas", methods=["POST"])
+
 def create_cobranca():
     
     try:
@@ -395,7 +396,9 @@ def create_cobranca():
         telefone_cliente = dados.get("telefone")
         product_id_recebido = dados.get("product_id")
         vendedor_codigo_recebido = dados.get("vendedor_codigo")
-        cupom_id_recebido = dados.get("cupom_id")  # NOVO: ID do cupom aplicado
+        cupom_id_recebido = dados.get("cupom_id")  # ID do cupom aplicado
+        # NOVO: capturar usuario_id do payload
+        usuario_id = dados.get("usuario_id")
 
         if not product_id_recebido:
             return jsonify({"status": "error", "message": "ID do produto é obrigatório."}), 400
@@ -424,7 +427,7 @@ def create_cobranca():
         valor_final = valor_original
         cupom_obj = None
 
-        # NOVO: Se tiver cupom, valida e aplica desconto
+        # Se tiver cupom, valida e aplica desconto
         if cupom_id_recebido:
             cupom_obj = Cupom.query.get(int(cupom_id_recebido))
             if cupom_obj:
@@ -463,20 +466,26 @@ def create_cobranca():
             
         payment = payment_response["response"]
 
+        # --- NOVO: Montar external_reference condicional ---
+        if usuario_id and int(product_id_recebido) == 7:  # produto de moedas (ID 7)
+            external_reference = f"{usuario_id}:{payment['id']}"
+        else:
+            external_reference = str(payment['id'])
+
         qr_code_base64 = payment["point_of_interaction"]["transaction_data"]["qr_code_base64"]
         qr_code_text = payment["point_of_interaction"]["transaction_data"]["qr_code"]
 
         nova_cobranca = Cobranca(
-            external_reference=str(payment["id"]),
+            external_reference=external_reference,  # AGORA USA A VARIÁVEL
             cliente_nome=nome_cliente,
             cliente_email=email_cliente,
             cliente_telefone=telefone_cliente,
             valor=round(valor_final, 2),
-            valor_original=round(valor_original, 2),  # NOVO: Salva valor original
+            valor_original=round(valor_original, 2),  # Salva valor original
             status=payment["status"],
             product_id=produto.id,
             vendedor_codigo=vendedor_codigo_recebido,
-            cupom_id=cupom_obj.id if cupom_obj else None  # NOVO
+            cupom_id=cupom_obj.id if cupom_obj else None
         )
         
         cobranca_dict = nova_cobranca.to_dict() 
@@ -510,7 +519,6 @@ def create_cobranca():
         db.session.rollback()
         print(f"ERRO CRÍTICO GERAL (CREATE): {str(e)}")
         return jsonify({"status": "error", "message": f"Falha ao criar cobrança: {str(e)}"}), 500
-
 
 # ROTA DE CONTATO
 @app.route("/api/contato", methods=["POST"])
