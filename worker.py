@@ -54,6 +54,7 @@ class Produto(db.Model):
     preco = db.Column(db.Float, nullable=False)
     link_download = db.Column(db.String(500), nullable=False)
     tipo = db.Column(db.String(50), default="ebook", nullable=False)
+    moedas_equivalentes = db.Column(db.Integer, nullable=True)
 
 class ChaveLicenca(db.Model):
     __tablename__ = "chaves_licenca"
@@ -313,5 +314,6 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
 
 
