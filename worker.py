@@ -411,34 +411,45 @@ def process_mercado_pago_webhook(payment_id):
 
                 
         
-        # 5. Enviar E-mail
-        destinatario = cobranca.cliente_email
-        print(f"[WORKER] Enviando produto '{produto.nome}' para {destinatario}...")
+                # 5. Enviar E-mail (apenas para produtos que não são moedas)
+        if produto.tipo != 'moedas':
+            destinatario = cobranca.cliente_email
+            print(f"[WORKER] Enviando produto '{produto.nome}' para {destinatario}...")
 
-        sucesso = enviar_email_confirmacao(
-            destinatario=destinatario,
-            nome_cliente=cobranca.cliente_nome,
-            valor=cobranca.valor,
-            link_produto=link_entrega,
-            cobranca=cobranca, 
-            nome_produto=produto.nome,
-            chave_acesso=chave_entregue
-        )
-        
-        # 6. Finalizar Transação
-        if sucesso:
+            sucesso = enviar_email_confirmacao(
+                destinatario=destinatario,
+                nome_cliente=cobranca.cliente_nome,
+                valor=cobranca.valor,
+                link_produto=link_entrega,
+                cobranca=cobranca, 
+                nome_produto=produto.nome,
+                chave_acesso=chave_entregue
+            )
+            
+            # 6. Finalizar Transação (aqui mantém a lógica existente)
+            if sucesso:
+                try:
+                    cobranca.status = "delivered" 
+                    db.session.add(cobranca) 
+                    db.session.commit()
+                    print(f"[WORKER] Sucesso total. Cobranca {cobranca.id} finalizada.")
+                except Exception as db_exc:
+                    print(f"[WORKER] ALERTA: E-mail enviado, mas falha ao salvar DB: {db_exc}")
+                    db.session.rollback() 
+            else:
+                print(f"[WORKER] Falha no envio de e-mail. Fazendo Rollback do DB.")
+                db.session.rollback() 
+                raise Exception(f"Falha no envio SMTP para {destinatario}")
+        else:
+            # Para moedas, o recibo já foi enviado; só finalizar a transação
             try:
                 cobranca.status = "delivered" 
                 db.session.add(cobranca) 
                 db.session.commit()
-                print(f"[WORKER] Sucesso total. Cobranca {cobranca.id} finalizada.")
+                print(f"[WORKER] Sucesso total. Cobranca {cobranca.id} finalizada (moedas).")
             except Exception as db_exc:
-                print(f"[WORKER] ALERTA: E-mail enviado, mas falha ao salvar DB: {db_exc}")
-                db.session.rollback() 
-        else:
-            print(f"[WORKER] Falha no envio de e-mail. Fazendo Rollback do DB.")
-            db.session.rollback() 
-            raise Exception(f"Falha no envio SMTP para {destinatario}")
+                print(f"[WORKER] ALERTA: Recibo enviado, mas falha ao salvar DB: {db_exc}")
+                db.session.rollback()
 
 # ---------- INICIALIZAÇÃO DO WORKER ----------
 if __name__ == "__main__":
@@ -472,6 +483,7 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
 
 
 
