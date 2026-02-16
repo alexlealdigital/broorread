@@ -343,7 +343,7 @@ def process_mercado_pago_webhook(payment_id):
 
 
 
-                        # 4.1. Se for compra de moedas, chama a Edge Function do Supabase
+                                # 4.1. Se for compra de moedas, chama a Edge Function do Supabase
         if produto.tipo == 'moedas':
             # Extrair usuario_id do external_reference (formato "usuario_id:payment_id")
             usuario_id = None
@@ -381,10 +381,10 @@ def process_mercado_pago_webhook(payment_id):
 
                 try:
                     resp = requests.post(edge_function_url, json=payload, headers=headers, timeout=10)
-                                        if resp.status_code == 200:
+                    if resp.status_code == 200:
                         print(f"[WORKER] ✅ Moedas creditadas para usuário {usuario_id}. Resposta: {resp.json()}")
                         
-                        # Envia e-mail de recibo
+                        # --- Envia e-mail de recibo ---
                         link_jogo = "https://broo.games"  # Substitua pelo link real do seu jogo
                         enviar_email_recibo_moedas(
                             destinatario=cobranca.cliente_email,
@@ -394,9 +394,6 @@ def process_mercado_pago_webhook(payment_id):
                             link_jogo=link_jogo,
                             cobranca=cobranca
                         )
-                        
-                        # Marcar que o e-mail padrão não deve ser enviado (se necessário, use uma flag)
-                        # Exemplo: email_recibo_enviado = True
                         
                     else:
                         print(f"[WORKER] ❌ Erro ao creditar moedas: {resp.status_code} - {resp.text}")
@@ -483,6 +480,7 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
 
 
 
