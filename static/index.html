@@ -492,7 +492,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE CHECKOUT COM CUPOM -->
+      <!-- MODAL DE CHECKOUT COM CUPOM -->
     <div id="checkout-modal" class="modal">
         <div class="modal-content">
             <span class="modal-close" id="checkout-modal-close">&times;</span>
@@ -506,7 +506,7 @@
                 <input type="hidden" id="checkout_product_id" name="product_id">
                 <input type="hidden" id="checkout_product_name" name="product_name">
                 <input type="hidden" id="checkout_product_price" name="product_price">
-                <input type="hidden" id="checkout_cupom_id" name="cupom_id"> <!-- NOVO -->
+                <input type="hidden" id="checkout_cupom_id" name="cupom_id">
                 
                 <div class="form-group">
                     <label>Nome Completo *</label>
@@ -523,7 +523,14 @@
                     <input type="tel" id="checkout_telefone" name="telefone" required placeholder="(11) 99999-9999" maxlength="15">
                 </div>
 
-                <!-- NOVO: SEÇÃO DE CUPOM -->
+                <!-- NOVO: Campo de ID do Usuário para testes (moedas) -->
+                <div class="form-group">
+                    <label>ID do Usuário (para testes)</label>
+                    <input type="text" id="checkout_usuario_id" name="usuario_id" placeholder="22222222-2222-2222-2222-222222222222" value="22222222-2222-2222-2222-222222222222">
+                    <small style="color: #aaa; display: block; margin-top: 5px;">Use o ID fixo para testes de cashback</small>
+                </div>
+
+                <!-- SEÇÃO DE CUPOM -->
                 <div class="cupom-section">
                     <label>
                         <i class="fas fa-ticket-alt"></i> CUPOM DE DESCONTO (Opcional)
@@ -537,7 +544,7 @@
                     <div class="cupom-status" id="cupom-status"></div>
                 </div>
 
-                <!-- NOVO: RESUMO DE PREÇOS -->
+                <!-- RESUMO DE PREÇOS -->
                 <div class="preco-resumo" id="preco-resumo" style="display: none;">
                     <div class="preco-linha original">
                         <span>Preço Original:</span>
