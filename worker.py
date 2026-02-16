@@ -381,9 +381,23 @@ def process_mercado_pago_webhook(payment_id):
 
                 try:
                     resp = requests.post(edge_function_url, json=payload, headers=headers, timeout=10)
-                    if resp.status_code == 200:
+                                        if resp.status_code == 200:
                         print(f"[WORKER] ✅ Moedas creditadas para usuário {usuario_id}. Resposta: {resp.json()}")
-                        # Opcional: enviar e-mail de recibo simples
+                        
+                        # Envia e-mail de recibo
+                        link_jogo = "https://broo.games"  # Substitua pelo link real do seu jogo
+                        enviar_email_recibo_moedas(
+                            destinatario=cobranca.cliente_email,
+                            nome_cliente=cobranca.cliente_nome,
+                            valor=valor_pago,
+                            quantidade=quantidade,
+                            link_jogo=link_jogo,
+                            cobranca=cobranca
+                        )
+                        
+                        # Marcar que o e-mail padrão não deve ser enviado (se necessário, use uma flag)
+                        # Exemplo: email_recibo_enviado = True
+                        
                     else:
                         print(f"[WORKER] ❌ Erro ao creditar moedas: {resp.status_code} - {resp.text}")
                         raise Exception(f"Falha ao creditar moedas (HTTP {resp.status_code})")
@@ -392,7 +406,6 @@ def process_mercado_pago_webhook(payment_id):
                     raise  # faz o RQ tentar novamente
             else:
                 print("[WORKER] ⚠️ Compra de moedas sem usuario_id identificado.")
-                # Decide se quer interromper ou continuar (aqui optamos por levantar erro)
                 raise Exception("usuario_id não encontrado para compra de moedas")
 
 
@@ -459,6 +472,7 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
 
 
 
