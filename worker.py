@@ -252,6 +252,63 @@ def process_mercado_pago_webhook(payment_id):
                 print(f"[WORKER] ERRO CRÍTICO: Estoque esgotado para o produto {produto.nome}.")
                 db.session.rollback() 
                 raise Exception(f"FALHA DE ESTOQUE: Sem chaves para produto ID {produto.id}")
+
+
+
+                        # 4.1. Se for compra de moedas, chama a Edge Function do Supabase
+        if produto.tipo == 'moedas':
+            # Extrair usuario_id do external_reference (formato "usuario_id:payment_id")
+            usuario_id = None
+            if ':' in cobranca.external_reference:
+                usuario_id, payment_id = cobranca.external_reference.split(':', 1)
+            else:
+                print(f"[WORKER] ERRO: external_reference não contém usuario_id para compra de moedas: {cobranca.external_reference}")
+
+            if usuario_id:
+                import requests
+                supabase_url = os.environ.get("SUPABASE_URL")
+                supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+
+                if not supabase_url or not supabase_key:
+                    print("[WORKER] ERRO: Variáveis SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configuradas.")
+                    raise Exception("Configuração do Supabase incompleta")
+
+                edge_function_url = f"{supabase_url}/functions/v1/creditar-moedas"
+
+                quantidade = produto.moedas_equivalentes
+                valor_pago = cobranca.valor
+                mp_id = payment_id
+
+                payload = {
+                    "usuario_id": usuario_id,
+                    "quantidade": quantidade,
+                    "valor_pago": valor_pago,
+                    "mp_id": mp_id
+                }
+
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {supabase_key}"
+                }
+
+                try:
+                    resp = requests.post(edge_function_url, json=payload, headers=headers, timeout=10)
+                    if resp.status_code == 200:
+                        print(f"[WORKER] ✅ Moedas creditadas para usuário {usuario_id}. Resposta: {resp.json()}")
+                        # Opcional: enviar e-mail de recibo simples
+                    else:
+                        print(f"[WORKER] ❌ Erro ao creditar moedas: {resp.status_code} - {resp.text}")
+                        raise Exception(f"Falha ao creditar moedas (HTTP {resp.status_code})")
+                except Exception as e:
+                    print(f"[WORKER] ❌ Exceção na chamada HTTP: {e}")
+                    raise  # faz o RQ tentar novamente
+            else:
+                print("[WORKER] ⚠️ Compra de moedas sem usuario_id identificado.")
+                # Decide se quer interromper ou continuar (aqui optamos por levantar erro)
+                raise Exception("usuario_id não encontrado para compra de moedas")
+
+
+                
         
         # 5. Enviar E-mail
         destinatario = cobranca.cliente_email
@@ -314,6 +371,7 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
 
 
 
