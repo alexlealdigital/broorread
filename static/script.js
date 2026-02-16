@@ -20,6 +20,7 @@ const btnAplicarCupom = document.getElementById('btn-aplicar-cupom'); // NOVO
 const cupomStatus = document.getElementById('cupom-status'); // NOVO
 const precoResumo = document.getElementById('preco-resumo'); // NOVO
 const feedbackToast = document.getElementById('feedback-toast');
+const checkoutUsuarioIdInput = document.getElementById('checkout_usuario_id'); // NOVOtestemoeda
 
 // Elementos do Modo Spotlight (Foco)
 const mainStore = document.getElementById('main-store');
@@ -222,9 +223,8 @@ function resetarCupom() {
 
 function openCheckoutModal(productId, nome, preco) {
     resetCheckoutModal(); 
-    resetarCupom(); // Reseta cupom ao abrir modal
+    resetarCupom();
 
-    // Converte preço para número
     valorOriginal = parseFloat(preco);
     valorFinal = valorOriginal;
     
@@ -236,12 +236,20 @@ function openCheckoutModal(productId, nome, preco) {
     `;
     
     checkoutProductIdInput.value = productId;
+    
+    // --- NOVO: pré-preenche o campo usuario_id para testes ---
+    if (checkoutUsuarioIdInput) {
+        checkoutUsuarioIdInput.value = '22222222-2222-2222-2222-222222222222';
+    }
+    // ---------------------------------------------------------
+    
     checkoutModal.style.display = 'block';
 }
 
 function closeCheckoutModal() {
     checkoutModal.style.display = 'none';
     resetCheckoutModal(); 
+    if (checkoutUsuarioIdInput) checkoutUsuarioIdInput.value = '';
 }
 
 function resetCheckoutModal() {
@@ -252,6 +260,7 @@ function resetCheckoutModal() {
        checkoutForm.style.display = 'block'; 
        clearFieldErrors(checkoutForm); 
     }
+    if (checkoutUsuarioIdInput) checkoutUsuarioIdInput.value = ''; // NOVO
 }
 
 async function handleCheckoutSubmit(event) {
@@ -265,13 +274,16 @@ async function handleCheckoutSubmit(event) {
     const productId = checkoutProductIdInput.value;
     const cupomId = checkoutCupomIdInput.value; // Pega o ID do cupom se houver
 
-    const dadosParaEnvio = {
-        email: emailCliente,
-        nome: nomeCliente,
-        telefone: telefoneCliente,
-        product_id: parseInt(productId),
-        cupom_id: cupomId ? parseInt(cupomId) : null // Envia o cupom
-    };
+    const usuarioId = checkoutUsuarioIdInput?.value || null; // NOVO
+
+const dadosParaEnvio = {
+    email: emailCliente,
+    nome: nomeCliente,
+    telefone: telefoneCliente,
+    product_id: parseInt(productId),
+    cupom_id: cupomId ? parseInt(cupomId) : null,
+    usuario_id: usuarioId // <--- LINHA NOVA
+};
 
     showLoadingInCheckoutResult();
     checkoutForm.style.display = 'none'; 
