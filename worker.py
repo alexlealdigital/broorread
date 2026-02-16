@@ -79,8 +79,105 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
         print("[WORKER] ERRO: Credenciais de e-mail não configuradas.")
         return False
 
+    # Configuração do Assunto e Conteúdo Dinâmico
+    if chave_acesso:
+        assunto = f"Broo Store: Sua chave de acesso para \"{nome_produto}\" chegou! 🚀"
+        instrucoes_entrega = f"""
+            <p>Agradecemos por escolher a <strong>BrooStore</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao produto "<strong>{nome_produto}</strong>" foi confirmado.</p>
+            <h2 style="color: #27ae60;">Sua Chave de Acesso está aqui! 🔑</h2>
+            <p>Sua chave de acesso (Serial Key) para o jogo/app é:</p>
+            <div style="background-color: #e0f2f1; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px dashed #27ae60;">
+                <code style="font-size: 1.5em; font-weight: bold; color: #14213d; display: block; word-break: break-all;">{chave_acesso}</code>
+            </div>
+            <p>Copie a chave acima e use-a no instalador. Se precisar baixar o instalador, clique abaixo:</p>
+            <div class="button-container"> 
+                <a href="{link_produto}" class="button" target="_blank" style="background-color: #27ae60;">[·] Baixar o Instalador</a>
+            </div>
+        """
+    else:
+        assunto = f"Broo Store: Seu e-book \"{nome_produto}\" está pronto para devorar! 🎉"
+        instrucoes_entrega = f"""
+            <p>Agradecemos por escolher a <strong>Broo Store</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao e-book "<strong>{nome_produto}</strong>" foi confirmado.</p>
+            <h2>Agora é hora de devorar o conteúdo!</h2>
+            <p>Clique no nosso <span class="brand-dot">·</span> (micro-portal!) abaixo para acessar seu e-book:</p>
+            <div class="button-container"> 
+                <a href="{link_produto}" class="button" target="_blank">[·] Baixar Meu E-book Agora</a>
+            </div>
+        """
 
-    def enviar_email_recibo_moedas(destinatario, nome_cliente, valor, quantidade, link_jogo, cobranca):
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = assunto
+    msg["From"] = email_user
+    msg["To"] = destinatario
+
+    corpo_html = f"""
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {{ font-family: 'Lato', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }}
+    .email-wrapper {{ background-color: #f4f4f4; padding: 20px 0; }}
+    .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }}
+    .header {{ background-color: #14213d; padding: 20px; text-align: center; }}
+    .header h1 {{ color: #ffffff; font-family: 'Poppins', sans-serif; font-size: 1.8em; margin: 0; }}
+    .content {{ padding: 30px; }}
+    h2 {{ color: #fca311; font-family: 'Poppins', sans-serif; font-size: 1.5em; margin: 25px 0 15px 0; text-align: center; }}
+    p {{ margin-bottom: 15px; font-size: 1em; color: #555; }}
+    strong {{ color: #14213d; }}
+    .button-container {{ text-align: center; margin: 25px 0; }}
+    .button {{ 
+        background-color: #fca311; color: #14213d !important; padding: 14px 28px; 
+        text-decoration: none !important; border-radius: 25px; font-weight: bold; 
+        display: inline-block; font-family: 'Poppins', sans-serif; font-size: 1.1em;
+        border: none; cursor: pointer; text-align: center;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }}
+    .button:hover {{ background-color: #e0900b; transform: scale(1.03); }}
+    .footer-text {{ font-size: 0.9em; color: #777; margin-top: 25px; border-top: 1px solid #e5e5e5; padding-top: 20px; text-align: center; }}
+    .link-copy {{ word-break: break-all; font-family: monospace; font-size: 0.85em; background-color: #f0f0f0; padding: 5px; border-radius: 4px; display: block; margin-top: 5px; }}
+    .brand-dot {{ color: #fca311; font-weight: bold; }}
+    a {{ color: #fca311; text-decoration: underline; }}
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="container">
+      <div class="header"><h1>✅ Parabéns pela sua compra!</h1></div>
+      <div class="content">
+        <p>Olá, {nome_cliente},</p>
+        {instrucoes_entrega}
+        <p style="font-size: 0.9em; color: #777; margin-top: 30px;">Se o link do botão não funcionar, copie e cole este link no seu navegador:</p>
+        <code class="link-copy">{link_produto}</code>
+        <div class="footer-text">
+          Boas leituras / Bom jogo!<br>Equipe <strong>Broo Store / B·ROO banca digital</strong>
+          <br><br>Pedido ID: {cobranca.id} <br> 
+          Lembre-se: nosso <span class="brand-dot">·</span> não é só um ponto, é uma experiência! <br>
+          Em caso de dúvidas, responda a este e-mail.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+"""
+    msg.attach(MIMEText(corpo_html, "html"))
+
+    try:
+        smtp_port = int(os.environ.get("SMTP_PORT", 587))
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
+            server.starttls()
+            server.login(email_user, email_pass)
+            server.send_message(msg)
+    except Exception as exc:
+        print(f"[WORKER] Falha no envio SMTP: {exc}")
+        return False
+
+    print(f"[WORKER] E-mail DE ENTREGA enviado para {destinatario}")
+    return True
+
+
+def enviar_email_recibo_moedas(destinatario, nome_cliente, valor, quantidade, link_jogo, cobranca):
     """ Envia e-mail de recibo para compra de moedas com a identidade da Broo Store. """
     try:
         smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
@@ -164,103 +261,8 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
 
     print(f"[WORKER] E-mail RECIBO enviado para {destinatario}")
     return True
-    
-    # Configuração do Assunto e Conteúdo Dinâmico
-    if chave_acesso:
-        assunto = f"Broo Store: Sua chave de acesso para \"{nome_produto}\" chegou! 🚀"
-        instrucoes_entrega = f"""
-            <p>Agradecemos por escolher a <strong>BrooStore</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao produto "<strong>{nome_produto}</strong>" foi confirmado.</p>
-            <h2 style="color: #27ae60;">Sua Chave de Acesso está aqui! 🔑</h2>
-            <p>Sua chave de acesso (Serial Key) para o jogo/app é:</p>
-            <div style="background-color: #e0f2f1; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px dashed #27ae60;">
-                <code style="font-size: 1.5em; font-weight: bold; color: #14213d; display: block; word-break: break-all;">{chave_acesso}</code>
-            </div>
-            <p>Copie a chave acima e use-a no instalador. Se precisar baixar o instalador, clique abaixo:</p>
-            <div class="button-container"> 
-                <a href="{link_produto}" class="button" target="_blank" style="background-color: #27ae60;">[·] Baixar o Instalador</a>
-            </div>
-        """
-    else:
-        assunto = f"Broo Store: Seu e-book \"{nome_produto}\" está pronto para devorar! 🎉"
-        instrucoes_entrega = f"""
-            <p>Agradecemos por escolher a <strong>Broo Store</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente ao e-book "<strong>{nome_produto}</strong>" foi confirmado.</p>
-            <h2>Agora é hora de devorar o conteúdo!</h2>
-            <p>Clique no nosso <span class="brand-dot">·</span> (micro-portal!) abaixo para acessar seu e-book:</p>
-            <div class="button-container"> 
-                <a href="{link_produto}" class="button" target="_blank">[·] Baixar Meu E-book Agora</a>
-            </div>
-        """
-        
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = assunto
-    msg["From"] = email_user
-    msg["To"] = destinatario
-    
-    corpo_html = f"""
-<!doctype html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body {{ font-family: 'Lato', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }}
-    .email-wrapper {{ background-color: #f4f4f4; padding: 20px 0; }}
-    .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }}
-    .header {{ background-color: #14213d; padding: 20px; text-align: center; }}
-    .header h1 {{ color: #ffffff; font-family: 'Poppins', sans-serif; font-size: 1.8em; margin: 0; }}
-    .content {{ padding: 30px; }}
-    h2 {{ color: #fca311; font-family: 'Poppins', sans-serif; font-size: 1.5em; margin: 25px 0 15px 0; text-align: center; }}
-    p {{ margin-bottom: 15px; font-size: 1em; color: #555; }}
-    strong {{ color: #14213d; }}
-    .button-container {{ text-align: center; margin: 25px 0; }}
-    .button {{ 
-        background-color: #fca311; color: #14213d !important; padding: 14px 28px; 
-        text-decoration: none !important; border-radius: 25px; font-weight: bold; 
-        display: inline-block; font-family: 'Poppins', sans-serif; font-size: 1.1em;
-        border: none; cursor: pointer; text-align: center;
-        transition: background-color 0.3s ease, transform 0.2s ease;
-    }}
-    .button:hover {{ background-color: #e0900b; transform: scale(1.03); }}
-    .footer-text {{ font-size: 0.9em; color: #777; margin-top: 25px; border-top: 1px solid #e5e5e5; padding-top: 20px; text-align: center; }}
-    .link-copy {{ word-break: break-all; font-family: monospace; font-size: 0.85em; background-color: #f0f0f0; padding: 5px; border-radius: 4px; display: block; margin-top: 5px; }}
-    .brand-dot {{ color: #fca311; font-weight: bold; }}
-    a {{ color: #fca311; text-decoration: underline; }}
-  </style>
-</head>
-<body>
-  <div class="email-wrapper">
-    <div class="container">
-      <div class="header"><h1>✅ Parabéns pela sua compra!</h1></div>
-      <div class="content">
-        <p>Olá, {nome_cliente},</p>
-        {instrucoes_entrega}
-        <p style="font-size: 0.9em; color: #777; margin-top: 30px;">Se o link do botão não funcionar, copie e cole este link no seu navegador:</p>
-        <code class="link-copy">{link_produto}</code>
-        <div class="footer-text">
-          Boas leituras / Bom jogo!<br>Equipe <strong>Broo Store / B·ROO banca digital</strong>
-          <br><br>Pedido ID: {cobranca.id} <br> 
-          Lembre-se: nosso <span class="brand-dot">·</span> não é só um ponto, é uma experiência! <br>
-          Em caso de dúvidas, responda a este e-mail.
-        </div>
-      </div>
-    </div>
-  </div>
-</body>
-</html>
-"""
-    msg.attach(MIMEText(corpo_html, "html"))
-    
-    try:
-        smtp_port = int(os.environ.get("SMTP_PORT", 587))
-        with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
-            server.starttls()
-            server.login(email_user, email_pass)
-            server.send_message(msg)
-    except Exception as exc:
-        print(f"[WORKER] Falha no envio SMTP: {exc}")
-        return False
-        
-    print(f"[WORKER] E-mail DE ENTREGA enviado para {destinatario}")
-    return True
+
+
 
 # --- JOB DO "PLANO A" ---
 
@@ -457,6 +459,7 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
 
 
 
