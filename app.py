@@ -453,6 +453,7 @@ def create_cobranca():
             "transaction_amount": round(valor_final, 2),
             "description": descricao_correta,
             "payment_method_id": "pix",
+            "external_reference": external_reference,  # <--- ESSENCIAL
             "payer": {
                 "email": email_cliente,
             }
