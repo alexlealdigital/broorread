@@ -150,9 +150,9 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
         <p style="font-size: 0.9em; color: #777; margin-top: 30px;">Se o link do botão não funcionar, copie e cole este link no seu navegador:</p>
         <code class="link-copy">{link_produto}</code>
         <div class="footer-text">
-          Boas leituras / Bom jogo!<br>Equipe <strong>Broo Store / B·ROO banca digital</strong>
+          Boas leituras / Bom jogo!<br>Equipe <strong>Broo Store / BROO loja digital</strong>
           <br><br>Pedido ID: {cobranca.id} <br> 
-          Lembre-se: nosso <span class="brand-dot">·</span> não é só um ponto, é uma experiência! <br>
+          Lembre-se: sua compra <span class="brand-dot">·</span> com a segurança Mercado Pago <br>
           Em caso de dúvidas, responda a este e-mail.
         </div>
       </div>
@@ -484,6 +484,7 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
 
 
 
