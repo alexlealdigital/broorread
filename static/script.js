@@ -282,7 +282,7 @@ const dadosParaEnvio = {
     telefone: telefoneCliente,
     product_id: parseInt(productId),
     cupom_id: cupomId ? parseInt(cupomId) : null,
-    usuario_id: usuarioId // <--- LINHA NOVA
+    usuario_id: currentUsuarioId // <-- usando a variável global
 };
 
     showLoadingInCheckoutResult();
