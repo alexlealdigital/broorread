@@ -384,8 +384,12 @@ function showErrorInCheckoutResult(message) {
 }
 
 // =========================================================
+// =========================================================
 // 5. INICIALIZAÇÃO E CONTROLE DE MODO (SPOTLIGHT vs LOJA)
 // =========================================================
+
+// Variável global para armazenar o usuario_id vindo da URL
+let currentUsuarioId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     
@@ -412,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Lógica do MODO FOCO (Spotlight) ---
     const params = new URLSearchParams(window.location.search);
     const urlProductId = params.get('id');
+    currentUsuarioId = params.get('usuario_id'); // Captura o usuario_id da URL
 
     if (urlProductId) {
         activateSpotlightMode(urlProductId);
@@ -457,6 +462,7 @@ function activateSpotlightMode(id) {
 
         const spotBtn = document.getElementById('spot-btn');
         spotBtn.onclick = () => {
+            // Passa o id, name e price para o modal (o usuario_id virá da variável global)
             openCheckoutModal(id, name, price);
         };
     } else {
