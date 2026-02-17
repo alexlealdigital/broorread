@@ -294,31 +294,24 @@ def process_mercado_pago_webhook(payment_id):
 
         payment = resp["response"]
 
-# Busca a cobrança usando o external_reference retornado pelo MP
-external_reference_mp = payment.get("external_reference")
-if external_reference_mp:
-    cobranca = Cobranca.query.filter_by(external_reference=external_reference_mp).first()
-else:
-    cobranca = None
-
-if not cobranca:
-    print(f"[WORKER] ERRO CRÍTICO: Cobranca com external_reference {external_reference_mp} aprovada, mas não encontrada no DB local.")
-    return
-
-        # 3. Buscar Cobrança no DB
-        print(f"[WORKER] Pagamento {payment_id} APROVADO. Buscando no DB...")
-        # Obtém o external_reference retornado pelo Mercado Pago
-external_reference_mp = payment.get("external_reference")
-if external_reference_mp:
-    cobranca = Cobranca.query.filter_by(external_reference=external_reference_mp).first()
-else:
-    cobranca = None
-
-        if not cobranca:
-            print(f"[WORKER] ERRO CRÍTICO: Cobranca {payment_id} aprovada, mas não encontrada no DB local.")
+        # Verifica se o pagamento foi aprovado
+        if payment.get("status") != "approved":
+            print(f"[WORKER] Pagamento {payment_id} não aprovado ({payment.get('status')}). Ignorando.")
             return
 
-        produto = cobranca.produto 
+        # Obtém o external_reference retornado pelo Mercado Pago (pode conter usuario_id:payment_id)
+        external_reference_mp = payment.get("external_reference")
+        if not external_reference_mp:
+            print(f"[WORKER] ERRO: Pagamento {payment_id} não possui external_reference.")
+            return
+
+        # Busca a cobrança usando o external_reference completo
+        cobranca = Cobranca.query.filter_by(external_reference=external_reference_mp).first()
+        if not cobranca:
+            print(f"[WORKER] ERRO CRÍTICO: Cobranca com external_reference {external_reference_mp} aprovada, mas não encontrada no DB local.")
+            return
+
+        produto = cobranca.produto
         if not produto:
             print(f"[WORKER] ERRO CRÍTICO: Produto não encontrado para a Cobranca ID {cobranca.id}.")
             return
@@ -328,7 +321,6 @@ else:
         chave_entregue = None
 
         if produto.tipo in ["game", "app"] or produto.nome == "8 PERSONAGENS do Game Chinelo Voador":
-            print(f"[WORKER] Produto '{produto.tipo}'. Buscando chave de licença...")
             
             # Lock de linha para evitar venda duplicada (concorrência)
             chave_obj = ChaveLicenca.query.filter(
@@ -355,7 +347,7 @@ else:
 
 
 
-                                # 4.1. Se for compra de moedas, chama a Edge Function do Supabase
+        # 4.1. Se for compra de moedas, chama a Edge Function do Supabase
         if produto.tipo == 'moedas':
             # Extrair usuario_id do external_reference (formato "usuario_id:payment_id")
             usuario_id = None
@@ -492,6 +484,7 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
 
 
 
