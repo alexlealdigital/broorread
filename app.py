@@ -382,9 +382,7 @@ def webhook_mercado_pago():
 
 # ROTA DE CRIAÇÃO DE COBRANÇA (com Cupom e Telefone)
 @app.route("/api/cobrancas", methods=["POST"])
-
 def create_cobranca():
-    
     try:
         dados = request.get_json()
         
@@ -396,9 +394,8 @@ def create_cobranca():
         telefone_cliente = dados.get("telefone")
         product_id_recebido = dados.get("product_id")
         vendedor_codigo_recebido = dados.get("vendedor_codigo")
-        cupom_id_recebido = dados.get("cupom_id")  # ID do cupom aplicado
-        # NOVO: capturar usuario_id do payload
-        usuario_id = dados.get("usuario_id")
+        cupom_id_recebido = dados.get("cupom_id")
+        usuario_id = dados.get("usuario_id")  # NOVO
 
         if not product_id_recebido:
             return jsonify({"status": "error", "message": "ID do produto é obrigatório."}), 400
@@ -427,7 +424,6 @@ def create_cobranca():
         valor_final = valor_original
         cupom_obj = None
 
-        # Se tiver cupom, valida e aplica desconto
         if cupom_id_recebido:
             cupom_obj = Cupom.query.get(int(cupom_id_recebido))
             if cupom_obj:
@@ -435,7 +431,6 @@ def create_cobranca():
                 if valido and (cupom_obj.produto_id is None or cupom_obj.produto_id == int(product_id_recebido)):
                     resultado = cupom_obj.calcular_desconto(valor_original)
                     valor_final = resultado["valor_final"]
-                    # Incrementa o contador de usos
                     cupom_obj.usos_atuais += 1
                     db.session.add(cupom_obj)
 
@@ -443,17 +438,28 @@ def create_cobranca():
         if cupom_obj:
             descricao_correta += f" (Cupom: {cupom_obj.codigo})"
 
+        # --- GERAÇÃO DO EXTERNAL_REFERENCE (CORRIGIDA) ---
+        import uuid
+        unique_id = str(uuid.uuid4())  # Identificador único para esta cobrança
+
+        # Define o external_reference conforme o produto
+        if usuario_id and int(product_id_recebido) == 7:  # produto de moedas
+            external_reference = f"{usuario_id}:{unique_id}"
+        else:
+            external_reference = unique_id
+
+        # --- CRIAÇÃO DO PAGAMENTO NO MERCADO PAGO ---
         access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
         if not access_token:
             return jsonify({"status": "error", "message": "Token do Mercado Pago não configurado."}), 500
-            
+
         sdk = mercadopago.SDK(access_token)
 
         payment_data = {
             "transaction_amount": round(valor_final, 2),
             "description": descricao_correta,
             "payment_method_id": "pix",
-            "external_reference": external_reference,  # <--- ESSENCIAL
+            "external_reference": external_reference,  # AGORA DEFINIDA
             "payer": {
                 "email": email_cliente,
             }
@@ -467,34 +473,29 @@ def create_cobranca():
             
         payment = payment_response["response"]
 
-        # --- NOVO: Montar external_reference condicional ---
-        if usuario_id and int(product_id_recebido) == 7:  # produto de moedas (ID 7)
-            external_reference = f"{usuario_id}:{payment['id']}"
-        else:
-            external_reference = str(payment['id'])
-
         qr_code_base64 = payment["point_of_interaction"]["transaction_data"]["qr_code_base64"]
         qr_code_text = payment["point_of_interaction"]["transaction_data"]["qr_code"]
 
+        # --- CRIAÇÃO DA COBRANÇA NO BANCO (USA O MESMO external_reference) ---
         nova_cobranca = Cobranca(
-            external_reference=external_reference,  # AGORA USA A VARIÁVEL
+            external_reference=external_reference,  # MESMO VALOR ENVIADO AO MP
             cliente_nome=nome_cliente,
             cliente_email=email_cliente,
             cliente_telefone=telefone_cliente,
             valor=round(valor_final, 2),
-            valor_original=round(valor_original, 2),  # Salva valor original
+            valor_original=round(valor_original, 2),
             status=payment["status"],
             product_id=produto.id,
             vendedor_codigo=vendedor_codigo_recebido,
             cupom_id=cupom_obj.id if cupom_obj else None
         )
         
-        cobranca_dict = nova_cobranca.to_dict() 
+        cobranca_dict = nova_cobranca.to_dict()
 
         db.session.add(nova_cobranca)
         db.session.commit()
         
-        # Prepara resposta com informações do desconto
+        # Prepara resposta
         resposta = {
             "status": "success",
             "message": "Cobrança PIX criada com sucesso!",
@@ -504,7 +505,6 @@ def create_cobranca():
             "cobranca": cobranca_dict
         }
         
-        # Adiciona info do desconto se houver
         if cupom_obj:
             resposta["desconto_aplicado"] = {
                 "cupom_codigo": cupom_obj.codigo,
@@ -520,7 +520,6 @@ def create_cobranca():
         db.session.rollback()
         print(f"ERRO CRÍTICO GERAL (CREATE): {str(e)}")
         return jsonify({"status": "error", "message": f"Falha ao criar cobrança: {str(e)}"}), 500
-
 # ROTA DE CONTATO
 @app.route("/api/contato", methods=["POST"])
 def handle_contact_form():
