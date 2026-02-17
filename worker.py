@@ -300,7 +300,12 @@ def process_mercado_pago_webhook(payment_id):
 
         # 3. Buscar Cobrança no DB
         print(f"[WORKER] Pagamento {payment_id} APROVADO. Buscando no DB...")
-        cobranca = Cobranca.query.filter_by(external_reference=str(payment_id)).first()
+        # Obtém o external_reference retornado pelo Mercado Pago
+external_reference_mp = payment.get("external_reference")
+if external_reference_mp:
+    cobranca = Cobranca.query.filter_by(external_reference=external_reference_mp).first()
+else:
+    cobranca = None
 
         if not cobranca:
             print(f"[WORKER] ERRO CRÍTICO: Cobranca {payment_id} aprovada, mas não encontrada no DB local.")
@@ -480,6 +485,7 @@ if __name__ == "__main__":
         worker.work()
     except Exception as e:
         print(f"[WORKER] Ocorreu um erro na execução do worker: {e}")
+
 
 
 
