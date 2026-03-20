@@ -458,18 +458,29 @@ def process_mercado_pago_webhook(payment_id):
                 cobranca=cobranca, 
                 nome_produto=produto.nome,
                 chave_acesso=chave_entregue
-            )
-            
+            )                    
+
+                
+
+                    
             # 6. Finalizar Transação (aqui mantém a lógica existente)
-            if sucesso:
-                try:
-                    cobranca.status = "delivered" 
-                    db.session.add(cobranca) 
-                    db.session.commit()
-                    print(f"[WORKER] Sucesso total. Cobranca {cobranca.id} finalizada.")
-                except Exception as db_exc:
-                    print(f"[WORKER] ALERTA: E-mail enviado, mas falha ao salvar DB: {db_exc}")
-                    db.session.rollback() 
+                    if sucesso:
+            # --- NOVO: Registrar venda no Supabase ---
+            registrar_venda_supabase(
+                produto_id=produto.id,
+                customer_email=cobranca.cliente_email,
+                amount=cobranca.valor,
+                payment_id=payment_id
+            )
+
+            try:
+                cobranca.status = "delivered" 
+                db.session.add(cobranca) 
+                db.session.commit()
+                print(f"[WORKER] Sucesso total. Cobranca {cobranca.id} finalizada.")
+            except Exception as db_exc:
+                print(f"[WORKER] ALERTA: E-mail enviado, mas falha ao salvar DB: {db_exc}")
+                db.session.rollback() 
             else:
                 print(f"[WORKER] Falha no envio de e-mail. Fazendo Rollback do DB.")
                 db.session.rollback() 
