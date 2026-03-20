@@ -16,6 +16,7 @@ from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
+
 # --- CONFIGURAÇÃO DO FLASK / DB ---
 app = Flask(__name__)
 
@@ -68,6 +69,38 @@ class ChaveLicenca(db.Model):
     cliente_email = db.Column(db.String(200), nullable=True) 
 
 # --- FUNÇÃO DE ENVIO DE E-MAIL ---
+def registrar_venda_supabase(produto_id, customer_email, amount, payment_id):
+    """Registra a venda na tabela 'sales' do Supabase via API REST."""
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not supabase_url or not supabase_key:
+        print("[WORKER] SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configuradas. Pulando registro.")
+        return
+
+    import requests
+    sales_url = f"{supabase_url}/rest/v1/sales"
+    headers = {
+        "apikey": supabase_key,
+        "Authorization": f"Bearer {supabase_key}",
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+    }
+    data = {
+        "product_id": produto_id,
+        "customer_email": customer_email,
+        "amount": amount,
+        "payment_id": payment_id,
+        "status": "paid"
+    }
+    try:
+        resp = requests.post(sales_url, json=data, headers=headers, timeout=5)
+        if resp.status_code in (200, 201):
+            print(f"[WORKER] Venda registrada no Supabase (product_id {produto_id})")
+        else:
+            print(f"[WORKER] Erro ao registrar venda no Supabase: {resp.status_code} - {resp.text}")
+    except Exception as e:
+        print(f"[WORKER] Exceção ao registrar venda no Supabase: {e}")
+
 
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, cobranca, nome_produto, chave_acesso=None):
     """ Envia e-mail, usando SMTP_SSL/TLS. Suporta link (e-book) ou chave (game/app). """
