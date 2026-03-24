@@ -538,10 +538,10 @@ def handle_contact_form():
              return jsonify({"status": "error", "message": "API de email não configurada."}), 500
 
         params = {
-            "from": "RREAD <onboarding@resend.dev>",
+            "from": "BrooStore <onboarding@resend.dev>",
             "to": "gameslizards@gmail.com",
             "reply_to": email_remetente,
-            "subject": f"Contato R·READ: {assunto}",
+            "subject": f"Contato BrooStore: {assunto}",
             "html": f"<p>De: {nome} ({email_remetente})</p><hr><p>{mensagem}</p>"
         }
         
