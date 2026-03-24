@@ -2,7 +2,7 @@
 """
 Worker RQ – ARQUITETURA "PLANO A"
 Ouve a fila por jobs (contendo o payment_id) enviados pelo webhook.
-Se o pagamento estiver aprovado, busca os dados no DB e envia o produto correto.
+Se o pagamento estiver aprovado, busca os dados no DB, envia o produto e REGISTRA A VENDA para o dashboard.
 """
 
 import os
@@ -54,6 +54,8 @@ class Produto(db.Model):
     preco = db.Column(db.Float, nullable=False)
     link_download = db.Column(db.String(500), nullable=False)
     tipo = db.Column(db.String(50), default="ebook", nullable=False)
+    # Assumindo que produtos têm author_id para vincular ao vendedor/autor
+    author_id = db.Column(db.String(100), nullable=True)  # UUID do autor no Supabase
 
 class ChaveLicenca(db.Model):
     __tablename__ = "chaves_licenca"
@@ -65,6 +67,17 @@ class ChaveLicenca(db.Model):
     vendida_em = db.Column(db.DateTime, nullable=True)
     cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), unique=True, nullable=True) 
     cliente_email = db.Column(db.String(200), nullable=True) 
+
+# NOVO MODELO: Registro de vendas para o dashboard dos autores
+class Sale(db.Model):
+    __tablename__ = "sales"
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)  # Valor bruto da venda
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Opcional: vincular ao autor diretamente para consultas mais rápidas
+    author_id = db.Column(db.String(100), nullable=True)
 
 # --- FUNÇÃO DE ENVIO DE E-MAIL ---
 
@@ -200,7 +213,6 @@ def process_mercado_pago_webhook(payment_id):
 
         if resp["status"] != 200:
             print(f"[WORKER] MP respondeu {resp['status']} para o ID {payment_id}. Detalhes: {resp.get('response')}")
-            # Se a API do MP falhar, lançamos erro para o RQ tentar de novo depois
             raise RuntimeError(f"MP respondeu {resp['status']} para o ID {payment_id}")
 
         payment = resp["response"]
@@ -209,8 +221,7 @@ def process_mercado_pago_webhook(payment_id):
             print(f"[WORKER] Pagamento {payment_id} não aprovado ({payment.get('status')}). Ignorando.")
             return
 
-        # 3. Buscar Cobrança no DB pelo EXTERNAL_REFERENCE (correção!)
-        # O external_reference é o UUID que você gerou, não o payment_id do MP
+        # 3. Buscar Cobrança no DB pelo EXTERNAL_REFERENCE
         external_ref = payment.get("external_reference")
         
         if not external_ref:
@@ -219,29 +230,18 @@ def process_mercado_pago_webhook(payment_id):
             
         print(f"[WORKER] Pagamento {payment_id} APROVADO. Buscando external_reference: {external_ref}")
         
-        # Retry com múltiplas tentativas (dá tempo do banco sincronizar se houver delay)
-        cobranca = None
-        tentativas = 0
-        max_tentativas = 5
-        
-        while tentativas < max_tentativas and not cobranca:
-            cobranca = Cobranca.query.filter_by(external_reference=str(external_ref)).first()
-            
-            if not cobranca and tentativas < max_tentativas - 1:
-                print(f"[WORKER] Cobrança não encontrada, tentando novamente em 2s... (tentativa {tentativas + 1})")
-                import time
-                time.sleep(2)
-                db.session.expire_all()  # Força refresh do banco
-                tentativas += 1
-            else:
-                tentativas += 1
+        cobranca = Cobranca.query.filter_by(external_reference=str(external_ref)).first()
 
         if not cobranca:
             print(f"[WORKER] ERRO CRÍTICO: Cobranca com external_reference {external_ref} não encontrada no DB.")
-            # Debug: mostrar últimas cobranças para verificar
             ultimas = Cobranca.query.order_by(Cobranca.data_criacao.desc()).limit(3).all()
             for c in ultimas:
                 print(f"[WORKER] DB Check: ID={c.id}, ExtRef={c.external_reference}, Status={c.status}")
+            return
+
+        # Verifica se já não foi processada (evita duplicatas)
+        if cobranca.status == "delivered":
+            print(f"[WORKER] Cobrança {cobranca.id} já foi entregue anteriormente. Ignorando.")
             return
 
         produto = cobranca.produto 
@@ -256,7 +256,6 @@ def process_mercado_pago_webhook(payment_id):
         if produto.tipo in ["game", "app"] or produto.nome == "8 PERSONAGENS do Game Chinelo Voador":
             print(f"[WORKER] Produto '{produto.tipo}'. Buscando chave de licença...")
             
-            # Lock de linha para evitar venda duplicada (concorrência)
             chave_obj = ChaveLicenca.query.filter(
                 ChaveLicenca.produto_id == produto.id,
                 ChaveLicenca.vendida == False
@@ -269,7 +268,6 @@ def process_mercado_pago_webhook(payment_id):
                 chave_obj.cliente_email = cobranca.cliente_email
                 
                 chave_entregue = chave_obj.chave_serial
-                # Para games, o link de download é o instalador geral
                 link_entrega = produto.link_download 
                 
                 print(f"[WORKER] CHAVE reservada: {chave_entregue}")
@@ -293,13 +291,24 @@ def process_mercado_pago_webhook(payment_id):
             chave_acesso=chave_entregue
         )
         
-        # 6. Finalizar Transação
+        # 6. Finalizar Transação e REGISTRAR VENDA NO DASHBOARD
         if sucesso:
             try:
+                # Atualiza status da cobrança
                 cobranca.status = "delivered" 
-                db.session.add(cobranca) 
+                db.session.add(cobranca)
+                
+                # NOVO: Registra a venda na tabela sales para o dashboard do autor
+                nova_venda = Sale(
+                    product_id=produto.id,
+                    amount=cobranca.valor,  # Valor bruto da venda
+                    author_id=produto.author_id  # Vincula ao autor do produto
+                )
+                db.session.add(nova_venda)
+                print(f"[WORKER] VENDA REGISTRADA: Produto {produto.id}, Autor {produto.author_id}, Valor {cobranca.valor}")
+                
                 db.session.commit()
-                print(f"[WORKER] Sucesso total. Cobranca {cobranca.id} finalizada.")
+                print(f"[WORKER] Sucesso total. Cobranca {cobranca.id} finalizada e venda computada no dashboard.")
             except Exception as db_exc:
                 print(f"[WORKER] ALERTA: E-mail enviado, mas falha ao salvar DB: {db_exc}")
                 db.session.rollback() 
@@ -327,10 +336,9 @@ if __name__ == "__main__":
     try:
         with app.app_context():
             db.create_all()
-            print("[WORKER] Tabelas do banco de dados verificadas.")
+            print("[WORKER] Tabelas do banco de dados verificadas (incluindo 'sales').")
     except Exception as db_err:
         print(f"[WORKER] ALERTA: Erro ao conectar/criar tabelas no DB: {db_err}")
-        # Não damos exit(1) aqui pois o DB pode ser 'lazy', mas é bom checar logs
 
     # Iniciar Worker
     worker_queues = ["default"]
