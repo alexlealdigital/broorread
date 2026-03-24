@@ -75,13 +75,13 @@ class ChaveLicenca(db.Model):
     cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), unique=True, nullable=True)
     cliente_email = db.Column(db.String(200), nullable=True)
 
+# REMOVIDO: supabase_synced - essa coluna não existe no banco local
 class Sale(db.Model):
     __tablename__ = "sales"
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    supabase_synced = db.Column(db.Boolean, default=False)
 
 # ============================================
 # FUNÇÃO: REGISTRAR VENDA NO SUPABASE
@@ -89,7 +89,7 @@ class Sale(db.Model):
 def registrar_venda_no_supabase(product_id, customer_email, amount, payment_id):
     """Insere a venda na tabela sales do Supabase para o dashboard atualizar."""
     if not SUPABASE_SERVICE_ROLE_KEY:
-        print("[WORKER] AVISO: SUPABASE_SERVICE_ROLE_KEY não configurada.")
+        print("[WORKER] ❌ ERRO: SUPABASE_SERVICE_ROLE_KEY não configurada!")
         return False
     
     try:
@@ -102,8 +102,8 @@ def registrar_venda_no_supabase(product_id, customer_email, amount, payment_id):
         }
         
         payload = {
-            "product_id": product_id,
-            "customer_email": customer_email,
+            "product_id": int(product_id),
+            "customer_email": str(customer_email),
             "amount": float(amount),
             "payment_id": str(payment_id),
             "status": "paid"
@@ -112,15 +112,17 @@ def registrar_venda_no_supabase(product_id, customer_email, amount, payment_id):
         print(f"[WORKER] Inserindo no Supabase: Produto {product_id}, Valor {amount}")
         response = requests.post(url, json=payload, headers=headers, timeout=10)
         
+        print(f"[WORKER] Resposta Supabase: Status {response.status_code}")
+        
         if response.status_code in [200, 201]:
             print(f"[WORKER] ✅ Venda registrada no Supabase!")
             return True
         else:
-            print(f"[WORKER] ⚠️ Erro Supabase {response.status_code}: {response.text}")
+            print(f"[WORKER] ❌ Erro Supabase: {response.status_code} - {response.text}")
             return False
             
     except Exception as e:
-        print(f"[WORKER] ⚠️ Falha ao conectar no Supabase: {e}")
+        print(f"[WORKER] ❌ Exceção ao conectar no Supabase: {e}")
         return False
 
 # ============================================
@@ -136,7 +138,6 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
         print("[WORKER] ERRO: Credenciais de email não configuradas.")
         return False
     
-    # Conteúdo dinâmico baseado no tipo de produto
     if chave_acesso:
         assunto = f"BrooStore: Sua chave de acesso para \"{nome_produto}\" chegou! 🚀"
         instrucoes_entrega = f"""
@@ -160,7 +161,6 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
             </div>
         """
     
-    # Template HTML completo
     corpo_html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -239,7 +239,7 @@ def process_mercado_pago_webhook(payment_id):
             print(f"[WORKER] Pagamento {payment_id} não aprovado ({payment.get('status')}).")
             return
         
-        # 3. Buscar cobrança pelo EXTERNAL_REFERENCE (correção crucial!)
+        # 3. Buscar cobrança pelo EXTERNAL_REFERENCE
         external_ref = payment.get("external_reference")
         if not external_ref:
             print(f"[WORKER] ERRO: Pagamento {payment_id} sem external_reference.")
@@ -247,7 +247,7 @@ def process_mercado_pago_webhook(payment_id):
         
         print(f"[WORKER] Processando pagamento {payment_id} | ExtRef: {external_ref}")
         
-        # Retry com delay para sincronização do banco
+        # Retry com delay
         cobranca = None
         for tentativa in range(5):
             cobranca = Cobranca.query.filter_by(external_reference=str(external_ref)).first()
@@ -259,14 +259,9 @@ def process_mercado_pago_webhook(payment_id):
                 db.session.expire_all()
         
         if not cobranca:
-            print(f"[WORKER] ERRO: Cobrança {external_ref} não encontrada após 5 tentativas.")
-            # Debug: mostrar últimas cobranças
-            ultimas = Cobranca.query.order_by(Cobranca.data_criacao.desc()).limit(3).all()
-            for c in ultimas:
-                print(f"[WORKER] DB: ID={c.id}, ExtRef={c.external_reference}, Status={c.status}")
+            print(f"[WORKER] ERRO: Cobrança {external_ref} não encontrada.")
             return
         
-        # Verificar se já foi processada
         if cobranca.status == "delivered":
             print(f"[WORKER] Cobrança {cobranca.id} já foi entregue. Ignorando.")
             return
@@ -274,10 +269,10 @@ def process_mercado_pago_webhook(payment_id):
         # 4. Buscar produto
         produto = cobranca.produto
         if not produto:
-            print(f"[WORKER] ERRO: Produto não encontrado para cobrança {cobranca.id}.")
+            print(f"[WORKER] ERRO: Produto não encontrado.")
             return
         
-        # 5. Gerenciar estoque (chaves ou link)
+        # 5. Gerenciar estoque
         link_entrega = produto.link_download
         chave_entregue = None
         
@@ -297,7 +292,7 @@ def process_mercado_pago_webhook(payment_id):
                 db.session.add(chave_obj)
                 print(f"[WORKER] Chave reservada: {chave_entregue[:10]}...")
             else:
-                print(f"[WORKER] ERRO: Estoque esgotado para {produto.nome}!")
+                print(f"[WORKER] ERRO: Estoque esgotado!")
                 db.session.rollback()
                 raise Exception(f"Estoque esgotado: {produto.id}")
         
@@ -315,20 +310,21 @@ def process_mercado_pago_webhook(payment_id):
         # 7. Finalizar transação e registrar no Supabase
         if sucesso:
             try:
-                # Atualiza cobrança local
+                # Salva localmente
                 cobranca.status = "delivered"
                 db.session.add(cobranca)
                 
-                # Registra venda local (backup)
+                # Salva na tabela local (backup)
                 nova_venda = Sale(
                     product_id=produto.id,
-                    amount=cobranca.valor,
-                    supabase_synced=False
+                    amount=cobranca.valor
                 )
                 db.session.add(nova_venda)
                 db.session.commit()
                 
-                # Registra no Supabase (para o dashboard)
+                print(f"[WORKER] ✅ Venda salva no banco local.")
+                
+                # REGISTRA NO SUPABASE (para o dashboard)
                 supabase_ok = registrar_venda_no_supabase(
                     product_id=produto.id,
                     customer_email=cobranca.cliente_email,
@@ -337,19 +333,16 @@ def process_mercado_pago_webhook(payment_id):
                 )
                 
                 if supabase_ok:
-                    nova_venda.supabase_synced = True
-                    db.session.commit()
-                    print(f"[WORKER] ✅ SUCESSO TOTAL: Email enviado + Dashboard atualizado.")
+                    print(f"[WORKER] ✅ SUCESSO TOTAL: Email + Dashboard atualizado!")
                 else:
-                    print(f"[WORKER] ⚠️ Email enviado, mas dashboard não atualizado.")
+                    print(f"[WORKER] ⚠️ Email enviado, mas dashboard NÃO atualizado.")
                 
             except Exception as e:
                 print(f"[WORKER] ERRO ao salvar: {e}")
                 db.session.rollback()
         else:
-            print(f"[WORKER] ERRO: Falha no envio de email. Rollback executado.")
+            print(f"[WORKER] ERRO: Falha no envio de email.")
             db.session.rollback()
-            raise Exception("Falha no envio de email")
 
 # ============================================
 # INICIALIZAÇÃO DO WORKER
@@ -376,7 +369,7 @@ if __name__ == "__main__":
     # Iniciar worker
     try:
         worker = Worker(["default"], connection=redis_conn)
-        print("[WORKER] 🚀 Worker iniciado e monitorando fila 'default'...")
+        print("[WORKER] 🚀 Worker iniciado...")
         worker.work()
     except Exception as e:
         print(f"[WORKER] ❌ Erro fatal: {e}")
