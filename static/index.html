@@ -403,62 +403,243 @@
         </button>
     </div>
 </div>
-                    <div id="spotlight-container">
-    <div class="spotlight-wrapper">
-        <!-- Coluna da Esquerda: Imagem e Informações Técnicas -->
-        <div class="spotlight-left">
-            <div class="spotlight-image-container">
-                <img id="spot-img" src="" alt="Capa do Livro">
+                   <div id="spotlight-container">
+    <!-- Estilos Embutidos para garantir que nada quebre -->
+    <style>
+        .vendas-wrapper {
+            display: flex;
+            min-height: 100vh;
+            background: #0a0e17;
+            color: #fff;
+            font-family: 'Lato', sans-serif;
+        }
+
+        /* Coluna Esquerda */
+        .vendas-left {
+            flex: 1;
+            background: #05070a;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid #1a212d;
+        }
+
+        .vendas-capa-container {
+            width: 100%;
+            max-width: 380px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+        }
+
+        .vendas-capa-container img {
+            width: 100%;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .vendas-autor {
+            width: 100%;
+            max-width: 450px;
+            margin-top: 20px;
+        }
+
+        .vendas-autor h3 {
+            color: #fca311;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #fca311;
+            display: inline-block;
+        }
+
+        .vendas-autor p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #bdc3c7;
+        }
+
+        .vendas-specs {
+            margin-top: 30px;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .vendas-spec-item { display: flex; flex-direction: column; }
+        .vendas-spec-label { font-size: 0.8rem; color: #5d6d7e; text-transform: uppercase; font-weight: bold; }
+        .vendas-spec-value { font-size: 2.8rem; font-weight: 900; color: #fff; line-height: 1; }
+
+        /* Coluna Direita */
+        .vendas-right {
+            flex: 1.2;
+            padding: 60px;
+            overflow-y: auto;
+        }
+
+        .vendas-badge {
+            background: #fca311;
+            color: #000;
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-weight: 900;
+            font-size: 0.75rem;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .vendas-titulo {
+            font-family: 'Poppins', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 10px;
+        }
+
+        .vendas-subtitulo {
+            font-size: 1.3rem;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+
+        .vendas-preco {
+            font-size: 4.5rem;
+            color: #27ae60;
+            font-weight: 900;
+            margin-bottom: 35px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .vendas-btn-comprar {
+            background: #27ae60;
+            color: #fff;
+            font-size: 1.4rem;
+            font-weight: 900;
+            padding: 20px 40px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            box-shadow: 0 10px 30px rgba(39, 174, 96, 0.3);
+        }
+
+        .vendas-btn-comprar:hover {
+            background: #2ecc71;
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(39, 174, 96, 0.5);
+        }
+
+        .vendas-seguro {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #5d6d7e;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .vendas-resumo {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid #1a212d;
+        }
+
+        .vendas-resumo h3 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .vendas-resumo-texto {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #bdc3c7;
+        }
+
+        .vendas-resumo-texto p { margin-bottom: 15px; }
+
+        .vendas-voltar {
+            margin-top: 40px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #fca311 !important;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .vendas-voltar:hover { text-decoration: underline !important; }
+
+        /* Responsividade */
+        @media (max-width: 1024px) {
+            .vendas-wrapper { flex-direction: column; }
+            .vendas-left { border-right: none; border-bottom: 1px solid #1a212d; }
+            .vendas-titulo { font-size: 2.5rem; }
+            .vendas-preco { font-size: 3.5rem; }
+        }
+    </style>
+
+    <div class="vendas-wrapper">
+        <!-- Coluna da Esquerda -->
+        <div class="vendas-left">
+            <div class="vendas-capa-container">
+                <img id="spot-img" src="" alt="Capa">
             </div>
             
-            <div class="author-section">
+            <div class="vendas-autor">
                 <h3>Sobre o Autor</h3>
-                <p id="author-bio">
+                <p>
                     <strong>Kleber de Oliveira Andrade</strong> é Doutor em Engenharia pela Escola de Engenharia de São Carlos (EESC/USP - 2016), Mestre na mesma instituição (2011) e Bacharel em Ciência da Computação pela Escola de Engenharia de Piracicaba (EEP - 2008). Sua paixão por tecnologia começou cedo: joga videogames desde os 3 anos e escreveu suas primeiras linhas de código aos 10. Hoje, soma mais de 25 anos de experiência como programador.
                 </p>
             </div>
 
-            <div class="book-specs">
-                <div class="spec-item">
-                    <span class="spec-label">Número de Páginas</span>
-                    <span class="spec-value">244</span>
+            <div class="vendas-specs">
+                <div class="vendas-spec-item">
+                    <span class="vendas-spec-label">Número de Páginas</span>
+                    <span class="vendas-spec-value">244</span>
                 </div>
             </div>
         </div>
 
-        <!-- Coluna da Direita: Venda e Resumo -->
-        <div class="spotlight-details">
-            <div class="offer-badge">OFERTA ESPECIAL</div>
-            <h1 id="spot-title" class="spotlight-title"></h1>
-            <p id="spot-desc" class="spotlight-subtitle"></p>
+        <!-- Coluna da Direita -->
+        <div class="vendas-right">
+            <div class="vendas-badge">OFERTA ESPECIAL</div>
+            <h1 id="spot-title" class="vendas-titulo"></h1>
+            <p id="spot-desc" class="vendas-subtitulo"></p>
 
-            <div class="price-container">
-                <span id="spot-price" class="main-price"></span>
-            </div>
+            <div class="vendas-preco" id="spot-price"></div>
 
-            <button id="spot-btn" class="spotlight-btn">
+            <button id="spot-btn" class="vendas-btn-comprar">
                 <i class="fas fa-rocket"></i> GARANTIR AGORA
             </button>
             
-            <p class="secure-payment">
+            <div class="vendas-seguro">
                 <i class="fas fa-lock"></i> Pagamento seguro via Mercado Pago
-            </p>
+            </div>
 
-            <div class="summary-section">
+            <div class="vendas-resumo">
                 <h3>Resumo da Obra</h3>
-                <div id="book-summary" class="summary-content">
-                    <!-- O resumo que você enviar entrará aqui -->
+                <div class="vendas-resumo-texto">
                     <p>Esta obra: Em 1999, logo depois de terminar a faculdade, eu fundei um estúdio independente de jogos no Brasil: a FourX Development. Naquela época, falar em "indústria de jogos" por aqui ainda soava como algo distante — existiam poucos estúdios, pouca estrutura e quase nenhum caminho claro. A gente aprendia fazendo, errando, consertando, improvisando... e, principalmente, insistindo.</p>
-                    <p>Foi nesse cenário que eu conheci o Kleber. Ele era um universitário de uma cidade distante, entusiasta de desenvolvimento de jogos, e um dia entrou em contato comigo pedindo ajuda...</p>
+                    <p>Foi nesse cenário que eu conheci o Kleber. Ele era um universitário de uma cidade distante, entusiasta de desenvolvimento de jogos, e um dia entrou em contato comigo pedindo ajuda. Para muita gente, aquilo teria sido só mais uma mensagem.</p>
+                    <p>Para mim, foi o começo de uma amizade e de uma parceria que atravessou anos, projetos, dúvidas e recomeços. O Kleber não apenas buscava aprender, ele vinha com aquela energia rara de quem quer construir algo de verdade, mesmo quando o mundo ao redor ainda não sabe.</p>
                 </div>
             </div>
 
-            <a href="javascript:void(0)" onclick="location.reload()" class="back-link">
+            <a href="javascript:void(0)" onclick="location.reload()" class="vendas-voltar">
                 <i class="fas fa-arrow-left"></i> Ver outros produtos da loja
             </a>
         </div>
     </div>
 </div>
+
 
                     
 
