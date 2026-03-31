@@ -403,19 +403,63 @@
         </button>
     </div>
 </div>
-                     <div class="book-card" data-id="4" 
-                         data-name="A Ordem do Código Limpo" 
-                         data-price="47.14" 
-                         data-desc="Fundamentos da Clareza e da Sobrevivência"
-                         data-img="https://i.imgur.com/KCZS2tp.png">
-                        <img src="https://i.imgur.com/KCZS2tp.png" class="book-cover">
-                        <div class="book-info">
-                            <h3>Tecnologia</h3>
-                            <p class="book-description">Fundamentos da Clareza e da Sobrevivência</p>
-                            <p class="book-price">R$ 47,14</p>
-                            <button class="cta-button comprar-btn"><i class="fas fa-shopping-cart"></i> Comprar</button>
-                        </div>
-                    </div>
+                    <div id="spotlight-container">
+    <div class="spotlight-wrapper">
+        <!-- Coluna da Esquerda: Imagem e Informações Técnicas -->
+        <div class="spotlight-left">
+            <div class="spotlight-image-container">
+                <img id="spot-img" src="" alt="Capa do Livro">
+            </div>
+            
+            <div class="author-section">
+                <h3>Sobre o Autor</h3>
+                <p id="author-bio">
+                    <strong>Kleber de Oliveira Andrade</strong> é Doutor em Engenharia pela Escola de Engenharia de São Carlos (EESC/USP - 2016), Mestre na mesma instituição (2011) e Bacharel em Ciência da Computação pela Escola de Engenharia de Piracicaba (EEP - 2008). Sua paixão por tecnologia começou cedo: joga videogames desde os 3 anos e escreveu suas primeiras linhas de código aos 10. Hoje, soma mais de 25 anos de experiência como programador.
+                </p>
+            </div>
+
+            <div class="book-specs">
+                <div class="spec-item">
+                    <span class="spec-label">Número de Páginas</span>
+                    <span class="spec-value">244</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna da Direita: Venda e Resumo -->
+        <div class="spotlight-details">
+            <div class="offer-badge">OFERTA ESPECIAL</div>
+            <h1 id="spot-title" class="spotlight-title"></h1>
+            <p id="spot-desc" class="spotlight-subtitle"></p>
+
+            <div class="price-container">
+                <span id="spot-price" class="main-price"></span>
+            </div>
+
+            <button id="spot-btn" class="spotlight-btn">
+                <i class="fas fa-rocket"></i> GARANTIR AGORA
+            </button>
+            
+            <p class="secure-payment">
+                <i class="fas fa-lock"></i> Pagamento seguro via Mercado Pago
+            </p>
+
+            <div class="summary-section">
+                <h3>Resumo da Obra</h3>
+                <div id="book-summary" class="summary-content">
+                    <!-- O resumo que você enviar entrará aqui -->
+                    <p>Esta obra: Em 1999, logo depois de terminar a faculdade, eu fundei um estúdio independente de jogos no Brasil: a FourX Development. Naquela época, falar em "indústria de jogos" por aqui ainda soava como algo distante — existiam poucos estúdios, pouca estrutura e quase nenhum caminho claro. A gente aprendia fazendo, errando, consertando, improvisando... e, principalmente, insistindo.</p>
+                    <p>Foi nesse cenário que eu conheci o Kleber. Ele era um universitário de uma cidade distante, entusiasta de desenvolvimento de jogos, e um dia entrou em contato comigo pedindo ajuda...</p>
+                </div>
+            </div>
+
+            <a href="javascript:void(0)" onclick="location.reload()" class="back-link">
+                <i class="fas fa-arrow-left"></i> Ver outros produtos da loja
+            </a>
+        </div>
+    </div>
+</div>
+
                     
 
                     <div class="book-card" data-id="1" 
