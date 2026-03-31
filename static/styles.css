@@ -174,4 +174,71 @@
     .spotlight-desc { border-left: none; padding-left: 0; font-size: 1rem; }
     .spotlight-title { font-size: 2.5rem; }
     .spotlight-btn { width: 100%; justify-content: center; }
+   /* --- NOVOS ESTILOS PARA PÁGINA DE VENDAS ATRAENTE --- */
+.spotlight-left {
+    flex: 0.8;
+    background: #050505;
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-right: 1px solid #1a1a1a;
+}
+
+.spotlight-image-container {
+    width: 100%;
+    max-width: 350px;
+    margin-bottom: 2rem;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+    transition: transform 0.3s ease;
+}
+
+.spotlight-image-container:hover { transform: scale(1.02); }
+
+.spotlight-image-container img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 4px;
+}
+
+.author-section { margin-top: 2rem; color: #ccc; }
+.author-section h3 { color: #fff; margin-bottom: 1rem; font-family: 'Poppins', sans-serif; border-bottom: 2px solid var(--orange-web); display: inline-block; }
+.author-section p { font-size: 0.95rem; line-height: 1.6; }
+
+.book-specs { margin-top: 2rem; width: 100%; display: flex; justify-content: flex-start; }
+.spec-item { display: flex; flex-direction: column; }
+.spec-label { font-size: 0.8rem; color: #666; text-transform: uppercase; }
+.spec-value { font-size: 2.5rem; font-weight: 800; color: #fff; }
+
+.offer-badge {
+    background: var(--orange-web);
+    color: #000;
+    padding: 0.3rem 1rem;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 0.75rem;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+.spotlight-subtitle { font-size: 1.2rem; color: #888; margin-bottom: 2rem; }
+.main-price { font-size: 4rem; color: var(--success-green); font-weight: 800; margin-bottom: 2rem; display: block; }
+
+.secure-payment { font-size: 0.8rem; color: #555; margin-top: 1rem; display: flex; align-items: center; gap: 8px; }
+
+.summary-section { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #1a1a1a; }
+.summary-section h3 { color: #fff; margin-bottom: 1.5rem; font-size: 1.5rem; }
+.summary-content { color: #aaa; font-size: 1.05rem; line-height: 1.7; }
+.summary-content p { margin-bottom: 1rem; }
+
+.back-link { margin-top: 3rem; color: var(--orange-web) !important; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
+.back-link:hover { text-decoration: underline !important; }
+
+/* Ajuste de Responsividade */
+@media (max-width: 1024px) {
+    .spotlight-wrapper { flex-direction: column; }
+    .spotlight-left { border-right: none; border-bottom: 1px solid #1a1a1a; }
+}
+
 }
