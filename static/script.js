@@ -454,11 +454,46 @@ function activateSpotlightMode(id) {
         const name = sourceCard.dataset.name;
         const price = sourceCard.dataset.price;
         const desc = sourceCard.dataset.desc;
+        const autor = sourceCard.dataset.autor || '';
+        const paginas = sourceCard.dataset.paginas || '';
+        const intro = sourceCard.dataset.intro || '';
 
         document.getElementById('spot-img').src = img;
         document.getElementById('spot-title').innerText = name;
         document.getElementById('spot-desc').innerText = desc;
         document.getElementById('spot-price').innerText = `R$ ${price.replace('.', ',')}`;
+
+        // Exibe metadados (autor e páginas) se existirem
+        const spotMeta = document.getElementById('spot-meta');
+        const spotAutorWrap = document.getElementById('spot-autor-wrap');
+        const spotPaginasWrap = document.getElementById('spot-paginas-wrap');
+
+        if (autor) {
+            document.getElementById('spot-autor').innerText = `Autor: ${autor}`;
+            spotAutorWrap.style.display = 'flex';
+        } else {
+            spotAutorWrap.style.display = 'none';
+        }
+
+        if (paginas) {
+            document.getElementById('spot-paginas').innerText = `${paginas} páginas`;
+            spotPaginasWrap.style.display = 'flex';
+        } else {
+            spotPaginasWrap.style.display = 'none';
+        }
+
+        if (autor || paginas) {
+            spotMeta.style.display = 'flex';
+        }
+
+        // Exibe introdução se existir
+        const spotIntroWrap = document.getElementById('spot-intro-wrap');
+        if (intro) {
+            document.getElementById('spot-intro').innerText = intro;
+            spotIntroWrap.style.display = 'block';
+        } else {
+            spotIntroWrap.style.display = 'none';
+        }
 
         const spotBtn = document.getElementById('spot-btn');
         spotBtn.onclick = () => {
