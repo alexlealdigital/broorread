@@ -457,6 +457,7 @@ function activateSpotlightMode(id) {
         const autor = sourceCard.dataset.autor || '';
         const paginas = sourceCard.dataset.paginas || '';
         const intro = sourceCard.dataset.intro || '';
+        const sobreAutor = sourceCard.dataset.sobreAutor || '';
 
         document.getElementById('spot-img').src = img;
         document.getElementById('spot-title').innerText = name;
@@ -493,6 +494,15 @@ function activateSpotlightMode(id) {
             spotIntroWrap.style.display = 'block';
         } else {
             spotIntroWrap.style.display = 'none';
+        }
+
+        // Exibe "Sobre o Autor" se existir
+        const spotSobreAutorWrap = document.getElementById('spot-sobre-autor-wrap');
+        if (sobreAutor) {
+            document.getElementById('spot-sobre-autor').innerText = sobreAutor;
+            spotSobreAutorWrap.style.display = 'block';
+        } else {
+            spotSobreAutorWrap.style.display = 'none';
         }
 
         const spotBtn = document.getElementById('spot-btn');
