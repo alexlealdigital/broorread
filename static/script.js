@@ -441,75 +441,110 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-function activateSpotlightMode(id) {
+async function activateSpotlightMode(id) {
     const sourceCard = document.querySelector(`.book-card[data-id="${id}"]`);
-    
-    if (sourceCard && mainStore && spotlightContainer) {
-        mainStore.style.display = 'none'; 
+
+    // Tenta pegar dados do card HTML primeiro, senão busca no Supabase
+    let produto = null;
+
+    if (sourceCard) {
+        produto = {
+            img:        sourceCard.dataset.img,
+            name:       sourceCard.dataset.name,
+            price:      sourceCard.dataset.price,
+            desc:       sourceCard.dataset.desc        || '',
+            autor:      sourceCard.dataset.autor       || '',
+            paginas:    sourceCard.dataset.paginas     || '',
+            intro:      sourceCard.dataset.intro       || '',
+            sobreAutor: sourceCard.dataset.sobreAutor  || '',
+        };
+    } else {
+        // Busca no Supabase
+        try {
+            const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
+            const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
+            const sb = window.supabase
+                ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
+                : null;
+
+            if (sb) {
+                const { data } = await sb
+                    .from('products')
+                    .select('title, price, image_url, descricao, author, paginas, intro, sobre_autor')
+                    .eq('id', id)
+                    .single();
+
+                if (data) {
+                    produto = {
+                        img:        data.image_url || '',
+                        name:       data.title,
+                        price:      String(data.price),
+                        desc:       data.descricao   || '',
+                        autor:      data.author       || '',
+                        paginas:    data.paginas ? String(data.paginas) : '',
+                        intro:      data.intro        || '',
+                        sobreAutor: data.sobre_autor  || '',
+                    };
+                }
+            }
+        } catch(e) {
+            console.warn('Erro ao buscar produto no Supabase:', e);
+        }
+    }
+
+    if (produto && mainStore && spotlightContainer) {
+        mainStore.style.display = 'none';
         mainStore.classList.add('hidden');
-        
         spotlightContainer.style.display = 'flex';
 
-        const img = sourceCard.dataset.img;
-        const name = sourceCard.dataset.name;
-        const price = sourceCard.dataset.price;
-        const desc = sourceCard.dataset.desc;
-        const autor = sourceCard.dataset.autor || '';
-        const paginas = sourceCard.dataset.paginas || '';
-        const intro = sourceCard.dataset.intro || '';
-        const sobreAutor = sourceCard.dataset.sobreAutor || '';
+        document.getElementById('spot-img').src = produto.img;
+        document.getElementById('spot-title').innerText = produto.name;
+        document.getElementById('spot-desc').innerText  = produto.desc;
+        document.getElementById('spot-price').innerText = `R$ ${produto.price.replace('.', ',')}`;
 
-        document.getElementById('spot-img').src = img;
-        document.getElementById('spot-title').innerText = name;
-        document.getElementById('spot-desc').innerText = desc;
-        document.getElementById('spot-price').innerText = `R$ ${price.replace('.', ',')}`;
-
-        // Exibe metadados (autor e páginas) se existirem
-        const spotMeta = document.getElementById('spot-meta');
-        const spotAutorWrap = document.getElementById('spot-autor-wrap');
+        // Metadados (autor e páginas)
+        const spotMeta        = document.getElementById('spot-meta');
+        const spotAutorWrap   = document.getElementById('spot-autor-wrap');
         const spotPaginasWrap = document.getElementById('spot-paginas-wrap');
 
-        if (autor) {
-            document.getElementById('spot-autor').innerText = `Autor: ${autor}`;
+        if (produto.autor) {
+            document.getElementById('spot-autor').innerText = `Autor: ${produto.autor}`;
             spotAutorWrap.style.display = 'flex';
         } else {
             spotAutorWrap.style.display = 'none';
         }
 
-        if (paginas) {
-            document.getElementById('spot-paginas').innerText = `${paginas} páginas`;
+        if (produto.paginas) {
+            document.getElementById('spot-paginas').innerText = `${produto.paginas} páginas`;
             spotPaginasWrap.style.display = 'flex';
         } else {
             spotPaginasWrap.style.display = 'none';
         }
 
-        if (autor || paginas) {
-            spotMeta.style.display = 'flex';
-        }
+        spotMeta.style.display = (produto.autor || produto.paginas) ? 'flex' : 'none';
 
-        // Exibe introdução se existir
+        // Introdução
         const spotIntroWrap = document.getElementById('spot-intro-wrap');
-        if (intro) {
-            document.getElementById('spot-intro').innerText = intro;
+        if (produto.intro) {
+            document.getElementById('spot-intro').innerText = produto.intro;
             spotIntroWrap.style.display = 'block';
         } else {
             spotIntroWrap.style.display = 'none';
         }
 
-        // Exibe "Sobre o Autor" se existir
+        // Sobre o autor
         const spotSobreAutorWrap = document.getElementById('spot-sobre-autor-wrap');
-        if (sobreAutor) {
-            document.getElementById('spot-sobre-autor').innerText = sobreAutor;
+        if (produto.sobreAutor) {
+            document.getElementById('spot-sobre-autor').innerText = produto.sobreAutor;
             spotSobreAutorWrap.style.display = 'block';
         } else {
             spotSobreAutorWrap.style.display = 'none';
         }
 
-        const spotBtn = document.getElementById('spot-btn');
-        spotBtn.onclick = () => {
-            // Passa o id, name e price para o modal (o usuario_id virá da variável global)
-            openCheckoutModal(id, name, price);
+        document.getElementById('spot-btn').onclick = () => {
+            openCheckoutModal(id, produto.name, produto.price);
         };
+
     } else {
         console.warn("Produto não encontrado para o ID:", id);
         initStoreButtons();
