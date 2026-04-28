@@ -307,6 +307,129 @@ def validar_cupom():
         return jsonify({"status": "error", "message": f"Erro ao validar cupom: {str(e)}"}), 500
 
 
+# ─────────────────────────────────────────────
+# ROTAS ADMIN – CUPONS
+# Requer header:  X-Admin-Key: <valor de ADMIN_SECRET_KEY no Render>
+# ─────────────────────────────────────────────
+
+def _check_admin_key():
+    """Retorna True se o header X-Admin-Key bater com a env var."""
+    secret = os.environ.get("ADMIN_SECRET_KEY", "")
+    if not secret:
+        return False, "ADMIN_SECRET_KEY não configurada no servidor"
+    if request.headers.get("X-Admin-Key", "") != secret:
+        return False, "Chave de admin inválida"
+    return True, ""
+
+
+@app.route("/api/admin/criar-cupom", methods=["POST"])
+def admin_criar_cupom():
+    """
+    Cria um novo cupom de desconto.
+
+    Body JSON:
+    {
+        "codigo":       "PROMO50",          # obrigatório – será salvo em maiúsculas
+        "tipo":         "percentual",        # "percentual" ou "valor_fixo"
+        "valor":        20,                  # 20 = 20 % ou R$ 20,00
+        "usos_maximos": 50,                  # null = ilimitado
+        "produto_id":   6,                   # null = vale para todos
+        "valido_de":    "2025-01-01",        # null = sem restrição de início
+        "valido_ate":   "2025-12-31"         # null = sem expiração
+    }
+    """
+    ok, msg = _check_admin_key()
+    if not ok:
+        return jsonify({"status": "error", "message": msg}), 401
+
+    try:
+        dados = request.get_json() or {}
+
+        codigo = dados.get("codigo", "").strip().upper()
+        tipo   = dados.get("tipo", "percentual")
+        valor  = dados.get("valor")
+
+        if not codigo:
+            return jsonify({"status": "error", "message": "Campo 'codigo' é obrigatório"}), 400
+        if tipo not in ("percentual", "valor_fixo"):
+            return jsonify({"status": "error", "message": "Campo 'tipo' deve ser 'percentual' ou 'valor_fixo'"}), 400
+        if valor is None:
+            return jsonify({"status": "error", "message": "Campo 'valor' é obrigatório"}), 400
+
+        # Código duplicado?
+        if Cupom.query.filter_by(codigo=codigo).first():
+            return jsonify({"status": "error", "message": f"Cupom '{codigo}' já existe"}), 409
+
+        # Datas opcionais
+        from datetime import date
+        def parse_date(s):
+            return date.fromisoformat(s) if s else None
+
+        novo = Cupom(
+            codigo       = codigo,
+            tipo         = tipo,
+            valor        = float(valor),
+            usos_maximos = dados.get("usos_maximos"),   # None = ilimitado
+            usos_atuais  = 0,
+            ativo        = True,
+            produto_id   = dados.get("produto_id"),     # None = todos os produtos
+            valido_de    = parse_date(dados.get("valido_de")),
+            valido_ate   = parse_date(dados.get("valido_ate")),
+        )
+        db.session.add(novo)
+        db.session.commit()
+
+        return jsonify({
+            "status":  "success",
+            "message": f"Cupom '{codigo}' criado com sucesso",
+            "cupom":   novo.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERRO (ADMIN CRIAR CUPOM): {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/admin/cupons", methods=["GET"])
+def admin_listar_cupons():
+    """Lista todos os cupons com status de uso."""
+    ok, msg = _check_admin_key()
+    if not ok:
+        return jsonify({"status": "error", "message": msg}), 401
+
+    try:
+        cupons = Cupom.query.order_by(Cupom.id.desc()).all()
+        return jsonify({
+            "status": "success",
+            "total":  len(cupons),
+            "cupons": [c.to_dict() for c in cupons]
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/admin/cupons/<codigo>/desativar", methods=["POST"])
+def admin_desativar_cupom(codigo):
+    """Desativa um cupom pelo código."""
+    ok, msg = _check_admin_key()
+    if not ok:
+        return jsonify({"status": "error", "message": msg}), 401
+
+    try:
+        cupom = Cupom.query.filter_by(codigo=codigo.upper()).first()
+        if not cupom:
+            return jsonify({"status": "error", "message": "Cupom não encontrado"}), 404
+
+        cupom.ativo = False
+        db.session.commit()
+        return jsonify({"status": "success", "message": f"Cupom '{cupom.codigo}' desativado"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─────────────────────────────────────────────
 # ROTA DE VALIDAÇÃO DE CHAVE
 @app.route("/api/validar_chave", methods=["POST"])
 def validar_chave():
