@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrooStore – Novo Produto</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --black: #000000;
+            --oxford-blue: #14213d;
+            --orange-web: #fca311;
+            --platinum: #e5e5e5;
+            --white: #ffffff;
+            --success-green: #27ae60;
+            --error-red: #e74c3c;
+            --border-grey: #333333;
+            --font-heading: 'Poppins', sans-serif;
+            --font-body: 'Lato', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-body); background: #0a0a0a; color: var(--white); min-height: 100vh; }
+
+        /* Header */
+        .header {
+            background: var(--oxford-blue);
+            border-bottom: 1px solid var(--border-grey);
+            padding: 1rem 2rem;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .header-brand { font-family: var(--font-heading); color: var(--orange-web); font-size: 1.2rem; }
+        .btn-icon {
+            background: rgba(255,255,255,.07);
+            border: 1px solid var(--border-grey);
+            color: var(--white);
+            padding: .5rem .9rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-size: .85rem;
+            transition: all .3s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .btn-icon:hover { border-color: var(--orange-web); color: var(--orange-web); }
+
+        /* Layout */
+        .main { padding: 2rem; max-width: 860px; margin: 0 auto; }
+        .page-title { font-family: var(--font-heading); font-size: 1.6rem; margin-bottom: 2rem; }
+        .page-title span { color: var(--orange-web); }
+
+        /* Card do form */
+        .form-card {
+            background: var(--oxford-blue);
+            border: 1px solid var(--border-grey);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        /* Upload capa */
+        .upload-area {
+            border: 2px dashed var(--border-grey);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all .3s;
+            margin-bottom: 1.5rem;
+            position: relative;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+        }
+        .upload-area:hover, .upload-area.dragover { border-color: var(--orange-web); background: rgba(252,163,17,.05); }
+        .upload-area i { font-size: 2.5rem; color: #444; }
+        .upload-area p { color: #666; font-size: .9rem; }
+        .upload-area strong { color: var(--orange-web); }
+        .upload-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .preview-img {
+            width: 120px;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.5);
+        }
+        .upload-progress {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin-top: .5rem;
+            overflow: hidden;
+            display: none;
+        }
+        .upload-progress-bar {
+            height: 100%;
+            background: var(--orange-web);
+            transition: width .3s;
+        }
+
+        /* Form fields */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media(max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group.full { grid-column: 1 / -1; }
+        .form-group label {
+            display: block;
+            font-size: .8rem;
+            font-weight: bold;
+            color: var(--orange-web);
+            margin-bottom: .4rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: .75rem 1rem;
+            background: rgba(255,255,255,.06);
+            border: 1px solid var(--border-grey);
+            border-radius: 8px;
+            color: var(--white);
+            font-family: var(--font-body);
+            font-size: .95rem;
+            outline: none;
+            transition: border-color .3s;
+        }
+        .form-group select option { background: var(--oxford-blue); }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus { border-color: var(--orange-web); }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder { color: #555; }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+
+        .hint { font-size: .78rem; color: #666; margin-top: .3rem; }
+
+        /* Botão */
+        .btn-submit {
+            width: 100%;
+            padding: 1rem;
+            background: var(--orange-web);
+            border: none;
+            border-radius: 8px;
+            color: var(--black);
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all .3s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            margin-top: .5rem;
+        }
+        .btn-submit:hover { background: #ffb700; transform: translateY(-2px); }
+        .btn-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+        /* Msg */
+        .msg {
+            padding: .75rem 1rem;
+            border-radius: 8px;
+            font-size: .88rem;
+            margin-bottom: 1.2rem;
+            display: none;
+        }
+        .msg.error   { background: rgba(231,76,60,.15); border: 1px solid var(--error-red); color: #ff6b6b; display: block; }
+        .msg.success { background: rgba(39,174,96,.15); border: 1px solid var(--success-green); color: #2ecc71; display: block; }
+
+        /* Divisor */
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border-grey);
+            margin: 1.5rem 0;
+        }
+        .section-label {
+            font-family: var(--font-heading);
+            font-size: .9rem;
+            color: #888;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-brand"><i class="fas fa-feather-alt"></i> BrooStore</div>
+    <div style="display:flex;gap:.75rem;">
+        <button class="btn-icon" onclick="window.location.href='/static/autor-dashboard.html'">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </button>
+    </div>
+</div>
+
+<div class="main">
+    <h1 class="page-title">Cadastrar <span>Novo Produto</span></h1>
+
+    <div class="form-card">
+        <div id="msg" class="msg"></div>
+
+        <!-- Upload da capa -->
+        <div class="section-label"><i class="fas fa-image"></i> Capa do Produto</div>
+        <div class="upload-area" id="upload-area"
+             ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <input type="file" id="input-capa" accept="image/jpeg,image/png,image/webp" onchange="onFileSelect(event)">
+            <div id="upload-placeholder">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Arraste a capa aqui ou <strong>clique para selecionar</strong></p>
+                <p style="font-size:.78rem;color:#555;">JPG, PNG ou WEBP — máx. 2 MB</p>
+            </div>
+            <img id="preview-img" class="preview-img" style="display:none;" alt="preview">
+            <div class="upload-progress" id="upload-progress">
+                <div class="upload-progress-bar" id="upload-bar" style="width:0%"></div>
+            </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Dados do produto -->
+        <div class="section-label"><i class="fas fa-info-circle"></i> Dados do Produto</div>
+        <div class="form-grid">
+            <div class="form-group full">
+                <label>Título do Produto *</label>
+                <input type="text" id="titulo" placeholder="Ex: Física Geral: Teoria do Tudo">
+            </div>
+            <div class="form-group full">
+                <label>Descrição curta *</label>
+                <textarea id="descricao" placeholder="Uma frase que resume seu produto..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Preço (R$) *</label>
+                <input type="number" id="preco" placeholder="Ex: 49.90" step="0.01" min="1">
+            </div>
+            <div class="form-group">
+                <label>Categoria *</label>
+                <select id="categoria">
+                    <option value="">Selecione...</option>
+                    <option value="Tecnologia">Tecnologia</option>
+                    <option value="Ciência">Ciência</option>
+                    <option value="Games">Games</option>
+                    <option value="Família e Relacionamento">Família e Relacionamento</option>
+                    <option value="Negócios">Negócios</option>
+                    <option value="Saúde">Saúde</option>
+                    <option value="Outros">Outros</option>
+                </select>
+            </div>
+
+            <hr class="divider" style="grid-column:1/-1;">
+            <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-book-open"></i> Informações da Página de Venda (opcional)</div>
+
+            <div class="form-group">
+                <label>Autor</label>
+                <input type="text" id="autor" placeholder="Nome do autor">
+            </div>
+            <div class="form-group">
+                <label>Número de páginas</label>
+                <input type="number" id="paginas" placeholder="Ex: 312" min="1">
+            </div>
+            <div class="form-group full">
+                <label>Introdução do livro</label>
+                <textarea id="intro" placeholder="Trecho introdutório para atrair o leitor..." style="min-height:120px;"></textarea>
+            </div>
+            <div class="form-group full">
+                <label>Sobre o autor</label>
+                <textarea id="sobre-autor" placeholder="Breve biografia do autor..." style="min-height:120px;"></textarea>
+            </div>
+
+            <hr class="divider" style="grid-column:1/-1;">
+            <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-link"></i> Entrega</div>
+
+            <div class="form-group full">
+                <label>Link de download / acesso</label>
+                <input type="url" id="link" placeholder="https://...">
+                <div class="hint">Link que o cliente receberá após o pagamento aprovado.</div>
+            </div>
+        </div>
+
+        <button class="btn-submit" id="btn-salvar" onclick="salvarProduto()">
+            <i class="fas fa-rocket"></i> Publicar Produto
+        </button>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    let usuarioAtual = null;
+    let arquivoCapa  = null;
+    let imageUrlFinal = '';
+
+    // Verifica auth
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) { window.location.href = '/static/autor-login.html'; return; }
+        usuarioAtual = session.user;
+    });
+
+    // ── Upload handlers ──
+    function onDragOver(e) { e.preventDefault(); document.getElementById('upload-area').classList.add('dragover'); }
+    function onDragLeave()  { document.getElementById('upload-area').classList.remove('dragover'); }
+    function onDrop(e) {
+        e.preventDefault();
+        document.getElementById('upload-area').classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) processarArquivo(file);
+    }
+    function onFileSelect(e) { const file = e.target.files[0]; if (file) processarArquivo(file); }
+
+    function processarArquivo(file) {
+        if (file.size > 2 * 1024 * 1024) { mostrarMsg('Arquivo muito grande. Máximo 2 MB.', 'error'); return; }
+        if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
+            mostrarMsg('Formato inválido. Use JPG, PNG ou WEBP.', 'error'); return;
+        }
+        arquivoCapa = file;
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = document.getElementById('preview-img');
+            img.src = e.target.result;
+            img.style.display = 'block';
+            document.getElementById('upload-placeholder').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+        limparMsg();
+    }
+
+    async function uploadCapa() {
+        if (!arquivoCapa) return '';
+        const ext  = arquivoCapa.name.split('.').pop();
+        const path = `${usuarioAtual.id}/${Date.now()}.${ext}`;
+
+        document.getElementById('upload-progress').style.display = 'block';
+        document.getElementById('upload-bar').style.width = '30%';
+
+        const { error } = await supabase.storage
+            .from('capas-produtos')
+            .upload(path, arquivoCapa, { contentType: arquivoCapa.type, upsert: false });
+
+        document.getElementById('upload-bar').style.width = '100%';
+
+        if (error) { mostrarMsg('Erro ao enviar imagem: ' + error.message, 'error'); return ''; }
+
+        const { data } = supabase.storage.from('capas-produtos').getPublicUrl(path);
+        return data.publicUrl;
+    }
+
+    async function salvarProduto() {
+        const titulo     = document.getElementById('titulo').value.trim();
+        const descricao  = document.getElementById('descricao').value.trim();
+        const preco      = parseFloat(document.getElementById('preco').value);
+        const categoria  = document.getElementById('categoria').value;
+        const autor      = document.getElementById('autor').value.trim();
+        const paginas    = document.getElementById('paginas').value.trim();
+        const intro      = document.getElementById('intro').value.trim();
+        const sobreAutor = document.getElementById('sobre-autor').value.trim();
+        const link       = document.getElementById('link').value.trim();
+        const btn        = document.getElementById('btn-salvar');
+
+        if (!titulo)      return mostrarMsg('Informe o título do produto.', 'error');
+        if (!descricao)   return mostrarMsg('Informe uma descrição.', 'error');
+        if (!preco || preco <= 0) return mostrarMsg('Informe um preço válido.', 'error');
+        if (!categoria)   return mostrarMsg('Selecione uma categoria.', 'error');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
+
+        // Upload da capa
+        imageUrlFinal = await uploadCapa();
+
+        // Salva no Supabase com todas as colunas
+        const { error } = await supabase.from('products').insert({
+            author_id:   usuarioAtual.id,
+            title:       titulo,
+            author:      autor       || null,
+            price:       preco,
+            category:    categoria,
+            image_url:   imageUrlFinal || null,
+            link:        link         || null,
+            descricao:   descricao    || null,
+            paginas:     paginas ? parseInt(paginas) : null,
+            intro:       intro        || null,
+            sobre_autor: sobreAutor   || null,
+        });
+
+        if (error) {
+            mostrarMsg('Erro ao salvar produto: ' + error.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rocket"></i> Publicar Produto';
+            return;
+        }
+
+        mostrarMsg('Produto publicado com sucesso!', 'success');
+        btn.innerHTML = '<i class="fas fa-check"></i> Publicado!';
+
+        setTimeout(() => window.location.href = '/static/autor-dashboard.html', 2000);
+    }
+
+    function mostrarMsg(texto, tipo) {
+        const el = document.getElementById('msg');
+        el.textContent = texto;
+        el.className = `msg ${tipo}`;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function limparMsg() { const el = document.getElementById('msg'); el.className = 'msg'; }
+</script>
+</body>
+</html>
