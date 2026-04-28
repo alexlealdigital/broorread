@@ -330,6 +330,49 @@
             margin-left: 5px;
         }
 
+        /* Oculta a loja por padrão para evitar flash ao carregar via ?id= */
+        #main-store { display: none; }
+
+        /* Informações extras do livro no spotlight */
+        .spotlight-meta {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .spotlight-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            color: var(--platinum);
+            opacity: 0.85;
+        }
+        .spotlight-meta-item i {
+            color: var(--orange-web);
+            font-size: 1rem;
+        }
+        .spotlight-intro {
+            background: rgba(255,255,255,0.05);
+            border-left: 3px solid var(--orange-web);
+            border-radius: 0 8px 8px 0;
+            padding: 1rem 1.2rem;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+            color: var(--platinum);
+            line-height: 1.7;
+            font-style: italic;
+        }
+        .spotlight-intro-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--orange-web);
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            font-style: normal;
+        }
+
         /* Responsividade */
         @media(min-width: 768px) { .spotlight-wrapper { flex-direction: row; } }
         @media(max-width: 768px) {
@@ -375,7 +418,10 @@
                          data-name="Física Geral: Teoria do Tudo" 
                          data-price="80.00" 
                          data-desc="Uma nova era do pensamento científico."
-                         data-img="https://i.imgur.com/GRAagYU.jpeg">
+                         data-img="https://i.imgur.com/GRAagYU.jpeg"
+                         data-autor="Drêus Ômegas"
+                         data-paginas="312"
+                         data-intro="Neste livro, o autor desafia os limites do conhecimento convencional e propõe uma visão unificada da física moderna. De mecânica quântica a relatividade geral, cada capítulo revela conexões surpreendentes entre as forças que governam o universo — escrito de forma acessível para quem quer entender o cosmos de verdade.">
                         <img src="https://i.imgur.com/GRAagYU.jpeg" class="book-cover">
                         <div class="book-info">
                             <h3>Teoria do Tudo</h3>
@@ -478,6 +524,25 @@
                 <span class="spotlight-tag">Oferta Especial</span>
                 <h1 id="spot-title" class="spotlight-title">Nome do Produto</h1>
                 <p id="spot-desc" class="spotlight-desc">Descrição detalhada do produto.</p>
+
+                <!-- Meta: autor e páginas (só aparece quando preenchido) -->
+                <div class="spotlight-meta" id="spot-meta" style="display:none;">
+                    <div class="spotlight-meta-item" id="spot-autor-wrap">
+                        <i class="fas fa-user-pen"></i>
+                        <span id="spot-autor"></span>
+                    </div>
+                    <div class="spotlight-meta-item" id="spot-paginas-wrap">
+                        <i class="fas fa-book-open"></i>
+                        <span id="spot-paginas"></span>
+                    </div>
+                </div>
+
+                <!-- Introdução do livro (só aparece quando preenchido) -->
+                <div class="spotlight-intro" id="spot-intro-wrap" style="display:none;">
+                    <div class="spotlight-intro-title"><i class="fas fa-quote-left"></i> Introdução</div>
+                    <span id="spot-intro"></span>
+                </div>
+
                 <div id="spot-price" class="spotlight-price">R$ 0,00</div>
                 
                 <button id="spot-btn" class="spotlight-btn">
