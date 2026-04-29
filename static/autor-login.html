@@ -634,12 +634,19 @@
 
         const { data: profile } = await sb.from('profiles').select('full_name').eq('id', usuarioAtual.id).single();
 
-        const { error } = await sb.from('payment_requests').insert({
-            autor_id: usuarioAtual.id, valor, pix_key: chave, status: 'pendente',
-            nome: profile?.full_name || '', email: usuarioAtual.email,
+        const resp = await fetch('https://gyepvrzkwesohbagpgfa.supabase.co/functions/v1/solicitar-pagamento-simples', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                autor_id: usuarioAtual.id,
+                nome:     profile?.full_name || '',
+                email:    usuarioAtual.email,
+                pix_key:  chave,
+                valor:    valor
+            })
         });
 
-        if (error) {
+        if (!resp.ok) {
             msgPix('Erro ao solicitar. Tente novamente.', 'error');
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-paper-plane"></i> Solicitar Pagamento';
