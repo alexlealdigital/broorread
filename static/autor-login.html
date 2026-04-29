@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrooStore – Área do Autor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --black: #000000;
+            --oxford-blue: #14213d;
+            --orange-web: #fca311;
+            --platinum: #e5e5e5;
+            --white: #ffffff;
+            --success-green: #27ae60;
+            --error-red: #e74c3c;
+            --border-grey: #333333;
+            --font-heading: 'Poppins', sans-serif;
+            --font-body: 'Lato', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-body);
+            background-color: var(--black);
+            color: var(--white);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        /* ── Card central ── */
+        .auth-card {
+            background: var(--oxford-blue);
+            border: 1px solid var(--border-grey);
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+        .auth-logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .auth-logo img { height: 48px; margin-bottom: .5rem; }
+        .auth-logo h1 {
+            font-family: var(--font-heading);
+            font-size: 1.4rem;
+            color: var(--orange-web);
+        }
+        .auth-logo p { font-size: .85rem; color: #aaa; margin-top: .25rem; }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-grey);
+            margin-bottom: 1.8rem;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: .7rem;
+            background: transparent;
+            border: none;
+            color: #888;
+            font-family: var(--font-body);
+            font-weight: bold;
+            font-size: .9rem;
+            cursor: pointer;
+            transition: all .3s;
+        }
+        .tab-btn.active {
+            background: var(--orange-web);
+            color: var(--black);
+        }
+
+        /* ── Form ── */
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label {
+            display: block;
+            font-size: .8rem;
+            font-weight: bold;
+            color: var(--orange-web);
+            margin-bottom: .4rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: .75rem 1rem;
+            background: rgba(255,255,255,.06);
+            border: 1px solid var(--border-grey);
+            border-radius: 8px;
+            color: var(--white);
+            font-family: var(--font-body);
+            font-size: .95rem;
+            transition: border-color .3s;
+            outline: none;
+        }
+        .form-group input:focus { border-color: var(--orange-web); }
+        .form-group input::placeholder { color: #555; }
+
+        .btn-submit {
+            width: 100%;
+            padding: .9rem;
+            background: var(--orange-web);
+            border: none;
+            border-radius: 8px;
+            color: var(--black);
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all .3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: .5rem;
+        }
+        .btn-submit:hover { background: #ffb700; transform: translateY(-2px); }
+        .btn-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+        /* ── Mensagens ── */
+        .msg {
+            padding: .75rem 1rem;
+            border-radius: 8px;
+            font-size: .88rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .msg.error   { background: rgba(231,76,60,.15); border: 1px solid var(--error-red); color: #ff6b6b; display: block; }
+        .msg.success { background: rgba(39,174,96,.15); border: 1px solid var(--success-green); color: #2ecc71; display: block; }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 1.5rem;
+            color: #666;
+            font-size: .85rem;
+            transition: color .3s;
+        }
+        .back-link:hover { color: var(--orange-web); }
+        .back-link i { margin-right: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+    <div class="auth-logo">
+        <h1><i class="fas fa-feather-alt"></i> BrooStore</h1>
+        <p>Área exclusiva para autores</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('login')">Entrar</button>
+        <button class="tab-btn" onclick="showTab('cadastro')">Cadastrar</button>
+    </div>
+
+    <div id="msg" class="msg"></div>
+
+    <!-- LOGIN -->
+    <div id="form-login">
+        <div class="form-group">
+            <label>E-mail</label>
+            <input type="email" id="login-email" placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+            <label>Senha</label>
+            <input type="password" id="login-senha" placeholder="••••••••">
+        </div>
+        <button class="btn-submit" id="btn-login" onclick="fazerLogin()">
+            <i class="fas fa-sign-in-alt"></i> Entrar
+        </button>
+    </div>
+
+    <!-- CADASTRO -->
+    <div id="form-cadastro" style="display:none;">
+        <div class="form-group">
+            <label>Nome completo</label>
+            <input type="text" id="cad-nome" placeholder="Seu nome de autor">
+        </div>
+        <div class="form-group">
+            <label>E-mail</label>
+            <input type="email" id="cad-email" placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+            <label>Senha</label>
+            <input type="password" id="cad-senha" placeholder="Mínimo 6 caracteres">
+        </div>
+        <button class="btn-submit" id="btn-cadastro" onclick="fazerCadastro()">
+            <i class="fas fa-user-plus"></i> Criar conta
+        </button>
+    </div>
+
+    <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Voltar à loja</a>
+</div>
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // Se já está logado, vai direto pro dashboard
+    supabase.auth.getSession().then(({ data }) => {
+        if (data.session) window.location.href = '/static/autor-dashboard.html';
+    });
+
+    function showTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('form-login').style.display   = tab === 'login'   ? 'block' : 'none';
+        document.getElementById('form-cadastro').style.display = tab === 'cadastro' ? 'block' : 'none';
+        limparMsg();
+    }
+
+    function mostrarMsg(texto, tipo) {
+        const el = document.getElementById('msg');
+        el.textContent = texto;
+        el.className = `msg ${tipo}`;
+    }
+    function limparMsg() {
+        const el = document.getElementById('msg');
+        el.className = 'msg';
+        el.textContent = '';
+    }
+
+    async function fazerLogin() {
+        const email = document.getElementById('login-email').value.trim();
+        const senha = document.getElementById('login-senha').value;
+        const btn   = document.getElementById('btn-login');
+
+        if (!email || !senha) return mostrarMsg('Preencha e-mail e senha.', 'error');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+
+        const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+
+        if (error) {
+            mostrarMsg('E-mail ou senha incorretos.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+        } else {
+            mostrarMsg('Login realizado! Redirecionando...', 'success');
+            setTimeout(() => window.location.href = '/static/autor-dashboard.html', 1000);
+        }
+    }
+
+    async function fazerCadastro() {
+        const nome  = document.getElementById('cad-nome').value.trim();
+        const email = document.getElementById('cad-email').value.trim();
+        const senha = document.getElementById('cad-senha').value;
+        const btn   = document.getElementById('btn-cadastro');
+
+        if (!nome || !email || !senha) return mostrarMsg('Preencha todos os campos.', 'error');
+        if (senha.length < 6) return mostrarMsg('Senha deve ter no mínimo 6 caracteres.', 'error');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando conta...';
+
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password: senha,
+            options: { data: { full_name: nome } }
+        });
+
+        if (error) {
+            mostrarMsg(error.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-user-plus"></i> Criar conta';
+            return;
+        }
+
+        // Salva nome no profile
+        if (data.user) {
+            await supabase.from('profiles').upsert({
+                id: data.user.id,
+                full_name: nome
+            });
+        }
+
+        mostrarMsg('Conta criada! Verifique seu e-mail para confirmar.', 'success');
+        btn.innerHTML = '<i class="fas fa-check"></i> Enviado!';
+    }
+
+    // Enter nos campos
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            const loginVisible = document.getElementById('form-login').style.display !== 'none';
+            if (loginVisible) fazerLogin(); else fazerCadastro();
+        }
+    });
+</script>
+</body>
+</html>
