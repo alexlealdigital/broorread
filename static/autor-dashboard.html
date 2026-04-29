@@ -344,7 +344,7 @@
 <script>
     const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
     let usuarioAtual = null;
     let saldoDisponivel = 0;
@@ -363,7 +363,7 @@
     }
 
     async function init() {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await sb.auth.getSession();
         if (!session) { window.location.href = '/static/autor-login.html'; return; }
 
         usuarioAtual = session.user;
@@ -486,9 +486,9 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
 
-        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', usuarioAtual.id).single();
+        const { data: profile } = await sb.from('profiles').select('full_name').eq('id', usuarioAtual.id).single();
 
-        const { error } = await supabase.from('payment_requests').insert({
+        const { error } = await sb.from('payment_requests').insert({
             autor_id: usuarioAtual.id,
             valor,
             pix_key: chave,
@@ -527,7 +527,7 @@
     }
 
     async function sair() {
-        await supabase.auth.signOut();
+        await sb.auth.signOut();
         window.location.href = '/static/autor-login.html';
     }
 
