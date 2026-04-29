@@ -210,10 +210,10 @@
 <script>
     const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
     // Se já está logado, vai direto pro dashboard
-    supabase.auth.getSession().then(({ data }) => {
+    sb.auth.getSession().then(({ data }) => {
         if (data.session) window.location.href = '/static/autor-dashboard.html';
     });
 
@@ -246,7 +246,7 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
 
-        const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+        const { error } = await sb.auth.signInWithPassword({ email, password: senha });
 
         if (error) {
             mostrarMsg('E-mail ou senha incorretos.', 'error');
@@ -270,7 +270,7 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando conta...';
 
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await sb.auth.signUp({
             email,
             password: senha,
             options: { data: { full_name: nome } }
@@ -285,7 +285,7 @@
 
         // Salva nome no profile
         if (data.user) {
-            await supabase.from('profiles').upsert({
+            await sb.from('profiles').upsert({
                 id: data.user.id,
                 full_name: nome
             });
