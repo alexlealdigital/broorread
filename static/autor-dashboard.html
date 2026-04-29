@@ -225,7 +225,7 @@
         <button class="btn-icon" onclick="window.location.href='/static/autor-produto.html'">
             <i class="fas fa-plus"></i> Novo Produto
         </button>
-        <button class="btn-icon" onclick="window.location.href='/'">
+        <button class="btn-icon" onclick="window.location.href='https://broostore.netlify.app'">
             <i class="fas fa-store"></i> Ver Loja
         </button>
         <button class="btn-icon" onclick="sair()">
@@ -298,7 +298,6 @@
                         <tr>
                             <th>Data</th>
                             <th>Produto</th>
-                            <th>Cliente</th>
                             <th>Valor</th>
                             <th>Status</th>
                         </tr>
@@ -424,7 +423,6 @@
                     <td>${totalVendas}</td>
                     <td>
                         ${fmt(totalLiquido)}
-                        <br><small style="color:#555;font-size:.75rem;">bruto: ${fmt(totalBruto)}</small>
                     </td>
                     <td><span class="badge badge-green">ativo</span></td>
                 </tr>`;
@@ -435,7 +433,7 @@
     async function carregarVendas() {
         const { data: vendas, error } = await sb
             .from('sales')
-            .select('created_at, product_id, customer_email, amount, status, products(title)')
+            .select('created_at, product_id, amount, status, products(title)')
             .eq('author_id', usuarioAtual.id)
             .order('created_at', { ascending: false })
             .limit(20);
@@ -475,7 +473,6 @@
             <tr>
                 <td>${fmtData(v.created_at)}</td>
                 <td>${v.products?.title || `Produto #${v.product_id}`}</td>
-                <td>${v.customer_email || '—'}</td>
                 <td>${fmt(v.amount)}</td>
                 <td>${badgeStatus(v.status)}</td>
             </tr>`).join('');
