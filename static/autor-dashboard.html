@@ -369,7 +369,7 @@
         usuarioAtual = session.user;
 
         // Nome do autor
-        const { data: profile } = await supabase
+        const { data: profile } = await sb
             .from('profiles')
             .select('full_name')
             .eq('id', usuarioAtual.id)
@@ -385,7 +385,7 @@
     }
 
     async function carregarProdutos() {
-        const { data: produtos, error } = await supabase
+        const { data: produtos, error } = await sb
             .from('products')
             .select('id, title, price, category')
             .eq('author_id', usuarioAtual.id);
@@ -402,7 +402,7 @@
         // Para cada produto, busca vendas aprovadas
         let htmlProdutos = '';
         for (const p of produtos) {
-            const { data: vendas } = await supabase
+            const { data: vendas } = await sb
                 .from('sales')
                 .select('amount')
                 .eq('product_id', p.id)
@@ -424,7 +424,7 @@
     }
 
     async function carregarVendas() {
-        const { data: vendas, error } = await supabase
+        const { data: vendas, error } = await sb
             .from('sales')
             .select('created_at, product_id, customer_email, amount, status, products(title)')
             .eq('author_id', usuarioAtual.id)
@@ -445,7 +445,7 @@
         const totalArrecadado = aprovadas.reduce((acc, v) => acc + parseFloat(v.amount || 0), 0);
 
         // Desconta solicitações pendentes/pagas
-        const { data: solicitacoes } = await supabase
+        const { data: solicitacoes } = await sb
             .from('payment_requests')
             .select('valor, status')
             .eq('autor_id', usuarioAtual.id)
