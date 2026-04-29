@@ -15,6 +15,7 @@ from rq import Queue
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import func
 import resend
+import requests as http_requests
 
 # Inicialização do Flask
 app = Flask(__name__, static_folder='static')
@@ -540,6 +541,31 @@ def create_cobranca():
             vendedor_codigo_recebido = None
 
         produto = db.session.get(Produto, int(product_id_recebido))
+
+        # Se não encontrar localmente, busca no Supabase e cria na tabela local
+        if not produto:
+            try:
+                sb_url  = os.environ.get("SUPABASE_URL", "https://gyepvrzkwesohbagpgfa.supabase.co")
+                sb_key  = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA")
+                resp = http_requests.get(
+                    f"{sb_url}/rest/v1/products?id=eq.{product_id_recebido}&select=id,title,price,link_pdf",
+                    headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}"}
+                )
+                rows = resp.json()
+                if rows:
+                    p = rows[0]
+                    produto = Produto(
+                        id=p["id"],
+                        nome=p["title"],
+                        preco=float(p["price"]),
+                        link_download=p.get("link_pdf") or "",
+                        tipo="ebook"
+                    )
+                    db.session.add(produto)
+                    db.session.commit()
+            except Exception as e:
+                print(f"Erro ao buscar produto no Supabase: {e}")
+
         if not produto:
             return jsonify({"status": "error", "message": "Produto não encontrado."}), 404
 
