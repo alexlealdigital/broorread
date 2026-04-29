@@ -212,7 +212,11 @@
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    // Se já está logado, vai direto pro dashboard
+    // Detecta sessão existente OU token vindo via redirect do Netlify
+    sb.auth.onAuthStateChange((event, session) => {
+        if (session) window.location.href = '/static/autor-dashboard.html';
+    });
+
     sb.auth.getSession().then(({ data }) => {
         if (data.session) window.location.href = '/static/autor-dashboard.html';
     });
