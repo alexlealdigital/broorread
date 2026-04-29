@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrooStore – Dashboard do Autor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --black: #000000;
+            --oxford-blue: #14213d;
+            --orange-web: #fca311;
+            --platinum: #e5e5e5;
+            --white: #ffffff;
+            --success-green: #27ae60;
+            --error-red: #e74c3c;
+            --border-grey: #333333;
+            --font-heading: 'Poppins', sans-serif;
+            --font-body: 'Lato', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-body); background: #0a0a0a; color: var(--white); min-height: 100vh; }
+
+        /* ── Header ── */
+        .header {
+            background: var(--oxford-blue);
+            border-bottom: 1px solid var(--border-grey);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-brand { font-family: var(--font-heading); color: var(--orange-web); font-size: 1.2rem; }
+        .header-brand span { color: var(--white); font-size: .85rem; font-family: var(--font-body); margin-left: .5rem; }
+        .header-actions { display: flex; gap: .75rem; align-items: center; }
+        .btn-icon {
+            background: rgba(255,255,255,.07);
+            border: 1px solid var(--border-grey);
+            color: var(--white);
+            padding: .5rem .9rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-size: .85rem;
+            transition: all .3s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .btn-icon:hover { border-color: var(--orange-web); color: var(--orange-web); }
+        .btn-orange {
+            background: var(--orange-web);
+            border: none;
+            color: var(--black);
+            padding: .5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: var(--font-heading);
+            font-size: .85rem;
+            font-weight: bold;
+            transition: all .3s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .btn-orange:hover { background: #ffb700; }
+
+        /* ── Layout ── */
+        .main { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+        .page-title { font-family: var(--font-heading); font-size: 1.6rem; margin-bottom: 2rem; }
+        .page-title span { color: var(--orange-web); }
+
+        /* ── Cards de stats ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+        .stat-card {
+            background: var(--oxford-blue);
+            border: 1px solid var(--border-grey);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: border-color .3s;
+        }
+        .stat-card:hover { border-color: var(--orange-web); }
+        .stat-label { font-size: .8rem; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: .5rem; }
+        .stat-value { font-family: var(--font-heading); font-size: 1.8rem; color: var(--orange-web); }
+        .stat-value.green { color: var(--success-green); }
+        .stat-icon { font-size: 1.5rem; color: #333; float: right; margin-top: -2rem; }
+
+        /* ── Seções ── */
+        .section { margin-bottom: 2.5rem; }
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .section-title { font-family: var(--font-heading); font-size: 1.1rem; }
+
+        /* ── Tabela de produtos ── */
+        .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-grey); }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            background: var(--oxford-blue);
+            padding: .8rem 1rem;
+            text-align: left;
+            font-size: .8rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #888;
+        }
+        td {
+            padding: .9rem 1rem;
+            border-top: 1px solid var(--border-grey);
+            font-size: .9rem;
+        }
+        tr:hover td { background: rgba(255,255,255,.03); }
+        .badge {
+            display: inline-block;
+            padding: .2rem .6rem;
+            border-radius: 20px;
+            font-size: .75rem;
+            font-weight: bold;
+        }
+        .badge-green { background: rgba(39,174,96,.2); color: #2ecc71; }
+        .badge-yellow { background: rgba(252,163,17,.2); color: var(--orange-web); }
+        .badge-grey  { background: rgba(255,255,255,.1); color: #aaa; }
+
+        /* ── Painel solicitar pagamento ── */
+        .pix-panel {
+            background: var(--oxford-blue);
+            border: 1px solid var(--border-grey);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .pix-saldo {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0,0,0,.3);
+            border-radius: 8px;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.2rem;
+        }
+        .pix-saldo-label { font-size: .85rem; color: #888; }
+        .pix-saldo-value { font-family: var(--font-heading); font-size: 1.6rem; color: var(--success-green); }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        @media(max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+        .form-group label {
+            display: block;
+            font-size: .8rem;
+            font-weight: bold;
+            color: var(--orange-web);
+            margin-bottom: .4rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: .7rem 1rem;
+            background: rgba(255,255,255,.06);
+            border: 1px solid var(--border-grey);
+            border-radius: 8px;
+            color: var(--white);
+            font-family: var(--font-body);
+            font-size: .9rem;
+            outline: none;
+            transition: border-color .3s;
+        }
+        .form-group input:focus { border-color: var(--orange-web); }
+        .form-group input::placeholder { color: #555; }
+
+        .btn-submit {
+            width: 100%;
+            padding: .85rem;
+            background: var(--success-green);
+            border: none;
+            border-radius: 8px;
+            color: var(--white);
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all .3s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-submit:hover { background: #2ecc71; }
+        .btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+        /* ── Mensagem ── */
+        .msg {
+            padding: .75rem 1rem;
+            border-radius: 8px;
+            font-size: .88rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .msg.error   { background: rgba(231,76,60,.15); border: 1px solid var(--error-red); color: #ff6b6b; display: block; }
+        .msg.success { background: rgba(39,174,96,.15); border: 1px solid var(--success-green); color: #2ecc71; display: block; }
+
+        /* ── Loading ── */
+        .loading { text-align: center; padding: 3rem; color: #555; }
+        .loading i { font-size: 2rem; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .empty { text-align: center; padding: 2rem; color: #555; font-size: .9rem; }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <div class="header-brand">
+        <i class="fas fa-feather-alt"></i> BrooStore
+        <span id="autor-nome">carregando...</span>
+    </div>
+    <div class="header-actions">
+        <button class="btn-icon" onclick="window.location.href='/static/autor-produto.html'">
+            <i class="fas fa-plus"></i> Novo Produto
+        </button>
+        <button class="btn-icon" onclick="window.location.href='/'">
+            <i class="fas fa-store"></i> Ver Loja
+        </button>
+        <button class="btn-icon" onclick="sair()">
+            <i class="fas fa-sign-out-alt"></i> Sair
+        </button>
+    </div>
+</div>
+
+<div class="main">
+    <div id="loading" class="loading"><i class="fas fa-spinner"></i><p style="margin-top:1rem;">Carregando seus dados...</p></div>
+    <div id="conteudo" style="display:none;">
+
+        <h1 class="page-title">Suas <span>Vendas</span></h1>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total de Vendas</div>
+                <div class="stat-value" id="stat-vendas">0</div>
+                <i class="fas fa-shopping-cart stat-icon"></i>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Arrecadado</div>
+                <div class="stat-value" id="stat-total">R$ 0,00</div>
+                <i class="fas fa-coins stat-icon"></i>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Saldo Disponível</div>
+                <div class="stat-value green" id="stat-saldo">R$ 0,00</div>
+                <i class="fas fa-wallet stat-icon"></i>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Produtos Ativos</div>
+                <div class="stat-value" id="stat-produtos">0</div>
+                <i class="fas fa-book stat-icon"></i>
+            </div>
+        </div>
+
+        <!-- Produtos -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title"><i class="fas fa-book" style="color:var(--orange-web);margin-right:.5rem;"></i> Meus Produtos</div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Preço</th>
+                            <th>Vendas</th>
+                            <th>Arrecadado</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-produtos">
+                        <tr><td colspan="5" class="empty">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Últimas vendas -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title"><i class="fas fa-history" style="color:var(--orange-web);margin-right:.5rem;"></i> Últimas Vendas</div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Produto</th>
+                            <th>Cliente</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-vendas">
+                        <tr><td colspan="5" class="empty">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Solicitar pagamento -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title"><i class="fas fa-pix" style="color:var(--orange-web);margin-right:.5rem;"></i> Solicitar Pagamento</div>
+            </div>
+            <div class="pix-panel">
+                <div class="pix-saldo">
+                    <div class="pix-saldo-label">Saldo disponível para saque</div>
+                    <div class="pix-saldo-value" id="pix-saldo-display">R$ 0,00</div>
+                </div>
+                <div id="msg-pix" class="msg"></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Valor a receber (R$)</label>
+                        <input type="number" id="pix-valor" placeholder="Ex: 50.00" step="0.01" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Sua chave PIX</label>
+                        <input type="text" id="pix-chave" placeholder="CPF, e-mail, telefone ou chave aleatória">
+                    </div>
+                </div>
+                <button class="btn-submit" id="btn-pix" onclick="solicitarPagamento()">
+                    <i class="fas fa-paper-plane"></i> Solicitar Pagamento
+                </button>
+            </div>
+        </div>
+
+    </div><!-- /conteudo -->
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    let usuarioAtual = null;
+    let saldoDisponivel = 0;
+
+    function fmt(val) {
+        return 'R$ ' + parseFloat(val || 0).toFixed(2).replace('.', ',');
+    }
+    function fmtData(iso) {
+        const d = new Date(iso);
+        return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+    function badgeStatus(status) {
+        if (status === 'approved' || status === 'paid' || status === 'pago') return `<span class="badge badge-green">${status}</span>`;
+        if (status === 'pending')  return `<span class="badge badge-yellow">pendente</span>`;
+        return `<span class="badge badge-grey">${status}</span>`;
+    }
+
+    async function init() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { window.location.href = '/static/autor-login.html'; return; }
+
+        usuarioAtual = session.user;
+
+        // Nome do autor
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', usuarioAtual.id)
+            .single();
+
+        const nome = profile?.full_name || usuarioAtual.email;
+        document.getElementById('autor-nome').textContent = `| ${nome}`;
+
+        await Promise.all([carregarProdutos(), carregarVendas()]);
+
+        document.getElementById('loading').style.display  = 'none';
+        document.getElementById('conteudo').style.display = 'block';
+    }
+
+    async function carregarProdutos() {
+        const { data: produtos, error } = await supabase
+            .from('products')
+            .select('id, title, price, category')
+            .eq('author_id', usuarioAtual.id);
+
+        if (error || !produtos?.length) {
+            document.getElementById('tabela-produtos').innerHTML =
+                `<tr><td colspan="5" class="empty"><i class="fas fa-book-open"></i> Nenhum produto cadastrado ainda. <a href="/static/autor-produto.html" style="color:var(--orange-web);">Adicionar produto</a></td></tr>`;
+            document.getElementById('stat-produtos').textContent = '0';
+            return;
+        }
+
+        document.getElementById('stat-produtos').textContent = produtos.length;
+
+        // Para cada produto, busca vendas aprovadas
+        let htmlProdutos = '';
+        for (const p of produtos) {
+            const { data: vendas } = await supabase
+                .from('sales')
+                .select('amount')
+                .eq('product_id', p.id)
+                .in('status', ['approved', 'paid']);
+
+            const totalVendas = vendas?.length || 0;
+            const totalValor  = vendas?.reduce((acc, v) => acc + parseFloat(v.amount || 0), 0) || 0;
+
+            htmlProdutos += `
+                <tr>
+                    <td><strong>${p.title}</strong><br><small style="color:#666;">${p.category || ''}</small></td>
+                    <td>${fmt(p.price)}</td>
+                    <td>${totalVendas}</td>
+                    <td>${fmt(totalValor)}</td>
+                    <td><span class="badge badge-green">ativo</span></td>
+                </tr>`;
+        }
+        document.getElementById('tabela-produtos').innerHTML = htmlProdutos;
+    }
+
+    async function carregarVendas() {
+        const { data: vendas, error } = await supabase
+            .from('sales')
+            .select('created_at, product_id, customer_email, amount, status, products(title)')
+            .eq('author_id', usuarioAtual.id)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+        if (error || !vendas?.length) {
+            document.getElementById('tabela-vendas').innerHTML =
+                `<tr><td colspan="5" class="empty"><i class="fas fa-inbox"></i> Nenhuma venda registrada ainda.</td></tr>`;
+            document.getElementById('stat-vendas').textContent = '0';
+            document.getElementById('stat-total').textContent  = fmt(0);
+            document.getElementById('stat-saldo').textContent  = fmt(0);
+            document.getElementById('pix-saldo-display').textContent = fmt(0);
+            return;
+        }
+
+        const aprovadas = vendas.filter(v => v.status === 'approved' || v.status === 'paid');
+        const totalArrecadado = aprovadas.reduce((acc, v) => acc + parseFloat(v.amount || 0), 0);
+
+        // Desconta solicitações pendentes/pagas
+        const { data: solicitacoes } = await supabase
+            .from('payment_requests')
+            .select('valor, status')
+            .eq('autor_id', usuarioAtual.id)
+            .in('status', ['pendente', 'pago']);
+
+        const totalSolicitado = solicitacoes?.reduce((acc, s) => acc + parseFloat(s.valor || 0), 0) || 0;
+        saldoDisponivel = Math.max(0, totalArrecadado - totalSolicitado);
+
+        document.getElementById('stat-vendas').textContent          = aprovadas.length;
+        document.getElementById('stat-total').textContent           = fmt(totalArrecadado);
+        document.getElementById('stat-saldo').textContent           = fmt(saldoDisponivel);
+        document.getElementById('pix-saldo-display').textContent    = fmt(saldoDisponivel);
+
+        // Tabela de vendas
+        const html = vendas.map(v => `
+            <tr>
+                <td>${fmtData(v.created_at)}</td>
+                <td>${v.products?.title || `Produto #${v.product_id}`}</td>
+                <td>${v.customer_email || '—'}</td>
+                <td>${fmt(v.amount)}</td>
+                <td>${badgeStatus(v.status)}</td>
+            </tr>`).join('');
+        document.getElementById('tabela-vendas').innerHTML = html;
+    }
+
+    async function solicitarPagamento() {
+        const valor = parseFloat(document.getElementById('pix-valor').value);
+        const chave = document.getElementById('pix-chave').value.trim();
+        const btn   = document.getElementById('btn-pix');
+
+        const msgEl = document.getElementById('msg-pix');
+        msgEl.className = 'msg';
+
+        if (!valor || valor <= 0)     { mostrarMsgPix('Informe um valor válido.', 'error'); return; }
+        if (valor > saldoDisponivel)  { mostrarMsgPix(`Valor maior que o saldo disponível (${fmt(saldoDisponivel)}).`, 'error'); return; }
+        if (!chave)                   { mostrarMsgPix('Informe sua chave PIX.', 'error'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', usuarioAtual.id).single();
+
+        const { error } = await supabase.from('payment_requests').insert({
+            autor_id: usuarioAtual.id,
+            valor,
+            pix_key: chave,
+            status: 'pendente',
+            nome: profile?.full_name || '',
+            email: usuarioAtual.email,
+        });
+
+        if (error) {
+            mostrarMsgPix('Erro ao solicitar pagamento. Tente novamente.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Solicitar Pagamento';
+            return;
+        }
+
+        mostrarMsgPix('Solicitação enviada! Você receberá o PIX em breve.', 'success');
+        btn.innerHTML = '<i class="fas fa-check"></i> Enviado!';
+        document.getElementById('pix-valor').value = '';
+        document.getElementById('pix-chave').value = '';
+
+        // Atualiza saldo na tela
+        saldoDisponivel -= valor;
+        document.getElementById('stat-saldo').textContent        = fmt(saldoDisponivel);
+        document.getElementById('pix-saldo-display').textContent = fmt(saldoDisponivel);
+
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Solicitar Pagamento';
+        }, 3000);
+    }
+
+    function mostrarMsgPix(texto, tipo) {
+        const el = document.getElementById('msg-pix');
+        el.textContent = texto;
+        el.className = `msg ${tipo}`;
+    }
+
+    async function sair() {
+        await supabase.auth.signOut();
+        window.location.href = '/static/autor-login.html';
+    }
+
+    init();
+</script>
+</body>
+</html>
