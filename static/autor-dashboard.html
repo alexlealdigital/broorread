@@ -248,7 +248,7 @@
                 <i class="fas fa-shopping-cart stat-icon"></i>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Total Arrecadado</div>
+                <div class="stat-label">Total Líquido (75%)</div>
                 <div class="stat-value" id="stat-total">R$ 0,00</div>
                 <i class="fas fa-coins stat-icon"></i>
             </div>
@@ -342,9 +342,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const _SB_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
+    const _SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
+    const sb = window.supabase.createClient(_SB_URL, _SB_ANON);
 
     let usuarioAtual = null;
     let saldoDisponivel = 0;
@@ -399,7 +399,7 @@
 
         document.getElementById('stat-produtos').textContent = produtos.length;
 
-        // Para cada produto, busca vendas aprovadas
+        // Nota da taxa
         let htmlProdutos = '';
         for (const p of produtos) {
             const { data: vendas } = await sb
@@ -408,15 +408,24 @@
                 .eq('product_id', p.id)
                 .in('status', ['approved', 'paid']);
 
-            const totalVendas = vendas?.length || 0;
-            const totalValor  = vendas?.reduce((acc, v) => acc + parseFloat(v.amount || 0), 0) || 0;
+            const TAXA = 0.25;
+            const totalVendas  = vendas?.length || 0;
+            const totalBruto   = vendas?.reduce((acc, v) => acc + parseFloat(v.amount || 0), 0) || 0;
+            const totalLiquido = totalBruto * (1 - TAXA);
+            const precoLiquido = p.price * (1 - TAXA);
 
             htmlProdutos += `
                 <tr>
                     <td><strong>${p.title}</strong><br><small style="color:#666;">${p.category || ''}</small></td>
-                    <td>${fmt(p.price)}</td>
+                    <td>
+                        ${fmt(precoLiquido)}
+                        <br><small style="color:#555;font-size:.75rem;">bruto: ${fmt(p.price)} — taxa 25%</small>
+                    </td>
                     <td>${totalVendas}</td>
-                    <td>${fmt(totalValor)}</td>
+                    <td>
+                        ${fmt(totalLiquido)}
+                        <br><small style="color:#555;font-size:.75rem;">bruto: ${fmt(totalBruto)}</small>
+                    </td>
                     <td><span class="badge badge-green">ativo</span></td>
                 </tr>`;
         }
@@ -443,6 +452,8 @@
 
         const aprovadas = vendas.filter(v => v.status === 'approved' || v.status === 'paid');
         const totalArrecadado = aprovadas.reduce((acc, v) => acc + parseFloat(v.amount || 0), 0);
+        const TAXA = 0.25;
+        const totalLiquido = totalArrecadado * (1 - TAXA);
 
         // Desconta solicitações pendentes/pagas
         const { data: solicitacoes } = await sb
@@ -452,10 +463,10 @@
             .in('status', ['pendente', 'pago']);
 
         const totalSolicitado = solicitacoes?.reduce((acc, s) => acc + parseFloat(s.valor || 0), 0) || 0;
-        saldoDisponivel = Math.max(0, totalArrecadado - totalSolicitado);
+        saldoDisponivel = Math.max(0, totalLiquido - totalSolicitado);
 
         document.getElementById('stat-vendas').textContent          = aprovadas.length;
-        document.getElementById('stat-total').textContent           = fmt(totalArrecadado);
+        document.getElementById('stat-total').textContent           = fmt(totalLiquido);
         document.getElementById('stat-saldo').textContent           = fmt(saldoDisponivel);
         document.getElementById('pix-saldo-display').textContent    = fmt(saldoDisponivel);
 
