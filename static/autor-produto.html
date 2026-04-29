@@ -295,14 +295,14 @@
 <script>
     const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
     let usuarioAtual = null;
     let arquivoCapa  = null;
     let imageUrlFinal = '';
 
     // Verifica auth
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    sb.auth.getSession().then(({ data: { session } }) => {
         if (!session) { window.location.href = '/static/autor-login.html'; return; }
         usuarioAtual = session.user;
     });
@@ -343,7 +343,7 @@
         document.getElementById('upload-progress').style.display = 'block';
         document.getElementById('upload-bar').style.width = '30%';
 
-        const { error } = await supabase.storage
+        const { error } = await sb.storage
             .from('capas-produtos')
             .upload(path, arquivoCapa, { contentType: arquivoCapa.type, upsert: false });
 
@@ -351,7 +351,7 @@
 
         if (error) { mostrarMsg('Erro ao enviar imagem: ' + error.message, 'error'); return ''; }
 
-        const { data } = supabase.storage.from('capas-produtos').getPublicUrl(path);
+        const { data } = sb.storage.from('capas-produtos').getPublicUrl(path);
         return data.publicUrl;
     }
 
@@ -379,7 +379,7 @@
         imageUrlFinal = await uploadCapa();
 
         // Salva no Supabase com todas as colunas
-        const { error } = await supabase.from('products').insert({
+        const { error } = await sb.from('products').insert({
             author_id:   usuarioAtual.id,
             title:       titulo,
             author:      autor       || null,
