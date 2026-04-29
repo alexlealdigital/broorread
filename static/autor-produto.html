@@ -276,12 +276,28 @@
             </div>
 
             <hr class="divider" style="grid-column:1/-1;">
-            <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-link"></i> Entrega</div>
+            <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-file-pdf"></i> Arquivo do Produto (PDF)</div>
 
             <div class="form-group full">
-                <label>Link de download / acesso</label>
-                <input type="url" id="link" placeholder="https://...">
-                <div class="hint">Link que o cliente receberá após o pagamento aprovado.</div>
+                <div class="upload-area" id="upload-pdf-area"
+                     ondragover="onDragOverPdf(event)" ondragleave="onDragLeavePdf(event)" ondrop="onDropPdf(event)"
+                     style="min-height:120px;">
+                    <input type="file" id="input-pdf" accept="application/pdf" onchange="onPdfSelect(event)">
+                    <div id="upload-pdf-placeholder">
+                        <i class="fas fa-file-pdf" style="font-size:2rem;color:#e74c3c;"></i>
+                        <p>Arraste o PDF aqui ou <strong>clique para selecionar</strong></p>
+                        <p style="font-size:.78rem;color:#555;">Somente PDF — máx. 12 MB</p>
+                    </div>
+                    <div id="pdf-selecionado" style="display:none;text-align:center;">
+                        <i class="fas fa-file-pdf" style="font-size:2rem;color:#e74c3c;"></i>
+                        <p id="pdf-nome" style="color:var(--orange-web);margin-top:.5rem;font-weight:bold;"></p>
+                        <p id="pdf-tamanho" style="color:#666;font-size:.8rem;"></p>
+                    </div>
+                    <div class="upload-progress" id="upload-pdf-progress">
+                        <div class="upload-progress-bar" id="upload-pdf-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="hint"><i class="fas fa-lock" style="color:var(--orange-web);"></i> O arquivo fica protegido — só quem comprar recebe o link de acesso.</div>
             </div>
         </div>
 
@@ -299,6 +315,7 @@
 
     let usuarioAtual = null;
     let arquivoCapa  = null;
+    let arquivoPdf   = null;
     let imageUrlFinal = '';
 
     // Verifica auth
@@ -307,7 +324,7 @@
         usuarioAtual = session.user;
     });
 
-    // ── Upload handlers ──
+    // ── Upload CAPA handlers ──
     function onDragOver(e) { e.preventDefault(); document.getElementById('upload-area').classList.add('dragover'); }
     function onDragLeave()  { document.getElementById('upload-area').classList.remove('dragover'); }
     function onDrop(e) {
@@ -317,6 +334,29 @@
         if (file) processarArquivo(file);
     }
     function onFileSelect(e) { const file = e.target.files[0]; if (file) processarArquivo(file); }
+
+    // ── Upload PDF handlers ──
+    function onDragOverPdf(e) { e.preventDefault(); document.getElementById('upload-pdf-area').classList.add('dragover'); }
+    function onDragLeavePdf()  { document.getElementById('upload-pdf-area').classList.remove('dragover'); }
+    function onDropPdf(e) {
+        e.preventDefault();
+        document.getElementById('upload-pdf-area').classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) processarPdf(file);
+    }
+    function onPdfSelect(e) { const file = e.target.files[0]; if (file) processarPdf(file); }
+
+    function processarPdf(file) {
+        if (file.size > 12 * 1024 * 1024) { mostrarMsg('PDF muito grande. Máximo 12 MB.', 'error'); return; }
+        if (file.type !== 'application/pdf') { mostrarMsg('Formato inválido. Selecione um PDF.', 'error'); return; }
+        arquivoPdf = file;
+        const tamanhoMB = (file.size / 1024 / 1024).toFixed(2);
+        document.getElementById('upload-pdf-placeholder').style.display = 'none';
+        document.getElementById('pdf-selecionado').style.display = 'block';
+        document.getElementById('pdf-nome').textContent = file.name;
+        document.getElementById('pdf-tamanho').textContent = `${tamanhoMB} MB`;
+        limparMsg();
+    }
 
     function processarArquivo(file) {
         if (file.size > 2 * 1024 * 1024) { mostrarMsg('Arquivo muito grande. Máximo 2 MB.', 'error'); return; }
@@ -355,6 +395,29 @@
         return data.publicUrl;
     }
 
+    async function uploadPdf() {
+        if (!arquivoPdf) return '';
+        const path = `${usuarioAtual.id}/${Date.now()}.pdf`;
+
+        document.getElementById('upload-pdf-progress').style.display = 'block';
+        document.getElementById('upload-pdf-bar').style.width = '30%';
+
+        const { error } = await sb.storage
+            .from('livros-pdf')
+            .upload(path, arquivoPdf, { contentType: 'application/pdf', upsert: false });
+
+        document.getElementById('upload-pdf-bar').style.width = '100%';
+
+        if (error) { mostrarMsg('Erro ao enviar PDF: ' + error.message, 'error'); return ''; }
+
+        // Gera URL assinada com validade longa (10 anos) — bucket privado
+        const { data } = await sb.storage
+            .from('livros-pdf')
+            .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+
+        return data?.signedUrl || '';
+    }
+
     async function salvarProduto() {
         const titulo     = document.getElementById('titulo').value.trim();
         const descricao  = document.getElementById('descricao').value.trim();
@@ -364,21 +427,38 @@
         const paginas    = document.getElementById('paginas').value.trim();
         const intro      = document.getElementById('intro').value.trim();
         const sobreAutor = document.getElementById('sobre-autor').value.trim();
-        const link       = document.getElementById('link').value.trim();
         const btn        = document.getElementById('btn-salvar');
 
-        if (!titulo)      return mostrarMsg('Informe o título do produto.', 'error');
-        if (!descricao)   return mostrarMsg('Informe uma descrição.', 'error');
+        if (!titulo)    return mostrarMsg('Informe o título do produto.', 'error');
+        if (!descricao) return mostrarMsg('Informe uma descrição.', 'error');
         if (!preco || preco <= 0) return mostrarMsg('Informe um preço válido.', 'error');
-        if (!categoria)   return mostrarMsg('Selecione uma categoria.', 'error');
+        if (!categoria) return mostrarMsg('Selecione uma categoria.', 'error');
+        if (!arquivoPdf) return mostrarMsg('Selecione o arquivo PDF do produto.', 'error');
 
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando arquivos...';
 
         // Upload da capa
         imageUrlFinal = await uploadCapa();
+        if (document.getElementById('msg').classList.contains('error')) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rocket"></i> Publicar Produto';
+            return;
+        }
 
-        // Salva no Supabase com todas as colunas
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando PDF...';
+
+        // Upload do PDF
+        const linkPdf = await uploadPdf();
+        if (!linkPdf) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rocket"></i> Publicar Produto';
+            return;
+        }
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
+
+        // Salva no Supabase
         const { error } = await sb.from('products').insert({
             author_id:   usuarioAtual.id,
             title:       titulo,
@@ -386,7 +466,7 @@
             price:       preco,
             category:    categoria,
             image_url:   imageUrlFinal || null,
-            link:        link         || null,
+            link:        linkPdf,
             descricao:   descricao    || null,
             paginas:     paginas ? parseInt(paginas) : null,
             intro:       intro        || null,
@@ -402,7 +482,6 @@
 
         mostrarMsg('Produto publicado com sucesso!', 'success');
         btn.innerHTML = '<i class="fas fa-check"></i> Publicado!';
-
         setTimeout(() => window.location.href = '/static/autor-dashboard.html', 2000);
     }
 
