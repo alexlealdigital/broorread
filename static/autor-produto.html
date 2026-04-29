@@ -196,7 +196,7 @@
 <div class="header">
     <div class="header-brand"><i class="fas fa-feather-alt"></i> BrooStore</div>
     <div style="display:flex;gap:.75rem;">
-        <button class="btn-icon" onclick="window.location.href='/static/autor-dashboard.html'">
+        <button class="btn-icon" onclick="window.location.href='/static/autor-login.html'">
             <i class="fas fa-arrow-left"></i> Dashboard
         </button>
     </div>
@@ -466,7 +466,7 @@
             price:       preco,
             category:    categoria,
             image_url:   imageUrlFinal || null,
-            link:        linkPdf,
+            link_pdf:    linkPdf,
             descricao:   descricao    || null,
             paginas:     paginas ? parseInt(paginas) : null,
             intro:       intro        || null,
@@ -482,7 +482,7 @@
 
         mostrarMsg('Produto publicado com sucesso!', 'success');
         btn.innerHTML = '<i class="fas fa-check"></i> Publicado!';
-        setTimeout(() => window.location.href = '/static/autor-dashboard.html', 2000);
+        setTimeout(() => window.location.href = '/static/autor-login.html', 2000);
     }
 
     function mostrarMsg(texto, tipo) {
