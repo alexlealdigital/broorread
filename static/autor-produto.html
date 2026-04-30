@@ -462,10 +462,11 @@
     }
 
     function verificarTermosAntesDeSalvar() {
-        if (localStorage.getItem(TERMOS_KEY) === '1') {
-            salvarProduto();
-        } else {
-            // Resetar radios
+        salvarProduto();
+    }
+
+    function abrirTermosSeNecessario() {
+        if (localStorage.getItem(TERMOS_KEY) !== '1') {
             document.querySelectorAll('input[name="termos"]').forEach(r => r.checked = false);
             document.getElementById('btn-aceitar-termos').disabled = true;
             document.getElementById('btn-aceitar-termos').textContent = 'Continuar para Publicação';
@@ -482,10 +483,11 @@
     let arquivoPdf   = null;
     let imageUrlFinal = '';
 
-    // Verifica auth
+    // Verifica auth e abre termos se necessário
     sb.auth.getSession().then(({ data: { session } }) => {
         if (!session) { window.location.href = '/static/autor-login.html'; return; }
         usuarioAtual = session.user;
+        abrirTermosSeNecessario();
     });
 
     // ── Upload CAPA handlers ──
