@@ -141,6 +141,78 @@
         .form-group textarea::placeholder { color: #555; }
         .form-group textarea { resize: vertical; min-height: 100px; }
 
+        /* Contador de caracteres */
+        .char-counter {
+            text-align: right;
+            font-size: .75rem;
+            color: #666;
+            margin-top: .3rem;
+            transition: color .3s;
+        }
+        .char-counter.warn   { color: var(--orange-web); }
+        .char-counter.over   { color: var(--error-red); font-weight: bold; }
+
+        /* Modal de Termos */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.85);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999; padding: 1rem;
+        }
+        .modal-box {
+            background: var(--oxford-blue);
+            border: 1px solid var(--border-grey);
+            border-radius: 16px;
+            width: 100%; max-width: 680px;
+            max-height: 90vh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-grey);
+            display: flex; align-items: center; gap: .75rem;
+        }
+        .modal-header i { color: var(--orange-web); font-size: 1.4rem; }
+        .modal-header h2 { font-family: var(--font-heading); font-size: 1.2rem; }
+        .modal-body {
+            padding: 1.5rem 2rem;
+            overflow-y: auto;
+            flex: 1;
+            font-size: .88rem;
+            line-height: 1.7;
+            color: #ccc;
+        }
+        .modal-body h3 {
+            color: var(--orange-web);
+            font-family: var(--font-heading);
+            font-size: .95rem;
+            margin: 1.2rem 0 .4rem;
+        }
+        .modal-body p { margin-bottom: .6rem; }
+        .modal-footer {
+            padding: 1.2rem 2rem;
+            border-top: 1px solid var(--border-grey);
+            display: flex; flex-direction: column; gap: .75rem;
+        }
+        .radio-group {
+            display: flex; gap: 1.5rem;
+        }
+        .radio-group label {
+            display: flex; align-items: center; gap: .5rem;
+            cursor: pointer; font-size: .9rem;
+        }
+        .radio-group input[type=radio] { accent-color: var(--orange-web); width: 16px; height: 16px; }
+        .btn-aceitar {
+            width: 100%; padding: .85rem;
+            background: var(--orange-web); border: none; border-radius: 8px;
+            color: var(--black); font-family: var(--font-heading);
+            font-size: 1rem; font-weight: bold; cursor: pointer;
+            transition: all .3s;
+        }
+        .btn-aceitar:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-aceitar:not(:disabled):hover { background: #ffb700; }
+
         .hint { font-size: .78rem; color: #666; margin-top: .3rem; }
 
         /* Botão */
@@ -230,12 +302,12 @@
         <div class="section-label"><i class="fas fa-info-circle"></i> Dados do Produto</div>
         <div class="form-grid">
             <div class="form-group full">
-                <label>Título do Produto *</label>
-                <input type="text" id="titulo" placeholder="Ex: Física Geral: Teoria do Tudo">
+                <label>Título do Produto * <span class="char-counter" id="cnt-titulo">0/80</span></label>
+                <input type="text" id="titulo" maxlength="80" placeholder="Ex: Física Geral: Teoria do Tudo" oninput="contarChars('titulo','cnt-titulo',80)">
             </div>
             <div class="form-group full">
-                <label>Descrição curta *</label>
-                <textarea id="descricao" placeholder="Uma frase que resume seu produto..."></textarea>
+                <label>Descrição curta * <span class="char-counter" id="cnt-descricao">0/160</span></label>
+                <textarea id="descricao" maxlength="160" placeholder="Uma frase que resume seu produto..." oninput="contarChars('descricao','cnt-descricao',160)"></textarea>
             </div>
             <div class="form-group">
                 <label>Preço (R$) *</label>
@@ -267,12 +339,12 @@
                 <input type="number" id="paginas" placeholder="Ex: 312" min="1">
             </div>
             <div class="form-group full">
-                <label>Introdução do livro</label>
-                <textarea id="intro" placeholder="Trecho introdutório para atrair o leitor..." style="min-height:120px;"></textarea>
+                <label>Introdução do livro <span class="char-counter" id="cnt-intro">0/1200</span></label>
+                <textarea id="intro" maxlength="1200" placeholder="Trecho introdutório para atrair o leitor..." style="min-height:120px;" oninput="contarChars('intro','cnt-intro',1200)"></textarea>
             </div>
             <div class="form-group full">
-                <label>Sobre o autor</label>
-                <textarea id="sobre-autor" placeholder="Breve biografia do autor..." style="min-height:120px;"></textarea>
+                <label>Sobre o autor <span class="char-counter" id="cnt-sobre">0/1200</span></label>
+                <textarea id="sobre-autor" maxlength="1200" placeholder="Breve biografia do autor..." style="min-height:120px;" oninput="contarChars('sobre-autor','cnt-sobre',1200)"></textarea>
             </div>
 
             <hr class="divider" style="grid-column:1/-1;">
@@ -301,14 +373,106 @@
             </div>
         </div>
 
-        <button class="btn-submit" id="btn-salvar" onclick="salvarProduto()">
+        <button class="btn-submit" id="btn-salvar" onclick="verificarTermosAntesDeSalvar()">
             <i class="fas fa-rocket"></i> Publicar Produto
         </button>
     </div>
 </div>
 
+<!-- Modal Termos de Uso -->
+<div class="modal-overlay" id="modal-termos" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <i class="fas fa-file-contract"></i>
+            <h2>Termos de Uso — Publicação de Produtos</h2>
+        </div>
+        <div class="modal-body">
+            <p>Antes de publicar seu primeiro produto na <strong>BrooStore</strong>, leia atentamente os termos abaixo. Ao aceitar, você confirma que leu, compreendeu e concorda com todas as condições.</p>
+
+            <h3>1. Responsabilidade pelo Conteúdo</h3>
+            <p>O conteúdo publicado — incluindo textos, imagens, arquivos e descrições — é de <strong>inteira responsabilidade do autor</strong>. A BrooStore atua como plataforma intermediária e não se responsabiliza por informações incorretas, direitos autorais de terceiros, conteúdo enganoso ou qualquer dano causado ao consumidor decorrente do produto publicado.</p>
+
+            <h3>2. Conformidade com a Legislação Brasileira</h3>
+            <p>O autor declara que seu produto está em conformidade com a legislação brasileira vigente, especialmente: <strong>Lei nº 9.610/1998</strong> (Lei de Direitos Autorais), <strong>Lei nº 8.078/1990</strong> (Código de Defesa do Consumidor), <strong>Lei nº 13.709/2018</strong> (LGPD — Lei Geral de Proteção de Dados) e o <strong>Marco Civil da Internet (Lei nº 12.965/2014)</strong>.</p>
+
+            <h3>3. Conteúdo Proibido</h3>
+            <p>É expressamente vedada a publicação de conteúdo que: contenha discurso de ódio, preconceito ou incitação à violência; viole direitos autorais ou propriedade intelectual de terceiros; promova atividades ilegais; seja de natureza sexual explícita ou envolvendo menores; induza o consumidor ao erro ou contenha informações falsas.</p>
+            <p>A BrooStore se reserva o direito de <strong>remover qualquer produto</strong> que viole estas diretrizes, sem aviso prévio e sem direito a reembolso da taxa.</p>
+
+            <h3>4. Taxa da Plataforma</h3>
+            <p>A BrooStore retém <strong>25% (vinte e cinco por cento)</strong> sobre o valor bruto de cada venda realizada como contraprestação pelos serviços de hospedagem, processamento de pagamentos e entrega digital. O autor recebe <strong>75%</strong> do valor bruto de cada venda.</p>
+
+            <h3>5. Prazo de Pagamento</h3>
+            <p>Após a solicitação de saque pelo autor, o pagamento via PIX será realizado em até <strong>72 horas úteis</strong>. Solicitações realizadas em fins de semana ou feriados nacionais serão processadas no próximo dia útil.</p>
+
+            <h3>6. Cancelamento e Reembolso</h3>
+            <p>O consumidor tem direito ao reembolso integral conforme o <strong>art. 49 do CDC</strong> (arrependimento em até 7 dias para compras digitais). Nestes casos, o valor correspondente ao autor será deduzido do saldo disponível para saque.</p>
+
+            <h3>7. Alterações nos Termos</h3>
+            <p>A BrooStore pode atualizar estes termos a qualquer momento. O autor será notificado por e-mail e deverá aceitar novamente para continuar publicando produtos.</p>
+
+            <p style="margin-top:1rem; color:#888; font-size:.8rem;">Última atualização: Abril de 2026.</p>
+        </div>
+        <div class="modal-footer">
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="termos" value="aceito" onchange="onRadioTermos(this)">
+                    Aceito os Termos de Uso
+                </label>
+                <label>
+                    <input type="radio" name="termos" value="recuso" onchange="onRadioTermos(this)">
+                    Não aceito
+                </label>
+            </div>
+            <button class="btn-aceitar" id="btn-aceitar-termos" disabled onclick="confirmarTermos()">
+                Continuar para Publicação
+            </button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    /* ── Contador de caracteres ── */
+    function contarChars(fieldId, counterId, max) {
+        const len = document.getElementById(fieldId).value.length;
+        const el  = document.getElementById(counterId);
+        el.textContent = `${len}/${max}`;
+        el.className = 'char-counter' + (len >= max ? ' over' : len >= max * 0.85 ? ' warn' : '');
+    }
+
+    /* ── Termos de Uso ── */
+    const TERMOS_KEY = 'broo_termos_aceitos';
+
+    function onRadioTermos(radio) {
+        const btn = document.getElementById('btn-aceitar-termos');
+        if (radio.value === 'aceito') {
+            btn.disabled = false;
+            btn.textContent = 'Continuar para Publicação';
+        } else {
+            btn.disabled = true;
+            btn.textContent = 'Você precisa aceitar para publicar';
+        }
+    }
+
+    function confirmarTermos() {
+        localStorage.setItem(TERMOS_KEY, '1');
+        document.getElementById('modal-termos').style.display = 'none';
+        salvarProduto();
+    }
+
+    function verificarTermosAntesDeSalvar() {
+        if (localStorage.getItem(TERMOS_KEY) === '1') {
+            salvarProduto();
+        } else {
+            // Resetar radios
+            document.querySelectorAll('input[name="termos"]').forEach(r => r.checked = false);
+            document.getElementById('btn-aceitar-termos').disabled = true;
+            document.getElementById('btn-aceitar-termos').textContent = 'Continuar para Publicação';
+            document.getElementById('modal-termos').style.display = 'flex';
+        }
+    }
+
     const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
