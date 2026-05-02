@@ -182,6 +182,18 @@
         .badge-green  { background: rgba(39,174,96,.2);  color: #2ecc71; }
         .badge-yellow { background: rgba(252,163,17,.2); color: var(--orange-web); }
         .badge-grey   { background: rgba(255,255,255,.1); color: #aaa; }
+        .badge-red    { background: rgba(231,76,60,.2);  color: #e74c3c; }
+
+        .btn-action {
+            background: rgba(255,255,255,.05); border: 1px solid var(--border-grey);
+            color: var(--white); padding: .4rem .6rem; border-radius: 6px;
+            cursor: pointer; font-size: .8rem; transition: all .2s;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        .btn-action:hover { border-color: var(--orange-web); color: var(--orange-web); background: rgba(252,163,11,.05); }
+        .btn-action.btn-danger:hover { border-color: var(--error-red); color: var(--error-red); background: rgba(231,76,60,.05); }
+        
+        .actions-cell { display: flex; gap: .5rem; }
 
         .pix-panel {
             background: var(--oxford-blue); border: 1px solid var(--border-grey);
@@ -334,7 +346,7 @@
                 <div class="table-wrap">
                     <table>
                         <thead>
-                            <tr><th>Produto</th><th>Preço</th><th>Vendas</th><th>Arrecadado</th><th>Status</th></tr>
+                            <tr><th>Produto</th><th>Preço</th><th>Vendas</th><th>Arrecadado</th><th>Status</th><th>Ações</th></tr>
                         </thead>
                         <tbody id="tabela-produtos">
                             <tr><td colspan="5" class="empty">Carregando...</td></tr>
@@ -539,8 +551,9 @@
     /* ── Produtos ── */
     async function carregarProdutos() {
         const { data: produtos, error } = await sb
-            .from('products').select('id, title, price, category')
-            .eq('author_id', usuarioAtual.id);
+            .from('products').select('id, title, price, category, active')
+            .eq('author_id', usuarioAtual.id)
+            .order('created_at', { ascending: false });
 
         if (error || !produtos?.length) {
             document.getElementById('tabela-produtos').innerHTML =
@@ -561,13 +574,32 @@
 
             const qv  = vendas?.length || 0;
             const bruto = vendas?.reduce((a, v) => a + parseFloat(v.amount||0), 0) || 0;
+            const statusBadge = p.active !== false 
+                ? '<span class="badge badge-green">ativo</span>' 
+                : '<span class="badge badge-red">inativo</span>';
+            
+            const toggleIcon = p.active !== false ? 'fa-eye-slash' : 'fa-eye';
+            const toggleText = p.active !== false ? 'Desativar' : 'Ativar';
+
             html += `
                 <tr>
                     <td><strong>${p.title}</strong><br><small style="color:#666;">${p.category||''}</small></td>
                     <td>${fmt(p.price*(1-TAXA))}<br><small style="color:#555;font-size:.75rem;">bruto: ${fmt(p.price)} — taxa 25%</small></td>
                     <td>${qv}</td>
                     <td>${fmt(bruto*(1-TAXA))}</td>
-                    <td><span class="badge badge-green">ativo</span></td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <div class="actions-cell">
+                            <button class="btn-action" onclick="editarProduto('${p.id}')" title="Editar">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+                            <button class="btn-action ${p.active !== false ? 'btn-danger' : ''}" 
+                                    onclick="toggleStatus('${p.id}', ${p.active !== false})" 
+                                    title="${toggleText}">
+                                <i class="fas ${toggleIcon}"></i> ${toggleText}
+                            </button>
+                        </div>
+                    </td>
                 </tr>`;
         }
         document.getElementById('tabela-produtos').innerHTML = html;
@@ -615,6 +647,30 @@
                 <td>${fmt(v.amount)}</td>
                 <td>${badgeStatus(v.status)}</td>
             </tr>`).join('');
+    }
+
+    /* ── Ações do Produto ── */
+    function editarProduto(id) {
+        window.location.href = `/static/autor-produto.html?id=${id}`;
+    }
+
+    async function toggleStatus(id, currentlyActive) {
+        const confirmMsg = currentlyActive 
+            ? "Deseja realmente desativar este produto? Ele não aparecerá mais na loja." 
+            : "Deseja ativar este produto para que ele apareça na loja?";
+        
+        if (!confirm(confirmMsg)) return;
+
+        const { error } = await sb
+            .from('products')
+            .update({ active: !currentlyActive })
+            .eq('id', id);
+
+        if (error) {
+            alert("Erro ao alterar status: " + error.message);
+        } else {
+            carregarProdutos();
+        }
     }
 
     /* ── PIX ── */
