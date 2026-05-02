@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrooStore – Área do Autor</title>
+    <title>BrooStore – Novo Produto</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@700&display=swap" rel="stylesheet">
@@ -24,109 +24,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: var(--font-body); background: #0a0a0a; color: var(--white); min-height: 100vh; }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ── Carregamento inicial ── */
-        #tela-carregando {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 1rem;
-            color: #555;
-        }
-        #tela-carregando i {
-            font-size: 2.5rem;
-            animation: spin 1s linear infinite;
-            color: var(--orange-web);
-        }
-
-        /* ══════════════════════════════
-           TELA DE LOGIN
-        ══════════════════════════════ */
-        #tela-login {
-            min-height: 100vh;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-        .auth-card {
-            background: var(--oxford-blue);
-            border: 1px solid var(--border-grey);
-            border-radius: 16px;
-            padding: 2.5rem 2rem;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-        }
-        .auth-logo { text-align: center; margin-bottom: 2rem; }
-        .auth-logo h1 { font-family: var(--font-heading); font-size: 1.4rem; color: var(--orange-web); }
-        .auth-logo p { font-size: .85rem; color: #aaa; margin-top: .25rem; }
-
-        .tabs {
-            display: flex;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--border-grey);
-            margin-bottom: 1.8rem;
-        }
-        .tab-btn {
-            flex: 1; padding: .7rem;
-            background: transparent; border: none;
-            color: #888; font-family: var(--font-body); font-weight: bold;
-            font-size: .9rem; cursor: pointer; transition: all .3s;
-        }
-        .tab-btn.active { background: var(--orange-web); color: var(--black); }
-
-        .form-group { margin-bottom: 1.2rem; }
-        .form-group label {
-            display: block; font-size: .8rem; font-weight: bold;
-            color: var(--orange-web); margin-bottom: .4rem;
-            text-transform: uppercase; letter-spacing: .5px;
-        }
-        .form-group input {
-            width: 100%; padding: .75rem 1rem;
-            background: rgba(255,255,255,.06);
-            border: 1px solid var(--border-grey);
-            border-radius: 8px; color: var(--white);
-            font-family: var(--font-body); font-size: .95rem;
-            transition: border-color .3s; outline: none;
-        }
-        .form-group input:focus { border-color: var(--orange-web); }
-        .form-group input::placeholder { color: #555; }
-
-        .btn-submit {
-            width: 100%; padding: .9rem;
-            background: var(--orange-web); border: none; border-radius: 8px;
-            color: var(--black); font-family: var(--font-heading);
-            font-size: 1rem; font-weight: bold; cursor: pointer;
-            text-transform: uppercase; letter-spacing: 1px; transition: all .3s;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            margin-top: .5rem;
-        }
-        .btn-submit:hover { background: #ffb700; transform: translateY(-2px); }
-        .btn-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-
-        .msg {
-            padding: .75rem 1rem; border-radius: 8px; font-size: .88rem;
-            margin-bottom: 1rem; display: none;
-        }
-        .msg.error   { background: rgba(231,76,60,.15); border: 1px solid var(--error-red); color: #ff6b6b; display: block; }
-        .msg.success { background: rgba(39,174,96,.15); border: 1px solid var(--success-green); color: #2ecc71; display: block; }
-
-        .back-link {
-            display: block; text-align: center; margin-top: 1.5rem;
-            color: #666; font-size: .85rem; transition: color .3s; text-decoration: none;
-        }
-        .back-link:hover { color: var(--orange-web); }
-
-        /* ══════════════════════════════
-           TELA DO DASHBOARD
-        ══════════════════════════════ */
-        #tela-dashboard { display: none; }
-
+        /* Header */
         .header {
             background: var(--oxford-blue);
             border-bottom: 1px solid var(--border-grey);
@@ -135,613 +33,692 @@
             position: sticky; top: 0; z-index: 100;
         }
         .header-brand { font-family: var(--font-heading); color: var(--orange-web); font-size: 1.2rem; }
-        .header-brand span { color: var(--white); font-size: .85rem; font-family: var(--font-body); margin-left: .5rem; }
-        .header-actions { display: flex; gap: .75rem; align-items: center; }
-
         .btn-icon {
-            background: rgba(255,255,255,.07); border: 1px solid var(--border-grey);
-            color: var(--white); padding: .5rem .9rem; border-radius: 8px;
-            cursor: pointer; font-family: var(--font-body); font-size: .85rem;
-            transition: all .3s; display: flex; align-items: center; gap: 6px;
+            background: rgba(255,255,255,.07);
+            border: 1px solid var(--border-grey);
+            color: var(--white);
+            padding: .5rem .9rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-size: .85rem;
+            transition: all .3s;
+            display: flex; align-items: center; gap: 6px;
         }
         .btn-icon:hover { border-color: var(--orange-web); color: var(--orange-web); }
 
-        .main { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+        /* Layout */
+        .main { padding: 2rem; max-width: 860px; margin: 0 auto; }
         .page-title { font-family: var(--font-heading); font-size: 1.6rem; margin-bottom: 2rem; }
         .page-title span { color: var(--orange-web); }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem; margin-bottom: 2.5rem;
+        /* Card do form */
+        .form-card {
+            background: var(--oxford-blue);
+            border: 1px solid var(--border-grey);
+            border-radius: 16px;
+            padding: 2rem;
         }
-        .stat-card {
-            background: var(--oxford-blue); border: 1px solid var(--border-grey);
-            border-radius: 12px; padding: 1.5rem; transition: border-color .3s;
+
+        /* Upload capa */
+        .upload-area {
+            border: 2px dashed var(--border-grey);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all .3s;
+            margin-bottom: 1.5rem;
+            position: relative;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
         }
-        .stat-card:hover { border-color: var(--orange-web); }
-        .stat-label { font-size: .8rem; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: .5rem; }
-        .stat-value { font-family: var(--font-heading); font-size: 1.8rem; color: var(--orange-web); }
-        .stat-value.green { color: var(--success-green); }
-        .stat-icon { font-size: 1.5rem; color: #333; float: right; margin-top: -2rem; }
-
-        .section { margin-bottom: 2.5rem; }
-        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-        .section-title { font-family: var(--font-heading); font-size: 1.1rem; }
-
-        .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-grey); }
-        table { width: 100%; border-collapse: collapse; }
-        th {
-            background: var(--oxford-blue); padding: .8rem 1rem; text-align: left;
-            font-size: .8rem; text-transform: uppercase; letter-spacing: .5px; color: #888;
+        .upload-area:hover, .upload-area.dragover { border-color: var(--orange-web); background: rgba(252,163,17,.05); }
+        .upload-area i { font-size: 2.5rem; color: #444; }
+        .upload-area p { color: #666; font-size: .9rem; }
+        .upload-area strong { color: var(--orange-web); }
+        .upload-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .preview-img {
+            width: 120px;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.5);
         }
-        td { padding: .9rem 1rem; border-top: 1px solid var(--border-grey); font-size: .9rem; }
-        tr:hover td { background: rgba(255,255,255,.03); }
-
-        .badge { display: inline-block; padding: .2rem .6rem; border-radius: 20px; font-size: .75rem; font-weight: bold; }
-        .badge-green  { background: rgba(39,174,96,.2);  color: #2ecc71; }
-        .badge-yellow { background: rgba(252,163,17,.2); color: var(--orange-web); }
-        .badge-grey   { background: rgba(255,255,255,.1); color: #aaa; }
-        .badge-red    { background: rgba(231,76,60,.2);  color: #e74c3c; }
-
-        .btn-action {
-            background: rgba(255,255,255,.05); border: 1px solid var(--border-grey);
-            color: var(--white); padding: .4rem .6rem; border-radius: 6px;
-            cursor: pointer; font-size: .8rem; transition: all .2s;
-            display: inline-flex; align-items: center; gap: 4px;
+        .upload-progress {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin-top: .5rem;
+            overflow: hidden;
+            display: none;
         }
-        .btn-action:hover { border-color: var(--orange-web); color: var(--orange-web); background: rgba(252,163,11,.05); }
-        .btn-action.btn-danger:hover { border-color: var(--error-red); color: var(--error-red); background: rgba(231,76,60,.05); }
-        
-        .actions-cell { display: flex; gap: .5rem; }
-
-        .pix-panel {
-            background: var(--oxford-blue); border: 1px solid var(--border-grey);
-            border-radius: 12px; padding: 1.5rem;
+        .upload-progress-bar {
+            height: 100%;
+            background: var(--orange-web);
+            transition: width .3s;
         }
-        .pix-saldo {
-            display: flex; align-items: center; justify-content: space-between;
-            background: rgba(0,0,0,.3); border-radius: 8px;
-            padding: 1rem 1.2rem; margin-bottom: 1.2rem;
+
+        /* Form fields */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media(max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group.full { grid-column: 1 / -1; }
+        .form-group label {
+            display: block;
+            font-size: .8rem;
+            font-weight: bold;
+            color: var(--orange-web);
+            margin-bottom: .4rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
         }
-        .pix-saldo-label { font-size: .85rem; color: #888; }
-        .pix-saldo-value { font-family: var(--font-heading); font-size: 1.6rem; color: var(--success-green); }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: .75rem 1rem;
+            background: rgba(255,255,255,.06);
+            border: 1px solid var(--border-grey);
+            border-radius: 8px;
+            color: var(--white);
+            font-family: var(--font-body);
+            font-size: .95rem;
+            outline: none;
+            transition: border-color .3s;
+        }
+        .form-group select option { background: var(--oxford-blue); }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus { border-color: var(--orange-web); }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder { color: #555; }
+        .form-group textarea { resize: vertical; min-height: 100px; }
 
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-        @media(max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+        /* Contador de caracteres */
+        .char-counter {
+            text-align: right;
+            font-size: .75rem;
+            color: #666;
+            margin-top: .3rem;
+            transition: color .3s;
+        }
+        .char-counter.warn   { color: var(--orange-web); }
+        .char-counter.over   { color: var(--error-red); font-weight: bold; }
 
-        .btn-green {
-            width: 100%; padding: .85rem; background: var(--success-green); border: none;
-            border-radius: 8px; color: var(--white); font-family: var(--font-heading);
-            font-size: 1rem; font-weight: bold; cursor: pointer; transition: all .3s;
+        /* Modal de Termos */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.85);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999; padding: 1rem;
+        }
+        .modal-box {
+            background: var(--oxford-blue);
+            border: 1px solid var(--border-grey);
+            border-radius: 16px;
+            width: 100%; max-width: 680px;
+            max-height: 90vh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-grey);
+            display: flex; align-items: center; gap: .75rem;
+        }
+        .modal-header i { color: var(--orange-web); font-size: 1.4rem; }
+        .modal-header h2 { font-family: var(--font-heading); font-size: 1.2rem; }
+        .modal-body {
+            padding: 1.5rem 2rem;
+            overflow-y: auto;
+            flex: 1;
+            font-size: .88rem;
+            line-height: 1.7;
+            color: #ccc;
+        }
+        .modal-body h3 {
+            color: var(--orange-web);
+            font-family: var(--font-heading);
+            font-size: .95rem;
+            margin: 1.2rem 0 .4rem;
+        }
+        .modal-body p { margin-bottom: .6rem; }
+        .modal-footer {
+            padding: 1.2rem 2rem;
+            border-top: 1px solid var(--border-grey);
+            display: flex; flex-direction: column; gap: .75rem;
+        }
+        .radio-group {
+            display: flex; gap: 1.5rem;
+        }
+        .radio-group label {
+            display: flex; align-items: center; gap: .5rem;
+            cursor: pointer; font-size: .9rem;
+        }
+        .radio-group input[type=radio] { accent-color: var(--orange-web); width: 16px; height: 16px; }
+        .btn-aceitar {
+            width: 100%; padding: .85rem;
+            background: var(--orange-web); border: none; border-radius: 8px;
+            color: var(--black); font-family: var(--font-heading);
+            font-size: 1rem; font-weight: bold; cursor: pointer;
+            transition: all .3s;
+        }
+        .btn-aceitar:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-aceitar:not(:disabled):hover { background: #ffb700; }
+
+        .hint { font-size: .78rem; color: #666; margin-top: .3rem; }
+
+        /* Botão */
+        .btn-submit {
+            width: 100%;
+            padding: 1rem;
+            background: var(--orange-web);
+            border: none;
+            border-radius: 8px;
+            color: var(--black);
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all .3s;
             display: flex; align-items: center; justify-content: center; gap: 8px;
+            margin-top: .5rem;
         }
-        .btn-green:hover { background: #2ecc71; }
-        .btn-green:disabled { opacity: .5; cursor: not-allowed; }
+        .btn-submit:hover { background: #ffb700; transform: translateY(-2px); }
+        .btn-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
-        .loading { text-align: center; padding: 3rem; color: #555; }
-        .loading i { font-size: 2rem; animation: spin 1s linear infinite; }
-        .empty { text-align: center; padding: 2rem; color: #555; font-size: .9rem; }
+        /* Msg */
+        .msg {
+            padding: .75rem 1rem;
+            border-radius: 8px;
+            font-size: .88rem;
+            margin-bottom: 1.2rem;
+            display: none;
+        }
+        .msg.error   { background: rgba(231,76,60,.15); border: 1px solid var(--error-red); color: #ff6b6b; display: block; }
+        .msg.success { background: rgba(39,174,96,.15); border: 1px solid var(--success-green); color: #2ecc71; display: block; }
+
+        /* Divisor */
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border-grey);
+            margin: 1.5rem 0;
+        }
+        .section-label {
+            font-family: var(--font-heading);
+            font-size: .9rem;
+            color: #888;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
     </style>
 </head>
 <body>
 
-<!-- 1. Verificando sessão -->
-<div id="tela-carregando">
-    <i class="fas fa-spinner"></i>
-    <p>Verificando sessão...</p>
+<div class="header">
+    <div class="header-brand"><i class="fas fa-feather-alt"></i> BrooStore</div>
+    <div style="display:flex;gap:.75rem;">
+        <button class="btn-icon" onclick="window.location.href='/static/autor-login.html'">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </button>
+    </div>
 </div>
 
-<!-- 2. Tela de Login -->
-<div id="tela-login">
-    <div class="auth-card">
-        <div class="auth-logo">
-            <h1><i class="fas fa-feather-alt"></i> BrooStore</h1>
-            <p>Área exclusiva para autores</p>
-        </div>
+<div class="main">
+    <h1 class="page-title" id="main-title">Cadastrar <span>Novo Produto</span></h1>
 
-        <div class="tabs">
-            <button class="tab-btn active" id="tab-entrar"   onclick="showTab('login')">Entrar</button>
-            <button class="tab-btn"        id="tab-cadastro" onclick="showTab('cadastro')">Cadastrar</button>
-        </div>
-
+    <div class="form-card">
         <div id="msg" class="msg"></div>
 
-        <div id="form-login">
-            <div class="form-group">
-                <label>E-mail</label>
-                <input type="email" id="login-email" placeholder="seu@email.com">
+        <!-- Upload da capa -->
+        <div class="section-label"><i class="fas fa-image"></i> Capa do Produto</div>
+        <div class="upload-area" id="upload-area"
+             ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <input type="file" id="input-capa" accept="image/jpeg,image/png,image/webp" onchange="onFileSelect(event)">
+            <div id="upload-placeholder">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Arraste a capa aqui ou <strong>clique para selecionar</strong></p>
+                <p style="font-size:.78rem;color:#555;">JPG, PNG ou WEBP — máx. 2 MB</p>
             </div>
-            <div class="form-group">
-                <label>Senha</label>
-                <input type="password" id="login-senha" placeholder="••••••••">
+            <img id="preview-img" class="preview-img" style="display:none;" alt="preview">
+            <div class="upload-progress" id="upload-progress">
+                <div class="upload-progress-bar" id="upload-bar" style="width:0%"></div>
             </div>
-            <button class="btn-submit" id="btn-login" onclick="fazerLogin()">
-                <i class="fas fa-sign-in-alt"></i> Entrar
-            </button>
         </div>
 
-        <div id="form-cadastro" style="display:none;">
-            <div class="form-group">
-                <label>Nome completo</label>
-                <input type="text" id="cad-nome" placeholder="Seu nome de autor">
+        <hr class="divider">
+
+        <!-- Dados do produto -->
+        <div class="section-label"><i class="fas fa-info-circle"></i> Dados do Produto</div>
+        <div class="form-grid">
+            <div class="form-group full">
+                <label>Título do Produto * <span class="char-counter" id="cnt-titulo">0/80</span></label>
+                <input type="text" id="titulo" maxlength="80" placeholder="Ex: Física Geral: Teoria do Tudo" oninput="contarChars('titulo','cnt-titulo',80)">
+            </div>
+            <div class="form-group full">
+                <label>Descrição curta * <span class="char-counter" id="cnt-descricao">0/160</span></label>
+                <textarea id="descricao" maxlength="160" placeholder="Uma frase que resume seu produto..." oninput="contarChars('descricao','cnt-descricao',160)"></textarea>
             </div>
             <div class="form-group">
-                <label>E-mail</label>
-                <input type="email" id="cad-email" placeholder="seu@email.com">
+                <label>Preço (R$) *</label>
+                <input type="number" id="preco" placeholder="Ex: 49.90" step="0.01" min="1">
             </div>
             <div class="form-group">
-                <label>Senha</label>
-                <input type="password" id="cad-senha" placeholder="Mínimo 6 caracteres">
+                <label>Categoria *</label>
+                <select id="categoria">
+                    <option value="">Selecione...</option>
+                    <option value="Tecnologia">Tecnologia</option>
+                    <option value="Ciência">Ciência</option>
+                    <option value="Games">Games</option>
+                    <option value="Família e Relacionamento">Família e Relacionamento</option>
+                    <option value="Negócios">Negócios</option>
+                    <option value="Saúde">Saúde</option>
+                    <option value="Outros">Outros</option>
+                </select>
             </div>
-            <button class="btn-submit" id="btn-cadastro" onclick="fazerCadastro()">
-                <i class="fas fa-user-plus"></i> Criar conta
-            </button>
+
+            <hr class="divider" style="grid-column:1/-1;">
+            <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-book-open"></i> Informações da Página de Venda (opcional)</div>
+
+            <div class="form-group">
+                <label>Autor</label>
+                <input type="text" id="autor" placeholder="Nome do autor">
+            </div>
+            <div class="form-group">
+                <label>Número de páginas</label>
+                <input type="number" id="paginas" placeholder="Ex: 312" min="1">
+            </div>
+            <div class="form-group full">
+                <label>Introdução do livro <span class="char-counter" id="cnt-intro">0/1200</span></label>
+                <textarea id="intro" maxlength="1200" placeholder="Trecho introdutório para atrair o leitor..." style="min-height:120px;" oninput="contarChars('intro','cnt-intro',1200)"></textarea>
+            </div>
+            <div class="form-group full">
+                <label>Sobre o autor <span class="char-counter" id="cnt-sobre">0/1200</span></label>
+                <textarea id="sobre-autor" maxlength="1200" placeholder="Breve biografia do autor..." style="min-height:120px;" oninput="contarChars('sobre-autor','cnt-sobre',1200)"></textarea>
+            </div>
+
+            <hr class="divider" style="grid-column:1/-1;">
+            <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-file-pdf"></i> Arquivo do Produto (PDF)</div>
+
+            <div class="form-group full">
+                <div class="upload-area" id="upload-pdf-area"
+                     ondragover="onDragOverPdf(event)" ondragleave="onDragLeavePdf(event)" ondrop="onDropPdf(event)"
+                     style="min-height:120px;">
+                    <input type="file" id="input-pdf" accept="application/pdf" onchange="onPdfSelect(event)">
+                    <div id="upload-pdf-placeholder">
+                        <i class="fas fa-file-pdf" style="font-size:2rem;color:#e74c3c;"></i>
+                        <p>Arraste o PDF aqui ou <strong>clique para selecionar</strong></p>
+                        <p style="font-size:.78rem;color:#555;">Somente PDF — máx. 12 MB</p>
+                    </div>
+                    <div id="pdf-selecionado" style="display:none;text-align:center;">
+                        <i class="fas fa-file-pdf" style="font-size:2rem;color:#e74c3c;"></i>
+                        <p id="pdf-nome" style="color:var(--orange-web);margin-top:.5rem;font-weight:bold;"></p>
+                        <p id="pdf-tamanho" style="color:#666;font-size:.8rem;"></p>
+                    </div>
+                    <div class="upload-progress" id="upload-pdf-progress">
+                        <div class="upload-progress-bar" id="upload-pdf-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="hint"><i class="fas fa-lock" style="color:var(--orange-web);"></i> O arquivo fica protegido — só quem comprar recebe o link de acesso.</div>
+            </div>
         </div>
 
-        <a href="https://broostore.netlify.app" class="back-link">
-            <i class="fas fa-arrow-left"></i> Voltar à loja
-        </a>
+        <button class="btn-submit" id="btn-salvar" onclick="verificarTermosAntesDeSalvar()">
+            <i class="fas fa-rocket"></i> Publicar Produto
+        </button>
     </div>
 </div>
 
-<!-- 3. Dashboard (aparece após login) -->
-<div id="tela-dashboard">
-    <div class="header">
-        <div class="header-brand">
-            <i class="fas fa-feather-alt"></i> BrooStore
-            <span id="autor-nome">...</span>
+<!-- Modal Termos de Uso -->
+<div class="modal-overlay" id="modal-termos" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <i class="fas fa-file-contract"></i>
+            <h2>Termos de Uso — Publicação de Produtos</h2>
         </div>
-        <div class="header-actions">
-            <button class="btn-icon" onclick="window.location.href='/static/autor-produto.html'">
-                <i class="fas fa-plus"></i> Novo Produto
-            </button>
-            <button class="btn-icon" onclick="window.location.href='https://broostore.netlify.app'">
-                <i class="fas fa-store"></i> Ver Loja
-            </button>
-            <button class="btn-icon" onclick="sair()">
-                <i class="fas fa-sign-out-alt"></i> Sair
-            </button>
+        <div class="modal-body">
+            <p>Antes de publicar seu primeiro produto na <strong>BrooStore</strong>, leia atentamente os termos abaixo. Ao aceitar, você confirma que leu, compreendeu e concorda com todas as condições.</p>
+
+            <h3>1. Responsabilidade pelo Conteúdo</h3>
+            <p>O conteúdo publicado — incluindo textos, imagens, arquivos e descrições — é de <strong>inteira responsabilidade do autor</strong>. A BrooStore atua como plataforma intermediária e não se responsabiliza por informações incorretas, direitos autorais de terceiros, conteúdo enganoso ou qualquer dano causado ao consumidor decorrente do produto publicado.</p>
+
+            <h3>2. Conformidade com a Legislação Brasileira</h3>
+            <p>O autor declara que seu produto está em conformidade com a legislação brasileira vigente, especialmente: <strong>Lei nº 9.610/1998</strong> (Lei de Direitos Autorais), <strong>Lei nº 8.078/1990</strong> (Código de Defesa do Consumidor), <strong>Lei nº 13.709/2018</strong> (LGPD — Lei Geral de Proteção de Dados) e o <strong>Marco Civil da Internet (Lei nº 12.965/2014)</strong>.</p>
+
+            <h3>3. Conteúdo Proibido</h3>
+            <p>É expressamente vedada a publicação de conteúdo que: contenha discurso de ódio, preconceito ou incitação à violência; viole direitos autorais ou propriedade intelectual de terceiros; promova atividades ilegais; seja de natureza sexual explícita ou envolvendo menores; induza o consumidor ao erro ou contenha informações falsas.</p>
+            <p>A BrooStore se reserva o direito de <strong>remover qualquer produto</strong> que viole estas diretrizes, sem aviso prévio e sem direito a reembolso da taxa.</p>
+
+            <h3>4. Taxa da Plataforma</h3>
+            <p>A BrooStore retém <strong>25% (vinte e cinco por cento)</strong> sobre o valor bruto de cada venda realizada como contraprestação pelos serviços de hospedagem, processamento de pagamentos e entrega digital. O autor recebe <strong>75%</strong> do valor bruto de cada venda.</p>
+
+            <h3>5. Prazo de Pagamento</h3>
+            <p>Após a solicitação de saque pelo autor, o pagamento via PIX será realizado em até <strong>72 horas úteis</strong>. Solicitações realizadas em fins de semana ou feriados nacionais serão processadas no próximo dia útil.</p>
+
+            <h3>6. Cancelamento e Reembolso</h3>
+            <p>O consumidor tem direito ao reembolso integral conforme o <strong>art. 49 do CDC</strong> (arrependimento em até 7 dias para compras digitais). Nestes casos, o valor correspondente ao autor será deduzido do saldo disponível para saque.</p>
+
+            <h3>7. Alterações nos Termos</h3>
+            <p>A BrooStore pode atualizar estes termos a qualquer momento. O autor será notificado por e-mail e deverá aceitar novamente para continuar publicando produtos.</p>
+
+            <p style="margin-top:1rem; color:#888; font-size:.8rem;">Última atualização: Abril de 2026.</p>
         </div>
-    </div>
-
-    <div class="main">
-        <div id="dash-loading" class="loading">
-            <i class="fas fa-spinner"></i>
-            <p style="margin-top:1rem;">Carregando seus dados...</p>
-        </div>
-
-        <div id="dash-conteudo" style="display:none;">
-            <h1 class="page-title">Suas <span>Vendas</span></h1>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-label">Total de Vendas</div>
-                    <div class="stat-value" id="stat-vendas">0</div>
-                    <i class="fas fa-shopping-cart stat-icon"></i>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Total Líquido (75%)</div>
-                    <div class="stat-value" id="stat-total">R$ 0,00</div>
-                    <i class="fas fa-coins stat-icon"></i>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Saldo Disponível</div>
-                    <div class="stat-value green" id="stat-saldo">R$ 0,00</div>
-                    <i class="fas fa-wallet stat-icon"></i>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Produtos Ativos</div>
-                    <div class="stat-value" id="stat-produtos">0</div>
-                    <i class="fas fa-book stat-icon"></i>
-                </div>
+        <div class="modal-footer">
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="termos" value="aceito" onchange="onRadioTermos(this)">
+                    Aceito os Termos de Uso
+                </label>
+                <label>
+                    <input type="radio" name="termos" value="recuso" onchange="onRadioTermos(this)">
+                    Não aceito
+                </label>
             </div>
-
-            <div class="section">
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="fas fa-book" style="color:var(--orange-web);margin-right:.5rem;"></i> Meus Produtos
-                    </div>
-                </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr><th>Produto</th><th>Preço</th><th>Vendas</th><th>Arrecadado</th><th>Status</th><th>Ações</th></tr>
-                        </thead>
-                        <tbody id="tabela-produtos">
-                            <tr><td colspan="5" class="empty">Carregando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="fas fa-history" style="color:var(--orange-web);margin-right:.5rem;"></i> Últimas Vendas
-                    </div>
-                </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr><th>Data</th><th>Produto</th><th>Valor</th><th>Status</th></tr>
-                        </thead>
-                        <tbody id="tabela-vendas">
-                            <tr><td colspan="4" class="empty">Carregando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="fas fa-pix" style="color:var(--orange-web);margin-right:.5rem;"></i> Solicitar Pagamento
-                    </div>
-                </div>
-                <div class="pix-panel">
-                    <div class="pix-saldo">
-                        <div class="pix-saldo-label">Saldo disponível para saque</div>
-                        <div class="pix-saldo-value" id="pix-saldo-display">R$ 0,00</div>
-                    </div>
-                    <div id="msg-pix" class="msg"></div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Valor a receber (R$)</label>
-                            <input type="number" id="pix-valor" placeholder="Ex: 50.00" step="0.01" min="1">
-                        </div>
-                        <div class="form-group">
-                            <label>Sua chave PIX</label>
-                            <input type="text" id="pix-chave" placeholder="CPF, e-mail, telefone ou chave aleatória">
-                        </div>
-                    </div>
-                    <button class="btn-green" id="btn-pix" onclick="solicitarPagamento()">
-                        <i class="fas fa-paper-plane"></i> Solicitar Pagamento
-                    </button>
-                </div>
-            </div>
+            <button class="btn-aceitar" id="btn-aceitar-termos" disabled onclick="confirmarTermos()">
+                Continuar para Publicação
+            </button>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    /* ── Contador de caracteres ── */
+    function contarChars(fieldId, counterId, max) {
+        const len = document.getElementById(fieldId).value.length;
+        const el  = document.getElementById(counterId);
+        el.textContent = `${len}/${max}`;
+        el.className = 'char-counter' + (len >= max ? ' over' : len >= max * 0.85 ? ' warn' : '');
+    }
+
+    /* ── Termos de Uso ── */
+    const TERMOS_KEY = 'broo_termos_aceitos';
+
+    function onRadioTermos(radio) {
+        const btn = document.getElementById('btn-aceitar-termos');
+        if (radio.value === 'aceito') {
+            btn.disabled = false;
+            btn.textContent = 'Continuar para Publicação';
+        } else {
+            btn.disabled = true;
+            btn.textContent = 'Você precisa aceitar para publicar';
+        }
+    }
+
+    function confirmarTermos() {
+        localStorage.setItem(TERMOS_KEY, '1');
+        document.getElementById('modal-termos').style.display = 'none';
+        salvarProduto();
+    }
+
+    function verificarTermosAntesDeSalvar() {
+        salvarProduto();
+    }
+
+    function abrirTermosSeNecessario() {
+        if (localStorage.getItem(TERMOS_KEY) !== '1') {
+            document.querySelectorAll('input[name="termos"]').forEach(r => r.checked = false);
+            document.getElementById('btn-aceitar-termos').disabled = true;
+            document.getElementById('btn-aceitar-termos').textContent = 'Continuar para Publicação';
+            document.getElementById('modal-termos').style.display = 'flex';
+        }
+    }
+
     const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
     let usuarioAtual = null;
-    let saldoDisponivel = 0;
+    let arquivoCapa  = null;
+    let arquivoPdf   = null;
+    let imageUrlFinal = '';
+    let pdfUrlFinal = '';
+    let produtoIdEdicao = new URLSearchParams(window.location.search).get('id');
 
-    /* ── Início: verifica sessão existente ── */
-    async function iniciar() {
-        const { data: { session } } = await sb.auth.getSession();
-        document.getElementById('tela-carregando').style.display = 'none';
-
-        if (session) {
-            usuarioAtual = session.user;
-            abrirDashboard();
+    // Verifica auth e abre termos se necessário
+    sb.auth.getSession().then(({ data: { session } }) => {
+        if (!session) { window.location.href = '/static/autor-login.html'; return; }
+        usuarioAtual = session.user;
+        if (produtoIdEdicao) {
+            prepararEdicao();
         } else {
-            document.getElementById('tela-login').style.display = 'flex';
+            abrirTermosSeNecessario();
+        }
+    });
+
+    async function prepararEdicao() {
+        document.getElementById('main-title').innerHTML = 'Editar <span>Produto</span>';
+        document.getElementById('btn-salvar').innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
+        
+        const { data: p, error } = await sb
+            .from('products')
+            .select('*')
+            .eq('id', produtoIdEdicao)
+            .eq('author_id', usuarioAtual.id)
+            .single();
+
+        if (error || !p) {
+            mostrarMsg('Produto não encontrado ou sem permissão.', 'error');
+            setTimeout(() => window.location.href = '/static/autor-login.html', 2000);
+            return;
+        }
+
+        // Preenche campos
+        document.getElementById('titulo').value = p.title || '';
+        document.getElementById('descricao').value = p.descricao || '';
+        document.getElementById('preco').value = p.price || '';
+        document.getElementById('categoria').value = p.category || '';
+        document.getElementById('autor').value = p.author || '';
+        document.getElementById('paginas').value = p.paginas || '';
+        document.getElementById('intro').value = p.intro || '';
+        document.getElementById('sobre-autor').value = p.sobre_autor || '';
+        
+        // Preview da capa
+        if (p.image_url) {
+            imageUrlFinal = p.image_url;
+            const img = document.getElementById('preview-img');
+            img.src = p.image_url;
+            img.style.display = 'block';
+            document.getElementById('upload-placeholder').style.display = 'none';
+        }
+
+        // Info do PDF
+        if (p.link_pdf) {
+            pdfUrlFinal = p.link_pdf;
+            document.getElementById('upload-pdf-placeholder').style.display = 'none';
+            document.getElementById('pdf-selecionado').style.display = 'block';
+            document.getElementById('pdf-nome').textContent = 'Arquivo PDF já enviado';
+            document.getElementById('pdf-tamanho').textContent = '—';
         }
     }
 
-    /* ── Abre o dashboard sem redirecionar ── */
-    async function abrirDashboard() {
-        document.getElementById('tela-login').style.display     = 'none';
-        document.getElementById('tela-dashboard').style.display = 'block';
-        document.getElementById('dash-loading').style.display   = 'block';
-        document.getElementById('dash-conteudo').style.display  = 'none';
+    // ── Upload CAPA handlers ──
+    function onDragOver(e) { e.preventDefault(); document.getElementById('upload-area').classList.add('dragover'); }
+    function onDragLeave()  { document.getElementById('upload-area').classList.remove('dragover'); }
+    function onDrop(e) {
+        e.preventDefault();
+        document.getElementById('upload-area').classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) processarArquivo(file);
+    }
+    function onFileSelect(e) { const file = e.target.files[0]; if (file) processarArquivo(file); }
 
-        const { data: profile } = await sb
-            .from('profiles').select('full_name')
-            .eq('id', usuarioAtual.id).single();
+    // ── Upload PDF handlers ──
+    function onDragOverPdf(e) { e.preventDefault(); document.getElementById('upload-pdf-area').classList.add('dragover'); }
+    function onDragLeavePdf()  { document.getElementById('upload-pdf-area').classList.remove('dragover'); }
+    function onDropPdf(e) {
+        e.preventDefault();
+        document.getElementById('upload-pdf-area').classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) processarPdf(file);
+    }
+    function onPdfSelect(e) { const file = e.target.files[0]; if (file) processarPdf(file); }
 
-        document.getElementById('autor-nome').textContent =
-            `| ${profile?.full_name || usuarioAtual.email}`;
-
-        await Promise.all([carregarProdutos(), carregarVendas()]);
-
-        document.getElementById('dash-loading').style.display  = 'none';
-        document.getElementById('dash-conteudo').style.display = 'block';
+    function processarPdf(file) {
+        if (file.size > 12 * 1024 * 1024) { mostrarMsg('PDF muito grande. Máximo 12 MB.', 'error'); return; }
+        if (file.type !== 'application/pdf') { mostrarMsg('Formato inválido. Selecione um PDF.', 'error'); return; }
+        arquivoPdf = file;
+        const tamanhoMB = (file.size / 1024 / 1024).toFixed(2);
+        document.getElementById('upload-pdf-placeholder').style.display = 'none';
+        document.getElementById('pdf-selecionado').style.display = 'block';
+        document.getElementById('pdf-nome').textContent = file.name;
+        document.getElementById('pdf-tamanho').textContent = `${tamanhoMB} MB`;
+        limparMsg();
     }
 
-    /* ── Tabs ── */
-    function showTab(tab) {
-        document.getElementById('tab-entrar').classList.toggle('active',   tab === 'login');
-        document.getElementById('tab-cadastro').classList.toggle('active', tab === 'cadastro');
-        document.getElementById('form-login').style.display    = tab === 'login'    ? 'block' : 'none';
-        document.getElementById('form-cadastro').style.display = tab === 'cadastro' ? 'block' : 'none';
+    function processarArquivo(file) {
+        if (file.size > 2 * 1024 * 1024) { mostrarMsg('Arquivo muito grande. Máximo 2 MB.', 'error'); return; }
+        if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
+            mostrarMsg('Formato inválido. Use JPG, PNG ou WEBP.', 'error'); return;
+        }
+        arquivoCapa = file;
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = document.getElementById('preview-img');
+            img.src = e.target.result;
+            img.style.display = 'block';
+            document.getElementById('upload-placeholder').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
         limparMsg();
+    }
+
+    async function uploadCapa() {
+        if (!arquivoCapa) return '';
+        const ext  = arquivoCapa.name.split('.').pop();
+        const path = `${usuarioAtual.id}/${Date.now()}.${ext}`;
+
+        document.getElementById('upload-progress').style.display = 'block';
+        document.getElementById('upload-bar').style.width = '30%';
+
+        const { error } = await sb.storage
+            .from('capas-produtos')
+            .upload(path, arquivoCapa, { contentType: arquivoCapa.type, upsert: false });
+
+        document.getElementById('upload-bar').style.width = '100%';
+
+        if (error) { mostrarMsg('Erro ao enviar imagem: ' + error.message, 'error'); return ''; }
+
+        const { data } = sb.storage.from('capas-produtos').getPublicUrl(path);
+        return data.publicUrl;
+    }
+
+    async function uploadPdf() {
+        if (!arquivoPdf) return '';
+        const path = `${usuarioAtual.id}/${Date.now()}.pdf`;
+
+        document.getElementById('upload-pdf-progress').style.display = 'block';
+        document.getElementById('upload-pdf-bar').style.width = '30%';
+
+        const { error } = await sb.storage
+            .from('livros-pdf')
+            .upload(path, arquivoPdf, { contentType: 'application/pdf', upsert: false });
+
+        document.getElementById('upload-pdf-bar').style.width = '100%';
+
+        if (error) { mostrarMsg('Erro ao enviar PDF: ' + error.message, 'error'); return ''; }
+
+        // Gera URL assinada com validade longa (10 anos) — bucket privado
+        const { data } = await sb.storage
+            .from('livros-pdf')
+            .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+
+        return data?.signedUrl || '';
+    }
+
+    async function salvarProduto() {
+        const titulo     = document.getElementById('titulo').value.trim();
+        const descricao  = document.getElementById('descricao').value.trim();
+        const preco      = parseFloat(document.getElementById('preco').value);
+        const categoria  = document.getElementById('categoria').value;
+        const autor      = document.getElementById('autor').value.trim();
+        const paginas    = document.getElementById('paginas').value.trim();
+        const intro      = document.getElementById('intro').value.trim();
+        const sobreAutor = document.getElementById('sobre-autor').value.trim();
+        const btn        = document.getElementById('btn-salvar');
+
+        if (!titulo)    return mostrarMsg('Informe o título do produto.', 'error');
+        if (!descricao) return mostrarMsg('Informe uma descrição.', 'error');
+        if (!preco || preco <= 0) return mostrarMsg('Informe um preço válido.', 'error');
+        if (!categoria) return mostrarMsg('Selecione uma categoria.', 'error');
+        if (!arquivoPdf && !pdfUrlFinal) return mostrarMsg('Selecione o arquivo PDF do produto.', 'error');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando arquivos...';
+
+        // Upload da capa
+        imageUrlFinal = await uploadCapa();
+        if (document.getElementById('msg').classList.contains('error')) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rocket"></i> Publicar Produto';
+            return;
+        }
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando PDF...';
+
+        // Upload do PDF
+        const linkPdf = await uploadPdf();
+        if (!linkPdf) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rocket"></i> Publicar Produto';
+            return;
+        }
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
+
+        // Salva ou Atualiza no Supabase
+        const dados = {
+            author_id:   usuarioAtual.id,
+            title:       titulo,
+            author:      autor       || null,
+            price:       preco,
+            category:    categoria,
+            image_url:   imageUrlFinal || null,
+            link_pdf:    linkPdf || pdfUrlFinal,
+            descricao:   descricao    || null,
+            paginas:     paginas ? parseInt(paginas) : null,
+            intro:       intro        || null,
+            sobre_autor: sobreAutor   || null,
+        };
+
+        let error;
+        if (produtoIdEdicao) {
+            const { error: err } = await sb.from('products').update(dados).eq('id', produtoIdEdicao);
+            error = err;
+        } else {
+            const { error: err } = await sb.from('products').insert(dados);
+            error = err;
+        }
+
+        if (error) {
+            mostrarMsg('Erro ao salvar produto: ' + error.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rocket"></i> Publicar Produto';
+            return;
+        }
+
+        mostrarMsg(produtoIdEdicao ? 'Alterações salvas com sucesso!' : 'Produto publicado com sucesso!', 'success');
+        btn.innerHTML = produtoIdEdicao ? '<i class="fas fa-check"></i> Salvo!' : '<i class="fas fa-check"></i> Publicado!';
+        setTimeout(() => window.location.href = '/static/autor-login.html', 2000);
     }
 
     function mostrarMsg(texto, tipo) {
         const el = document.getElementById('msg');
         el.textContent = texto;
         el.className = `msg ${tipo}`;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    function limparMsg() {
-        const el = document.getElementById('msg');
-        el.className = 'msg'; el.textContent = '';
-    }
-
-    /* ── Login ── */
-    async function fazerLogin() {
-        const email = document.getElementById('login-email').value.trim();
-        const senha = document.getElementById('login-senha').value;
-        const btn   = document.getElementById('btn-login');
-
-        if (!email || !senha) return mostrarMsg('Preencha e-mail e senha.', 'error');
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
-
-        const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
-
-        if (error) {
-            mostrarMsg('E-mail ou senha incorretos.', 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
-            return;
-        }
-
-        usuarioAtual = data.user;
-        abrirDashboard();
-    }
-
-    /* ── Cadastro ── */
-    async function fazerCadastro() {
-        const nome  = document.getElementById('cad-nome').value.trim();
-        const email = document.getElementById('cad-email').value.trim();
-        const senha = document.getElementById('cad-senha').value;
-        const btn   = document.getElementById('btn-cadastro');
-
-        if (!nome || !email || !senha) return mostrarMsg('Preencha todos os campos.', 'error');
-        if (senha.length < 6) return mostrarMsg('Senha deve ter no mínimo 6 caracteres.', 'error');
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando conta...';
-
-        const { data, error } = await sb.auth.signUp({
-            email, password: senha,
-            options: { data: { full_name: nome } }
-        });
-
-        if (error) {
-            mostrarMsg(error.message, 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-user-plus"></i> Criar conta';
-            return;
-        }
-
-        if (data.user) {
-            await sb.from('profiles').upsert({ id: data.user.id, full_name: nome });
-        }
-
-        mostrarMsg('Conta criada! Verifique seu e-mail para confirmar.', 'success');
-        btn.innerHTML = '<i class="fas fa-check"></i> Enviado!';
-    }
-
-    /* ── Sair ── */
-    async function sair() {
-        await sb.auth.signOut();
-        usuarioAtual = null;
-        document.getElementById('tela-dashboard').style.display = 'none';
-        document.getElementById('tela-login').style.display     = 'flex';
-        document.getElementById('login-email').value = '';
-        document.getElementById('login-senha').value = '';
-        limparMsg();
-    }
-
-    /* ── Utilitários ── */
-    const fmt = val => 'R$ ' + parseFloat(val || 0).toFixed(2).replace('.', ',');
-    function fmtData(iso) {
-        const d = new Date(iso);
-        return d.toLocaleDateString('pt-BR') + ' ' +
-               d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-    }
-    function badgeStatus(s) {
-        if (['approved','paid','pago'].includes(s))
-            return `<span class="badge badge-green">${s}</span>`;
-        if (s === 'pending')
-            return `<span class="badge badge-yellow">pendente</span>`;
-        return `<span class="badge badge-grey">${s}</span>`;
-    }
-
-    /* ── Produtos ── */
-    async function carregarProdutos() {
-        const { data: produtos, error } = await sb
-            .from('products').select('id, title, price, category, active')
-            .eq('author_id', usuarioAtual.id)
-            .order('created_at', { ascending: false });
-
-        if (error || !produtos?.length) {
-            document.getElementById('tabela-produtos').innerHTML =
-                `<tr><td colspan="5" class="empty"><i class="fas fa-book-open"></i> Nenhum produto ainda.
-                 <a href="/static/autor-produto.html" style="color:var(--orange-web);">Adicionar</a></td></tr>`;
-            document.getElementById('stat-produtos').textContent = '0';
-            return;
-        }
-
-        document.getElementById('stat-produtos').textContent = produtos.length;
-        const TAXA = 0.25;
-        let html = '';
-
-        for (const p of produtos) {
-            const { data: vendas } = await sb
-                .from('sales').select('amount')
-                .eq('product_id', p.id).in('status', ['approved','paid']);
-
-            const qv  = vendas?.length || 0;
-            const bruto = vendas?.reduce((a, v) => a + parseFloat(v.amount||0), 0) || 0;
-            const statusBadge = p.active !== false 
-                ? '<span class="badge badge-green">ativo</span>' 
-                : '<span class="badge badge-red">inativo</span>';
-            
-            const toggleIcon = p.active !== false ? 'fa-eye-slash' : 'fa-eye';
-            const toggleText = p.active !== false ? 'Desativar' : 'Ativar';
-
-            html += `
-                <tr>
-                    <td><strong>${p.title}</strong><br><small style="color:#666;">${p.category||''}</small></td>
-                    <td>${fmt(p.price*(1-TAXA))}<br><small style="color:#555;font-size:.75rem;">bruto: ${fmt(p.price)} — taxa 25%</small></td>
-                    <td>${qv}</td>
-                    <td>${fmt(bruto*(1-TAXA))}</td>
-                    <td>${statusBadge}</td>
-                    <td>
-                        <div class="actions-cell">
-                            <button class="btn-action" onclick="editarProduto('${p.id}')" title="Editar">
-                                <i class="fas fa-edit"></i> Editar
-                            </button>
-                            <button class="btn-action ${p.active !== false ? 'btn-danger' : ''}" 
-                                    onclick="toggleStatus('${p.id}', ${p.active !== false})" 
-                                    title="${toggleText}">
-                                <i class="fas ${toggleIcon}"></i> ${toggleText}
-                            </button>
-                        </div>
-                    </td>
-                </tr>`;
-        }
-        document.getElementById('tabela-produtos').innerHTML = html;
-    }
-
-    /* ── Vendas ── */
-    async function carregarVendas() {
-        const { data: vendas, error } = await sb
-            .from('sales')
-            .select('created_at, product_id, amount, status, products(title)')
-            .eq('author_id', usuarioAtual.id)
-            .order('created_at', { ascending: false })
-            .limit(20);
-
-        if (error || !vendas?.length) {
-            document.getElementById('tabela-vendas').innerHTML =
-                `<tr><td colspan="4" class="empty"><i class="fas fa-inbox"></i> Nenhuma venda ainda.</td></tr>`;
-            ['stat-vendas','stat-total','stat-saldo','pix-saldo-display'].forEach(id => {
-                document.getElementById(id).textContent = id === 'stat-vendas' ? '0' : fmt(0);
-            });
-            return;
-        }
-
-        const aprovadas = vendas.filter(v => ['approved','paid'].includes(v.status));
-        const bruto = aprovadas.reduce((a, v) => a + parseFloat(v.amount||0), 0);
-        const TAXA  = 0.25;
-        const liq   = bruto * (1 - TAXA);
-
-        const { data: sols } = await sb
-            .from('payment_requests').select('valor, status')
-            .eq('autor_id', usuarioAtual.id).in('status', ['pendente','pago']);
-
-        const solicitado = sols?.reduce((a, s) => a + parseFloat(s.valor||0), 0) || 0;
-        saldoDisponivel  = Math.max(0, liq - solicitado);
-
-        document.getElementById('stat-vendas').textContent       = aprovadas.length;
-        document.getElementById('stat-total').textContent        = fmt(liq);
-        document.getElementById('stat-saldo').textContent        = fmt(saldoDisponivel);
-        document.getElementById('pix-saldo-display').textContent = fmt(saldoDisponivel);
-
-        document.getElementById('tabela-vendas').innerHTML = vendas.map(v => `
-            <tr>
-                <td>${fmtData(v.created_at)}</td>
-                <td>${v.products?.title || `Produto #${v.product_id}`}</td>
-                <td>${fmt(v.amount)}</td>
-                <td>${badgeStatus(v.status)}</td>
-            </tr>`).join('');
-    }
-
-    /* ── Ações do Produto ── */
-    function editarProduto(id) {
-        window.location.href = `/static/autor-produto.html?id=${id}`;
-    }
-
-    async function toggleStatus(id, currentlyActive) {
-        const confirmMsg = currentlyActive 
-            ? "Deseja realmente desativar este produto? Ele não aparecerá mais na loja." 
-            : "Deseja ativar este produto para que ele apareça na loja?";
-        
-        if (!confirm(confirmMsg)) return;
-
-        const { error } = await sb
-            .from('products')
-            .update({ active: !currentlyActive })
-            .eq('id', id);
-
-        if (error) {
-            alert("Erro ao alterar status: " + error.message);
-        } else {
-            carregarProdutos();
-        }
-    }
-
-    /* ── PIX ── */
-    async function solicitarPagamento() {
-        const valor = parseFloat(document.getElementById('pix-valor').value);
-        const chave = document.getElementById('pix-chave').value.trim();
-        const btn   = document.getElementById('btn-pix');
-
-        document.getElementById('msg-pix').className = 'msg';
-
-        if (!valor || valor <= 0)    { msgPix('Informe um valor válido.', 'error'); return; }
-        if (valor > saldoDisponivel) { msgPix(`Maior que o saldo (${fmt(saldoDisponivel)}).`, 'error'); return; }
-        if (!chave)                  { msgPix('Informe sua chave PIX.', 'error'); return; }
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-
-        const { data: profile } = await sb.from('profiles').select('full_name').eq('id', usuarioAtual.id).single();
-
-        const { data: { session } } = await sb.auth.getSession();
-        const resp = await fetch('https://gyepvrzkwesohbagpgfa.supabase.co/functions/v1/solicitar-pagamento-simples', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-                autor_id: usuarioAtual.id,
-                nome:     profile?.full_name || '',
-                email:    usuarioAtual.email,
-                pix_key:  chave,
-                valor:    valor
-            })
-        });
-
-        if (!resp.ok) {
-            msgPix('Erro ao solicitar. Tente novamente.', 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Solicitar Pagamento';
-            return;
-        }
-
-        msgPix('Solicitação enviada! Você receberá o PIX em breve.', 'success');
-        btn.innerHTML = '<i class="fas fa-check"></i> Enviado!';
-        document.getElementById('pix-valor').value = '';
-        document.getElementById('pix-chave').value = '';
-
-        saldoDisponivel -= valor;
-        document.getElementById('stat-saldo').textContent        = fmt(saldoDisponivel);
-        document.getElementById('pix-saldo-display').textContent = fmt(saldoDisponivel);
-
-        setTimeout(() => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Solicitar Pagamento';
-        }, 3000);
-    }
-
-    function msgPix(texto, tipo) {
-        const el = document.getElementById('msg-pix');
-        el.textContent = texto;
-        el.className = `msg ${tipo}`;
-    }
-
-    /* ── Enter no login ── */
-    document.addEventListener('keydown', e => {
-        if (e.key !== 'Enter' || document.getElementById('tela-login').style.display === 'none') return;
-        const loginVisivel = document.getElementById('form-login').style.display !== 'none';
-        if (loginVisivel) fazerLogin(); else fazerCadastro();
-    });
-
-    iniciar();
+    function limparMsg() { const el = document.getElementById('msg'); el.className = 'msg'; }
 </script>
 </body>
 </html>
