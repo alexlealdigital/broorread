@@ -275,7 +275,7 @@
 </div>
 
 <div class="main">
-    <h1 class="page-title" id="main-title">Cadastrar <span>Novo Produto</span></h1>
+    <h1 class="page-title">Cadastrar <span>Novo Produto</span></h1>
 
     <div class="form-card">
         <div id="msg" class="msg"></div>
@@ -482,65 +482,13 @@
     let arquivoCapa  = null;
     let arquivoPdf   = null;
     let imageUrlFinal = '';
-    let pdfUrlFinal = '';
-    let produtoIdEdicao = new URLSearchParams(window.location.search).get('id');
 
     // Verifica auth e abre termos se necessário
     sb.auth.getSession().then(({ data: { session } }) => {
         if (!session) { window.location.href = '/static/autor-login.html'; return; }
         usuarioAtual = session.user;
-        if (produtoIdEdicao) {
-            prepararEdicao();
-        } else {
-            abrirTermosSeNecessario();
-        }
+        abrirTermosSeNecessario();
     });
-
-    async function prepararEdicao() {
-        document.getElementById('main-title').innerHTML = 'Editar <span>Produto</span>';
-        document.getElementById('btn-salvar').innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
-        
-        const { data: p, error } = await sb
-            .from('products')
-            .select('*')
-            .eq('id', produtoIdEdicao)
-            .eq('author_id', usuarioAtual.id)
-            .single();
-
-        if (error || !p) {
-            mostrarMsg('Produto não encontrado ou sem permissão.', 'error');
-            setTimeout(() => window.location.href = '/static/autor-login.html', 2000);
-            return;
-        }
-
-        // Preenche campos
-        document.getElementById('titulo').value = p.title || '';
-        document.getElementById('descricao').value = p.descricao || '';
-        document.getElementById('preco').value = p.price || '';
-        document.getElementById('categoria').value = p.category || '';
-        document.getElementById('autor').value = p.author || '';
-        document.getElementById('paginas').value = p.paginas || '';
-        document.getElementById('intro').value = p.intro || '';
-        document.getElementById('sobre-autor').value = p.sobre_autor || '';
-        
-        // Preview da capa
-        if (p.image_url) {
-            imageUrlFinal = p.image_url;
-            const img = document.getElementById('preview-img');
-            img.src = p.image_url;
-            img.style.display = 'block';
-            document.getElementById('upload-placeholder').style.display = 'none';
-        }
-
-        // Info do PDF
-        if (p.link_pdf) {
-            pdfUrlFinal = p.link_pdf;
-            document.getElementById('upload-pdf-placeholder').style.display = 'none';
-            document.getElementById('pdf-selecionado').style.display = 'block';
-            document.getElementById('pdf-nome').textContent = 'Arquivo PDF já enviado';
-            document.getElementById('pdf-tamanho').textContent = '—';
-        }
-    }
 
     // ── Upload CAPA handlers ──
     function onDragOver(e) { e.preventDefault(); document.getElementById('upload-area').classList.add('dragover'); }
@@ -651,7 +599,7 @@
         if (!descricao) return mostrarMsg('Informe uma descrição.', 'error');
         if (!preco || preco <= 0) return mostrarMsg('Informe um preço válido.', 'error');
         if (!categoria) return mostrarMsg('Selecione uma categoria.', 'error');
-        if (!arquivoPdf && !pdfUrlFinal) return mostrarMsg('Selecione o arquivo PDF do produto.', 'error');
+        if (!arquivoPdf) return mostrarMsg('Selecione o arquivo PDF do produto.', 'error');
 
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando arquivos...';
@@ -676,29 +624,20 @@
 
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publicando...';
 
-        // Salva ou Atualiza no Supabase
-        const dados = {
+        // Salva no Supabase
+        const { error } = await sb.from('products').insert({
             author_id:   usuarioAtual.id,
             title:       titulo,
             author:      autor       || null,
             price:       preco,
             category:    categoria,
             image_url:   imageUrlFinal || null,
-            link_pdf:    linkPdf || pdfUrlFinal,
+            link_pdf:    linkPdf,
             descricao:   descricao    || null,
             paginas:     paginas ? parseInt(paginas) : null,
             intro:       intro        || null,
             sobre_autor: sobreAutor   || null,
-        };
-
-        let error;
-        if (produtoIdEdicao) {
-            const { error: err } = await sb.from('products').update(dados).eq('id', produtoIdEdicao);
-            error = err;
-        } else {
-            const { error: err } = await sb.from('products').insert(dados);
-            error = err;
-        }
+        });
 
         if (error) {
             mostrarMsg('Erro ao salvar produto: ' + error.message, 'error');
@@ -707,8 +646,8 @@
             return;
         }
 
-        mostrarMsg(produtoIdEdicao ? 'Alterações salvas com sucesso!' : 'Produto publicado com sucesso!', 'success');
-        btn.innerHTML = produtoIdEdicao ? '<i class="fas fa-check"></i> Salvo!' : '<i class="fas fa-check"></i> Publicado!';
+        mostrarMsg('Produto publicado com sucesso!', 'success');
+        btn.innerHTML = '<i class="fas fa-check"></i> Publicado!';
         setTimeout(() => window.location.href = '/static/autor-login.html', 2000);
     }
 
