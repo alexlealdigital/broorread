@@ -604,16 +604,37 @@
     }
 
     async function toggleAtivo(produtoId, novoValor) {
-        const { error } = await sb
+        // Tenta com author_id primeiro (produtos novos)
+        const { error, data } = await sb
             .from('products')
             .update({ active: novoValor })
             .eq('id', produtoId)
-            .eq('author_id', usuarioAtual.id);
+            .eq('author_id', usuarioAtual.id)
+            .select();
 
-        if (error) {
-            alert('Erro ao atualizar: ' + error.message);
+        // Se não atualizou nenhuma linha (produto antigo sem author_id), tenta só por id
+        if (!error && (!data || data.length === 0)) {
+            const { error: error2 } = await sb
+                .from('products')
+                .update({ active: novoValor, author_id: usuarioAtual.id })
+                .eq('id', produtoId)
+                .select();
+
+            if (error2) {
+                alert('Erro ao atualizar: ' + error2.message +
+                    '\n\nVerifique se a coluna \'active\' existe na tabela \'products\' no Supabase.\n' +
+                    'Execute no SQL Editor:\nALTER TABLE public.products ADD COLUMN IF NOT EXISTS active boolean DEFAULT true;\n' +
+                    'UPDATE public.products SET active = true WHERE active IS NULL;');
+                return;
+            }
+        } else if (error) {
+            alert('Erro ao atualizar: ' + error.message +
+                '\n\nVerifique se a coluna \'active\' existe na tabela \'products\' no Supabase.\n' +
+                'Execute no SQL Editor:\nALTER TABLE public.products ADD COLUMN IF NOT EXISTS active boolean DEFAULT true;\n' +
+                'UPDATE public.products SET active = true WHERE active IS NULL;');
             return;
         }
+
         await carregarProdutos();
     }
 
