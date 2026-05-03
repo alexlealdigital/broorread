@@ -226,6 +226,66 @@
         .btn-editar:hover   { border-color: var(--orange-web); color: var(--orange-web); }
         .btn-desativar:hover{ border-color: #e74c3c; color: #e74c3c; }
         .btn-ativar:hover   { border-color: var(--success-green); color: var(--success-green); }
+
+        /* ── Modal de confirmação ── */
+        .confirm-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.75);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999; padding: 1rem;
+            animation: fadeIn .15s ease;
+        }
+        @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+        .confirm-box {
+            background: #14213d;
+            border: 1px solid #333;
+            border-radius: 16px;
+            width: 100%; max-width: 400px;
+            padding: 2rem;
+            text-align: center;
+        }
+        .confirm-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .confirm-icon.warn  { color: #e74c3c; }
+        .confirm-icon.info  { color: #27ae60; }
+        .confirm-title {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            margin-bottom: .5rem;
+        }
+        .confirm-desc {
+            color: #aaa;
+            font-size: .88rem;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+        .confirm-desc strong { color: var(--orange-web); }
+        .confirm-actions {
+            display: flex; gap: .75rem; justify-content: center;
+        }
+        .confirm-actions button {
+            flex: 1;
+            padding: .7rem 1rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-size: .9rem;
+            font-weight: bold;
+            transition: all .2s;
+        }
+        .btn-confirm-cancel {
+            background: rgba(255,255,255,.08);
+            color: #aaa;
+            border: 1px solid #333 !important;
+        }
+        .btn-confirm-cancel:hover { background: rgba(255,255,255,.15); color: #fff; }
+        .btn-confirm-danger  { background: #e74c3c; color: #fff; }
+        .btn-confirm-danger:hover  { background: #c0392b; }
+        .btn-confirm-success { background: #27ae60; color: #fff; }
+        .btn-confirm-success:hover { background: #1e8449; }
     </style>
 </head>
 <body>
@@ -603,8 +663,41 @@
         document.getElementById('tabela-produtos').innerHTML = html;
     }
 
-    async function toggleAtivo(produtoId, novoValor) {
-        // Tenta com author_id primeiro (produtos novos)
+    // ── Confirmação de ativar/desativar ──
+    let _confirmCallback = null;
+
+    function pedirConfirm(produtoId, novoValor, nomeproduto) {
+        const desativar = !novoValor;
+        document.getElementById('confirm-icon').className  = 'confirm-icon ' + (desativar ? 'warn' : 'info');
+        document.getElementById('confirm-icon').innerHTML  = desativar ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        document.getElementById('confirm-title').textContent = desativar ? 'Desativar produto?' : 'Reativar produto?';
+        document.getElementById('confirm-desc').innerHTML  = desativar
+            ? `O produto <strong>${nomeproduto}</strong> ficará invisível na loja e não poderá ser comprado. Você pode reativá-lo a qualquer momento.`
+            : `O produto <strong>${nomeproduto}</strong> voltará a aparecer na loja e ficará disponível para compra.`;
+        const btn = document.getElementById('confirm-ok');
+        btn.className = desativar ? 'btn-confirm-danger' : 'btn-confirm-success';
+        btn.textContent = desativar ? 'Sim, desativar' : 'Sim, reativar';
+        _confirmCallback = () => executarToggle(produtoId, novoValor);
+        document.getElementById('confirm-modal').style.display = 'flex';
+    }
+
+    function fecharConfirm() {
+        document.getElementById('confirm-modal').style.display = 'none';
+        _confirmCallback = null;
+    }
+
+    function executarConfirm() {
+        fecharConfirm();
+        if (_confirmCallback) _confirmCallback();
+    }
+
+    // Fecha ao clicar fora
+    document.getElementById('confirm-modal').addEventListener('click', function(e) {
+        if (e.target === this) fecharConfirm();
+    });
+
+    async function executarToggle(produtoId, novoValor) {
+        // Tenta com author_id (produtos novos)
         const { error, data } = await sb
             .from('products')
             .update({ active: novoValor })
@@ -612,30 +705,46 @@
             .eq('author_id', usuarioAtual.id)
             .select();
 
-        // Se não atualizou nenhuma linha (produto antigo sem author_id), tenta só por id
+        console.log('[toggleAtivo] tentativa 1 →', { error, data, produtoId, novoValor });
+
+        // Fallback: produto antigo sem author_id
         if (!error && (!data || data.length === 0)) {
-            const { error: error2 } = await sb
+            const { error: e2, data: d2 } = await sb
                 .from('products')
                 .update({ active: novoValor, author_id: usuarioAtual.id })
                 .eq('id', produtoId)
                 .select();
 
-            if (error2) {
-                alert('Erro ao atualizar: ' + error2.message +
-                    '\n\nVerifique se a coluna \'active\' existe na tabela \'products\' no Supabase.\n' +
-                    'Execute no SQL Editor:\nALTER TABLE public.products ADD COLUMN IF NOT EXISTS active boolean DEFAULT true;\n' +
-                    'UPDATE public.products SET active = true WHERE active IS NULL;');
+            console.log('[toggleAtivo] tentativa 2 (fallback) →', { error: e2, data: d2 });
+
+            if (e2) {
+                alert('Erro ao atualizar: ' + e2.message);
+                return;
+            }
+            if (!d2 || d2.length === 0) {
+                alert('Nenhuma linha foi atualizada.\n\nPossível causa: a coluna \'active\' não existe ainda.\nRode no SQL Editor do Supabase:\n\nALTER TABLE public.products ADD COLUMN IF NOT EXISTS active boolean DEFAULT true;\nUPDATE public.products SET active = true WHERE active IS NULL;');
                 return;
             }
         } else if (error) {
-            alert('Erro ao atualizar: ' + error.message +
-                '\n\nVerifique se a coluna \'active\' existe na tabela \'products\' no Supabase.\n' +
-                'Execute no SQL Editor:\nALTER TABLE public.products ADD COLUMN IF NOT EXISTS active boolean DEFAULT true;\n' +
-                'UPDATE public.products SET active = true WHERE active IS NULL;');
+            alert('Erro ao atualizar: ' + error.message);
             return;
         }
 
         await carregarProdutos();
+    }
+
+    function toggleAtivo(produtoId, novoValor) {
+        // Busca o nome do produto na tabela para exibir no modal
+        const linhas = document.querySelectorAll('#tabela-produtos tr');
+        let nome = 'este produto';
+        linhas.forEach(tr => {
+            const btn = tr.querySelector(`[onclick*="toggleAtivo(${produtoId},"]`);
+            if (btn) {
+                const strong = tr.querySelector('strong');
+                if (strong) nome = strong.textContent;
+            }
+        });
+        pedirConfirm(produtoId, novoValor, nome);
     }
 
     function editarProduto(produtoId) {
@@ -752,5 +861,19 @@
 
     iniciar();
 </script>
+
+<!-- Modal de confirmação de ativar/desativar -->
+<div id="confirm-modal" class="confirm-overlay" style="display:none;">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirm-icon"></div>
+        <div class="confirm-title" id="confirm-title"></div>
+        <div class="confirm-desc"  id="confirm-desc"></div>
+        <div class="confirm-actions">
+            <button class="btn-confirm-cancel" onclick="fecharConfirm()">Cancelar</button>
+            <button id="confirm-ok" onclick="executarConfirm()">Confirmar</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
