@@ -542,18 +542,19 @@ def create_cobranca():
 
         produto = db.session.get(Produto, int(product_id_recebido))
 
-        # Se não encontrar localmente, busca no Supabase e cria na tabela local
-        if not produto:
-            try:
-                sb_url  = os.environ.get("SUPABASE_URL", "https://gyepvrzkwesohbagpgfa.supabase.co")
-                sb_key  = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA")
-                resp = http_requests.get(
-                    f"{sb_url}/rest/v1/products?id=eq.{product_id_recebido}&select=id,title,price,link_pdf",
-                    headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}"}
-                )
-                rows = resp.json()
-                if rows:
-                    p = rows[0]
+        # Sempre sincroniza preço e dados com o Supabase (evita cache desatualizado)
+        try:
+            sb_url  = os.environ.get("SUPABASE_URL", "https://gyepvrzkwesohbagpgfa.supabase.co")
+            sb_key  = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA")
+            resp = http_requests.get(
+                f"{sb_url}/rest/v1/products?id=eq.{product_id_recebido}&select=id,title,price,link_pdf",
+                headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}"}
+            )
+            rows = resp.json()
+            if rows:
+                p = rows[0]
+                if not produto:
+                    # Produto novo: cria localmente
                     produto = Produto(
                         id=p["id"],
                         nome=p["title"],
@@ -562,9 +563,14 @@ def create_cobranca():
                         tipo="ebook"
                     )
                     db.session.add(produto)
-                    db.session.commit()
-            except Exception as e:
-                print(f"Erro ao buscar produto no Supabase: {e}")
+                else:
+                    # Produto existente: sempre atualiza preço e link_pdf do Supabase
+                    produto.preco         = float(p["price"])
+                    produto.nome          = p["title"]
+                    produto.link_download = p.get("link_pdf") or produto.link_download
+                db.session.commit()
+        except Exception as e:
+            print(f"Erro ao sincronizar produto com Supabase: {e}")
 
         if not produto:
             return jsonify({"status": "error", "message": "Produto não encontrado."}), 404
