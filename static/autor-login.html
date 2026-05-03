@@ -210,6 +210,22 @@
         .loading { text-align: center; padding: 3rem; color: #555; }
         .loading i { font-size: 2rem; animation: spin 1s linear infinite; }
         .empty { text-align: center; padding: 2rem; color: #555; font-size: .9rem; }
+
+        /* Botões de ação na tabela */
+        .btn-acao {
+            background: rgba(255,255,255,.07);
+            border: 1px solid var(--border-grey);
+            color: var(--white);
+            padding: .35rem .6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: .8rem;
+            transition: all .2s;
+            margin: 0 2px;
+        }
+        .btn-editar:hover   { border-color: var(--orange-web); color: var(--orange-web); }
+        .btn-desativar:hover{ border-color: #e74c3c; color: #e74c3c; }
+        .btn-ativar:hover   { border-color: var(--success-green); color: var(--success-green); }
     </style>
 </head>
 <body>
@@ -334,7 +350,7 @@
                 <div class="table-wrap">
                     <table>
                         <thead>
-                            <tr><th>Produto</th><th>Preço</th><th>Vendas</th><th>Arrecadado</th><th>Status</th></tr>
+                            <tr><th>Produto</th><th>Preço</th><th>Vendas</th><th>Arrecadado</th><th>Status</th><th>Ações</th></tr>
                         </thead>
                         <tbody id="tabela-produtos">
                             <tr><td colspan="5" class="empty">Carregando...</td></tr>
@@ -539,38 +555,70 @@
     /* ── Produtos ── */
     async function carregarProdutos() {
         const { data: produtos, error } = await sb
-            .from('products').select('id, title, price, category')
-            .eq('author_id', usuarioAtual.id);
+            .from('products').select('id, title, price, category, active')
+            .eq('author_id', usuarioAtual.id)
+            .order('id', { ascending: false });
 
         if (error || !produtos?.length) {
             document.getElementById('tabela-produtos').innerHTML =
-                `<tr><td colspan="5" class="empty"><i class="fas fa-book-open"></i> Nenhum produto ainda.
+                `<tr><td colspan="6" class="empty"><i class="fas fa-book-open"></i> Nenhum produto ainda.
                  <a href="/static/autor-produto.html" style="color:var(--orange-web);">Adicionar</a></td></tr>`;
             document.getElementById('stat-produtos').textContent = '0';
             return;
         }
 
-        document.getElementById('stat-produtos').textContent = produtos.length;
+        const ativos = produtos.filter(p => p.active !== false).length;
+        document.getElementById('stat-produtos').textContent = ativos;
         const TAXA = 0.25;
         let html = '';
 
         for (const p of produtos) {
+            const ativo = p.active !== false;
             const { data: vendas } = await sb
                 .from('sales').select('amount')
                 .eq('product_id', p.id).in('status', ['approved','paid']);
 
-            const qv  = vendas?.length || 0;
+            const qv    = vendas?.length || 0;
             const bruto = vendas?.reduce((a, v) => a + parseFloat(v.amount||0), 0) || 0;
+            const badgeAtivo = ativo
+                ? `<span class="badge badge-green">ativo</span>`
+                : `<span class="badge badge-grey">inativo</span>`;
+            const btnDesativar = ativo
+                ? `<button class="btn-acao btn-desativar" onclick="toggleAtivo(${p.id}, false)" title="Desativar"><i class="fas fa-eye-slash"></i></button>`
+                : `<button class="btn-acao btn-ativar"    onclick="toggleAtivo(${p.id}, true)"  title="Ativar"><i class="fas fa-eye"></i></button>`;
+
             html += `
-                <tr>
+                <tr style="${ativo ? '' : 'opacity:.55;'}">
                     <td><strong>${p.title}</strong><br><small style="color:#666;">${p.category||''}</small></td>
                     <td>${fmt(p.price*(1-TAXA))}<br><small style="color:#555;font-size:.75rem;">bruto: ${fmt(p.price)} — taxa 25%</small></td>
                     <td>${qv}</td>
                     <td>${fmt(bruto*(1-TAXA))}</td>
-                    <td><span class="badge badge-green">ativo</span></td>
+                    <td>${badgeAtivo}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn-acao btn-editar" onclick="editarProduto(${p.id})" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                        ${btnDesativar}
+                    </td>
                 </tr>`;
         }
         document.getElementById('tabela-produtos').innerHTML = html;
+    }
+
+    async function toggleAtivo(produtoId, novoValor) {
+        const { error } = await sb
+            .from('products')
+            .update({ active: novoValor })
+            .eq('id', produtoId)
+            .eq('author_id', usuarioAtual.id);
+
+        if (error) {
+            alert('Erro ao atualizar: ' + error.message);
+            return;
+        }
+        await carregarProdutos();
+    }
+
+    function editarProduto(produtoId) {
+        window.location.href = `/static/autor-produto.html?edit=${produtoId}`;
     }
 
     /* ── Vendas ── */
