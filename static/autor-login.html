@@ -712,37 +712,39 @@
     }
 
     async function executarToggle(produtoId, novoValor) {
-        // Tenta com author_id (produtos novos)
+        const id = parseInt(produtoId, 10);
+        console.log('[toggleAtivo] iniciando →', { id, novoValor, uid: usuarioAtual.id });
+
+        // Tenta só pelo id (RLS já garante segurança pela policy)
         const { error, data } = await sb
             .from('products')
             .update({ active: novoValor })
-            .eq('id', produtoId)
-            .eq('author_id', usuarioAtual.id)
+            .eq('id', id)
             .select();
 
-        console.log('[toggleAtivo] tentativa 1 →', { error, data, produtoId, novoValor });
+        console.log('[toggleAtivo] resultado →', { error, data });
 
-        // Fallback: produto antigo sem author_id
-        if (!error && (!data || data.length === 0)) {
-            const { error: e2, data: d2 } = await sb
-                .from('products')
-                .update({ active: novoValor, author_id: usuarioAtual.id })
-                .eq('id', produtoId)
-                .select();
-
-            console.log('[toggleAtivo] tentativa 2 (fallback) →', { error: e2, data: d2 });
-
-            if (e2) {
-                alert('Erro ao atualizar: ' + e2.message);
-                return;
-            }
-            if (!d2 || d2.length === 0) {
-                alert('Nenhuma linha foi atualizada.\n\nPossível causa: a coluna \'active\' não existe ainda.\nRode no SQL Editor do Supabase:\n\nALTER TABLE public.products ADD COLUMN IF NOT EXISTS active boolean DEFAULT true;\nUPDATE public.products SET active = true WHERE active IS NULL;');
-                return;
-            }
-        } else if (error) {
+        if (error) {
             alert('Erro ao atualizar: ' + error.message);
             return;
+        }
+
+        if (!data || data.length === 0) {
+            // Segunda tentativa: filtra por author_id explicitamente
+            const { error: e2, data: d2 } = await sb
+                .from('products')
+                .update({ active: novoValor })
+                .eq('id', id)
+                .eq('author_id', usuarioAtual.id)
+                .select();
+
+            console.log('[toggleAtivo] tentativa 2 →', { error: e2, data: d2 });
+
+            if (e2) { alert('Erro: ' + e2.message); return; }
+            if (!d2 || d2.length === 0) {
+                alert('Não foi possível atualizar.\n\nVerifique no console (F12) os logs [toggleAtivo] e envie para o suporte.');
+                return;
+            }
         }
 
         await carregarProdutos();
