@@ -468,6 +468,21 @@
     </div>
 </div>
 
+
+<!-- Modal de confirmação de ativar/desativar -->
+<div id="confirm-modal" class="confirm-overlay" style="display:none;">
+    <div class="confirm-box">
+        <div class="confirm-icon" id="confirm-icon"></div>
+        <div class="confirm-title" id="confirm-title"></div>
+        <div class="confirm-desc"  id="confirm-desc"></div>
+        <div class="confirm-actions">
+            <button class="btn-confirm-cancel" onclick="fecharConfirm()">Cancelar</button>
+            <button id="confirm-ok" onclick="executarConfirm()">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
@@ -861,19 +876,6 @@
 
     iniciar();
 </script>
-
-<!-- Modal de confirmação de ativar/desativar -->
-<div id="confirm-modal" class="confirm-overlay" style="display:none;">
-    <div class="confirm-box">
-        <div class="confirm-icon" id="confirm-icon"></div>
-        <div class="confirm-title" id="confirm-title"></div>
-        <div class="confirm-desc"  id="confirm-desc"></div>
-        <div class="confirm-actions">
-            <button class="btn-confirm-cancel" onclick="fecharConfirm()">Cancelar</button>
-            <button id="confirm-ok" onclick="executarConfirm()">Confirmar</button>
-        </div>
-    </div>
-</div>
 
 </body>
 </html>
