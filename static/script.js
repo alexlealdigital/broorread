@@ -3,7 +3,7 @@
 // =========================================================
 const API_URL = "https://mercadopago-final.onrender.com/api/cobrancas";
 const VALIDAR_CUPOM_URL = "https://mercadopago-final.onrender.com/api/validar-cupom";
-
+ 
 // Elementos do Modal de Checkout
 const checkoutModal = document.getElementById('checkout-modal');
 const checkoutModalClose = document.getElementById('checkout-modal-close');
@@ -21,20 +21,20 @@ const cupomStatus = document.getElementById('cupom-status'); // NOVO
 const precoResumo = document.getElementById('preco-resumo'); // NOVO
 const feedbackToast = document.getElementById('feedback-toast');
 const checkoutUsuarioIdInput = document.getElementById('checkout_usuario_id'); // NOVOtestemoeda
-
+ 
 // Elementos do Modo Spotlight (Foco)
 const mainStore = document.getElementById('main-store');
 const spotlightContainer = document.getElementById('spotlight-container');
-
+ 
 // Variáveis de estado do cupom
 let cupomAplicado = null;
 let valorOriginal = 0;
 let valorFinal = 0;
-
+ 
 // =========================================================
 // 2. FUNÇÕES DE UI (Modal, Toast, Erros)
 // =========================================================
-
+ 
 function showFieldError(fieldElement, message) {
     if (!fieldElement) return;
     const errorDiv = fieldElement.nextElementSibling; 
@@ -44,7 +44,7 @@ function showFieldError(fieldElement, message) {
     }
     fieldElement.style.borderColor = '#e74c3c'; 
 }
-
+ 
 function clearFieldErrors(form) {
     if (!form) return;
     form.querySelectorAll('.field-error').forEach(div => {
@@ -55,16 +55,16 @@ function clearFieldErrors(form) {
         input.style.borderColor = '#ccc'; 
     });
 }
-
+ 
 function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
-
+ 
 function isValidTelefone(telefone) {
     const numeros = telefone.replace(/\D/g, '');
     return numeros.length >= 10 && numeros.length <= 11;
 }
-
+ 
 function aplicarMascaraTelefone(input) {
     input.addEventListener('input', function(e) {
         let valor = e.target.value.replace(/\D/g, '');
@@ -84,37 +84,37 @@ function aplicarMascaraTelefone(input) {
         e.target.value = valor;
     });
 }
-
+ 
 function showToast(message, type = 'info') {
     if (!feedbackToast) return;
-
+ 
     const toastIcon = feedbackToast.querySelector('.toast-icon i');
     const toastMessage = feedbackToast.querySelector('.toast-message');
-
+ 
     let iconClass, color;
     switch (type) {
         case 'success': iconClass = 'fas fa-check-circle'; color = '#27ae60'; break;
         case 'error': iconClass = 'fas fa-exclamation-circle'; color = '#e74c3c'; break;
         default: iconClass = 'fas fa-info-circle'; color = '#3498db'; break;
     }
-
+ 
     if (toastIcon) toastIcon.className = iconClass;
     if (toastMessage) toastMessage.textContent = message;
     feedbackToast.style.background = color;
     
     feedbackToast.classList.add('show');
     feedbackToast.style.display = 'flex';
-
+ 
     setTimeout(() => {
         feedbackToast.classList.remove('show');
         feedbackToast.style.display = 'none';
     }, 5000);
 }
-
+ 
 // =========================================================
 // 3. LÓGICA DE CUPOM (NOVO)
 // =========================================================
-
+ 
 async function aplicarCupom() {
     const codigo = checkoutCupomInput.value.trim().toUpperCase();
     const productId = checkoutProductIdInput.value;
@@ -179,7 +179,7 @@ async function aplicarCupom() {
         btnAplicarCupom.disabled = false;
     }
 }
-
+ 
 function mostrarStatusCupom(mensagem, tipo) {
     cupomStatus.textContent = mensagem;
     cupomStatus.className = 'cupom-status ' + tipo;
@@ -190,7 +190,7 @@ function mostrarStatusCupom(mensagem, tipo) {
         cupomStatus.innerHTML = '<i class="fas fa-times-circle"></i> ' + mensagem;
     }
 }
-
+ 
 function mostrarResumoPrecos(calculo) {
     precoResumo.style.display = 'block';
     
@@ -198,7 +198,7 @@ function mostrarResumoPrecos(calculo) {
     document.getElementById('valor-desconto').textContent = `-R$ ${calculo.desconto.toFixed(2).replace('.', ',')} (${Math.round(calculo.percentual_aplicado)}%)`;
     document.getElementById('preco-final').innerHTML = `R$ ${calculo.valor_final.toFixed(2).replace('.', ',')} <span class="tag-desconto">-${Math.round(calculo.percentual_aplicado)}%</span>`;
 }
-
+ 
 function resetarCupom() {
     cupomAplicado = null;
     valorFinal = valorOriginal;
@@ -216,15 +216,15 @@ function resetarCupom() {
     cupomStatus.className = 'cupom-status';
     precoResumo.style.display = 'none';
 }
-
+ 
 // =========================================================
 // 4. LÓGICA DE CHECKOUT (Modal e API)
 // =========================================================
-
+ 
 function openCheckoutModal(productId, nome, preco) {
     resetCheckoutModal(); 
     resetarCupom();
-
+ 
     valorOriginal = parseFloat(preco);
     valorFinal = valorOriginal;
     
@@ -245,13 +245,13 @@ function openCheckoutModal(productId, nome, preco) {
     
     checkoutModal.style.display = 'block';
 }
-
+ 
 function closeCheckoutModal() {
     checkoutModal.style.display = 'none';
     resetCheckoutModal(); 
     if (checkoutUsuarioIdInput) checkoutUsuarioIdInput.value = '';
 }
-
+ 
 function resetCheckoutModal() {
     checkoutProdutoDetalhes.innerHTML = '';
     checkoutResultado.innerHTML = '';
@@ -262,20 +262,20 @@ function resetCheckoutModal() {
     }
     if (checkoutUsuarioIdInput) checkoutUsuarioIdInput.value = ''; // NOVO
 }
-
+ 
 async function handleCheckoutSubmit(event) {
     event.preventDefault(); 
     
     if (!validateCheckoutForm()) return;
-
+ 
     const nomeCliente = checkoutNomeInput.value;
     const emailCliente = checkoutEmailInput.value;
     const telefoneCliente = checkoutTelefoneInput.value;
     const productId = checkoutProductIdInput.value;
     const cupomId = checkoutCupomIdInput.value; // Pega o ID do cupom se houver
-
+ 
     const usuarioId = checkoutUsuarioIdInput?.value || null; // NOVO
-
+ 
 const dadosParaEnvio = {
     email: emailCliente,
     nome: nomeCliente,
@@ -284,19 +284,19 @@ const dadosParaEnvio = {
     cupom_id: cupomId ? parseInt(cupomId) : null,
     usuario_id: currentUsuarioId // <-- usando a variável global
 };
-
+ 
     showLoadingInCheckoutResult();
     checkoutForm.style.display = 'none'; 
-
+ 
     try {
         const response = await fetch(API_URL, { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dadosParaEnvio),
         });
-
+ 
         const result = await response.json();
-
+ 
         if (response.ok) {
             showQrCodeInCheckoutResult(result);
             
@@ -309,7 +309,7 @@ const dadosParaEnvio = {
         } else {
             throw new Error(result.message || 'Erro ao gerar cobrança.');
         }
-
+ 
     } catch (error) {
         console.error('Erro no checkout:', error);
         showErrorInCheckoutResult(error.message);
@@ -317,14 +317,14 @@ const dadosParaEnvio = {
         checkoutForm.style.display = 'block'; 
     }
 }
-
+ 
 function validateCheckoutForm() {
     clearFieldErrors(checkoutForm); 
     let isValid = true;
     const nome = checkoutNomeInput.value.trim();
     const email = checkoutEmailInput.value.trim();
     const telefone = checkoutTelefoneInput.value.trim();
-
+ 
     if (nome.length < 2) {
         showFieldError(checkoutNomeInput, 'Nome muito curto');
         isValid = false;
@@ -339,7 +339,7 @@ function validateCheckoutForm() {
     }
     return isValid;
 }
-
+ 
 function showLoadingInCheckoutResult() {
     checkoutResultado.innerHTML = `
         <div style="text-align: center; padding: 2rem;">
@@ -348,7 +348,7 @@ function showLoadingInCheckoutResult() {
         </div>
     `;
 }
-
+ 
 function showQrCodeInCheckoutResult(data) {
     let descontoHtml = '';
     
@@ -378,26 +378,26 @@ function showQrCodeInCheckoutResult(data) {
         </div>
     `;
 }
-
+ 
 function showErrorInCheckoutResult(message) {
       checkoutResultado.innerHTML = `<p style="color: #e74c3c; text-align: center;">${message}</p>`;
 }
-
+ 
 // =========================================================
 // =========================================================
 // 5. INICIALIZAÇÃO E CONTROLE DE MODO (SPOTLIGHT vs LOJA)
 // =========================================================
-
+ 
 // Variável global para armazenar o usuario_id vindo da URL
 let currentUsuarioId = null;
-
+ 
 document.addEventListener('DOMContentLoaded', () => {
     
     // Aplica máscara no campo de telefone
     if (checkoutTelefoneInput) {
         aplicarMascaraTelefone(checkoutTelefoneInput);
     }
-
+ 
     // Evento do botão de aplicar cupom
     if (btnAplicarCupom) {
         btnAplicarCupom.addEventListener('click', aplicarCupom);
@@ -412,25 +412,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
+ 
     // --- Lógica do MODO FOCO (Spotlight) ---
     const params = new URLSearchParams(window.location.search);
     const urlProductId = params.get('id');
     currentUsuarioId = params.get('usuario_id'); // Captura o usuario_id da URL
-
+ 
     if (urlProductId) {
         activateSpotlightMode(urlProductId);
     } else {
         initStoreButtons();
     }
-
+ 
     // Configura eventos globais (Modal e Form)
     if (checkoutModalClose) checkoutModalClose.addEventListener('click', closeCheckoutModal);
     
     window.addEventListener('click', (event) => {
         if (event.target == checkoutModal) closeCheckoutModal();
     });
-
+ 
     if (checkoutForm) checkoutForm.addEventListener('submit', handleCheckoutSubmit);
     
     if (feedbackToast) {
@@ -440,89 +440,87 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
+ 
 async function activateSpotlightMode(id) {
-    const sourceCard = document.querySelector(`.book-card[data-id="${id}"]`);
-
-    // Tenta pegar dados do card HTML primeiro, senão busca no Supabase
+    // Sempre busca o preço atualizado do Supabase (ignora card HTML que pode estar desatualizado)
     let produto = null;
-
-    if (sourceCard) {
-        produto = {
-            img:        sourceCard.dataset.img,
-            name:       sourceCard.dataset.name,
-            price:      sourceCard.dataset.price,
-            desc:       sourceCard.dataset.desc        || '',
-            autor:      sourceCard.dataset.autor       || '',
-            paginas:    sourceCard.dataset.paginas     || '',
-            intro:      sourceCard.dataset.intro       || '',
-            sobreAutor: sourceCard.dataset.sobreAutor  || '',
-        };
-    } else {
-        // Busca no Supabase
-        try {
-            const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
-            const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
-            const sb = window.supabase
-                ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
-                : null;
-
-            if (sb) {
-                const { data } = await sb
-                    .from('products')
-                    .select('title, price, image_url, descricao, author, paginas, intro, sobre_autor')
-                    .eq('id', id)
-                    .single();
-
-                if (data) {
-                    produto = {
-                        img:        data.image_url || '',
-                        name:       data.title,
-                        price:      String(data.price),
-                        desc:       data.descricao   || '',
-                        autor:      data.author       || '',
-                        paginas:    data.paginas ? String(data.paginas) : '',
-                        intro:      data.intro        || '',
-                        sobreAutor: data.sobre_autor  || '',
-                    };
-                }
+ 
+    try {
+        const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
+        const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
+        const sb = window.supabase
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON)
+            : null;
+ 
+        if (sb) {
+            const { data } = await sb
+                .from('products')
+                .select('title, price, image_url, descricao, author, paginas, intro, sobre_autor')
+                .eq('id', id)
+                .single();
+ 
+            if (data) {
+                produto = {
+                    img:        data.image_url || '',
+                    name:       data.title,
+                    price:      String(data.price),
+                    desc:       data.descricao   || '',
+                    autor:      data.author       || '',
+                    paginas:    data.paginas ? String(data.paginas) : '',
+                    intro:      data.intro        || '',
+                    sobreAutor: data.sobre_autor  || '',
+                };
             }
-        } catch(e) {
-            console.warn('Erro ao buscar produto no Supabase:', e);
+        }
+    } catch(e) {
+        console.warn('Erro ao buscar produto no Supabase:', e);
+        // Fallback: usa dados do card HTML se Supabase falhar
+        const sourceCard = document.querySelector(`.book-card[data-id="${id}"]`);
+        if (sourceCard) {
+            produto = {
+                img:        sourceCard.dataset.img,
+                name:       sourceCard.dataset.name,
+                price:      sourceCard.dataset.price,
+                desc:       sourceCard.dataset.desc        || '',
+                autor:      sourceCard.dataset.autor       || '',
+                paginas:    sourceCard.dataset.paginas     || '',
+                intro:      sourceCard.dataset.intro       || '',
+                sobreAutor: sourceCard.dataset.sobreAutor  || '',
+            };
         }
     }
-
+ 
     if (produto && mainStore && spotlightContainer) {
         mainStore.style.display = 'none';
         mainStore.classList.add('hidden');
         spotlightContainer.style.display = 'flex';
-
+ 
         document.getElementById('spot-img').src = produto.img;
         document.getElementById('spot-title').innerText = produto.name;
         document.getElementById('spot-desc').innerText  = produto.desc;
         document.getElementById('spot-price').innerText = `R$ ${produto.price.replace('.', ',')}`;
-
+ 
         // Metadados (autor e páginas)
         const spotMeta        = document.getElementById('spot-meta');
         const spotAutorWrap   = document.getElementById('spot-autor-wrap');
         const spotPaginasWrap = document.getElementById('spot-paginas-wrap');
-
+ 
         if (produto.autor) {
             document.getElementById('spot-autor').innerText = `Autor: ${produto.autor}`;
             spotAutorWrap.style.display = 'flex';
         } else {
             spotAutorWrap.style.display = 'none';
         }
-
+ 
         if (produto.paginas) {
             document.getElementById('spot-paginas').innerText = `${produto.paginas} páginas`;
             spotPaginasWrap.style.display = 'flex';
         } else {
             spotPaginasWrap.style.display = 'none';
         }
-
+ 
         spotMeta.style.display = (produto.autor || produto.paginas) ? 'flex' : 'none';
-
+ 
         // Introdução
         const spotIntroWrap = document.getElementById('spot-intro-wrap');
         if (produto.intro) {
@@ -531,7 +529,7 @@ async function activateSpotlightMode(id) {
         } else {
             spotIntroWrap.style.display = 'none';
         }
-
+ 
         // Sobre o autor
         const spotSobreAutorWrap = document.getElementById('spot-sobre-autor-wrap');
         if (produto.sobreAutor) {
@@ -540,21 +538,21 @@ async function activateSpotlightMode(id) {
         } else {
             spotSobreAutorWrap.style.display = 'none';
         }
-
+ 
         document.getElementById('spot-btn').onclick = () => {
             openCheckoutModal(id, produto.name, produto.price);
         };
-
+ 
     } else {
         console.warn("Produto não encontrado para o ID:", id);
         initStoreButtons();
     }
 }
-
+ 
 function initStoreButtons() {
     if(mainStore) mainStore.style.display = 'block';
     if(spotlightContainer) spotlightContainer.style.display = 'none';
-
+ 
     const buttons = document.querySelectorAll('.comprar-btn');
     buttons.forEach(btn => {
         btn.addEventListener('click', (e) => {
