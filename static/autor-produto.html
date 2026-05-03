@@ -514,17 +514,33 @@
     });
 
     async function carregarProdutoParaEdicao() {
-        const { data: p, error } = await sb
+        // Tenta com author_id (produtos novos); se falhar, tenta só por id
+        // (compatibilidade com produtos inseridos manualmente antes do sistema)
+        let p = null;
+
+        const { data: d1 } = await sb
             .from('products')
             .select('*')
             .eq('id', editId)
             .eq('author_id', usuarioAtual.id)
-            .single();
+            .maybeSingle();
 
-        if (error || !p) {
-            alert('Produto não encontrado ou sem permissão.');
-            window.location.href = '/static/autor-login.html';
-            return;
+        if (d1) {
+            p = d1;
+        } else {
+            // Produto sem author_id — carrega e, ao salvar, preencherá o author_id
+            const { data: d2, error: e2 } = await sb
+                .from('products')
+                .select('*')
+                .eq('id', editId)
+                .maybeSingle();
+
+            if (e2 || !d2) {
+                alert('Produto não encontrado.');
+                window.location.href = '/static/autor-login.html';
+                return;
+            }
+            p = d2;
         }
 
         produtoOriginal = p;
@@ -716,11 +732,11 @@
         let dbError;
 
         if (modoEdicao) {
+            // Sempre grava author_id (corrige registros antigos que não tinham)
             const { error } = await sb
                 .from('products')
-                .update(payload)
-                .eq('id', editId)
-                .eq('author_id', usuarioAtual.id);
+                .update({ ...payload, author_id: usuarioAtual.id })
+                .eq('id', editId);
             dbError = error;
         } else {
             const { error } = await sb
