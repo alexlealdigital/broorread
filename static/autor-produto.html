@@ -651,7 +651,10 @@
     }
 
     async function uploadPdf() {
-        if (!arquivoPdf) return produtoOriginal?.link_pdf || ''; // mantém PDF existente
+        if (!arquivoPdf) {
+            // Em modo edição: mantém o link existente (pode ser vazio para produtos antigos)
+            return produtoOriginal?.link_pdf ?? '__sem_pdf__';
+        }
         const path = `${usuarioAtual.id}/${Date.now()}.pdf`;
 
         document.getElementById('upload-pdf-progress').style.display = 'block';
@@ -705,8 +708,11 @@
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando PDF...';
 
         // Upload do PDF
-        const linkPdf = await uploadPdf();
-        if (!linkPdf) {
+        const linkPdfRaw = await uploadPdf();
+        // '__sem_pdf__' = sentinela: modo edição, produto antigo sem PDF (aceita normalmente)
+        const linkPdf = linkPdfRaw === '__sem_pdf__' ? null : linkPdfRaw;
+        if (linkPdfRaw !== '__sem_pdf__' && !linkPdf) {
+            // uploadPdf retornou '' = erro real no upload
             btn.disabled = false;
             btn.innerHTML = modoEdicao
                 ? '<i class="fas fa-save"></i> Salvar Alterações'
@@ -722,22 +728,27 @@
             price:       preco,
             category:    categoria,
             image_url:   novaImageUrl || null,
-            link_pdf:    linkPdf,
             descricao:   descricao    || null,
             paginas:     paginas ? parseInt(paginas) : null,
             intro:       intro        || null,
             sobre_autor: sobreAutor   || null,
         };
+        // Só atualiza link_pdf se houver um valor real (não sobrescreve com null)
+        if (linkPdf !== null) payload.link_pdf = linkPdf;
 
         let dbError;
 
         if (modoEdicao) {
             // Sempre grava author_id (corrige registros antigos que não tinham)
-            const { error } = await sb
+            const { error, count } = await sb
                 .from('products')
                 .update({ ...payload, author_id: usuarioAtual.id })
-                .eq('id', editId);
+                .eq('id', editId)
+                .select();
             dbError = error;
+            if (!error && count === 0) {
+                dbError = { message: 'Nenhuma linha atualizada. Verifique as permissões da tabela no Supabase (RLS).' };
+            }
         } else {
             const { error } = await sb
                 .from('products')
