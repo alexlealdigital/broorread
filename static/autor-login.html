@@ -479,6 +479,11 @@
 
     /* ── Início: verifica sessão existente ── */
     async function iniciar() {
+        // Fecha modal ao clicar fora
+        document.getElementById('confirm-modal').addEventListener('click', function(e) {
+            if (e.target === this) fecharConfirm();
+        });
+
         const { data: { session } } = await sb.auth.getSession();
         document.getElementById('tela-carregando').style.display = 'none';
 
@@ -690,11 +695,6 @@
         fecharConfirm();
         if (_confirmCallback) _confirmCallback();
     }
-
-    // Fecha ao clicar fora
-    document.getElementById('confirm-modal').addEventListener('click', function(e) {
-        if (e.target === this) fecharConfirm();
-    });
 
     async function executarToggle(produtoId, novoValor) {
         // Tenta com author_id (produtos novos)
