@@ -44,7 +44,7 @@
  
         /* ══════════════════════════════
            TELA DE LOGIN
-        ══════════════════════════════ */
+           ══════════════════════════════ */
         #tela-login {
             min-height: 100vh;
             display: none;
@@ -80,7 +80,7 @@
         }
         .tab-btn.active { background: var(--orange-web); color: var(--black); }
  
-        .form-group { margin-bottom: 1.2rem; }
+        .form-group { margin-bottom: 1.2rem; position: relative; }
         .form-group label {
             display: block; font-size: .8rem; font-weight: bold;
             color: var(--orange-web); margin-bottom: .4rem;
@@ -96,6 +96,18 @@
         }
         .form-group input:focus { border-color: var(--orange-web); }
         .form-group input::placeholder { color: #555; }
+
+        /* Estilo para o botão de ver senha */
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 35px;
+            color: #888;
+            cursor: pointer;
+            transition: color 0.3s;
+            z-index: 10;
+        }
+        .toggle-password:hover { color: var(--orange-web); }
  
         .btn-submit {
             width: 100%; padding: .9rem;
@@ -119,12 +131,19 @@
         .back-link {
             display: block; text-align: center; margin-top: 1.5rem;
             color: #666; font-size: .85rem; transition: color .3s; text-decoration: none;
+            cursor: pointer;
         }
         .back-link:hover { color: var(--orange-web); }
+
+        .forgot-link {
+            display: block; text-align: right; margin-top: -0.8rem; margin-bottom: 1.2rem;
+            color: #666; font-size: 0.8rem; text-decoration: none; cursor: pointer;
+        }
+        .forgot-link:hover { color: var(--orange-web); }
  
         /* ══════════════════════════════
            TELA DO DASHBOARD
-        ══════════════════════════════ */
+           ══════════════════════════════ */
         #tela-dashboard { display: none; }
  
         .header {
@@ -229,88 +248,56 @@
  
         /* ── Modal de confirmação ── */
         .confirm-overlay {
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,.75);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 9999; padding: 1rem;
-            animation: fadeIn .15s ease;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
+            padding: 1.5rem;
         }
-        @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
-        .confirm-box {
-            background: #14213d;
-            border: 1px solid #333;
-            border-radius: 16px;
-            width: 100%; max-width: 400px;
-            padding: 2rem;
-            text-align: center;
+        .confirm-card {
+            background: var(--oxford-blue); border: 1px solid var(--border-grey);
+            border-radius: 16px; padding: 2rem; width: 100%; max-width: 400px;
+            text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
         }
-        .confirm-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
+        .confirm-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+        .confirm-icon.warn { color: var(--error-red); }
+        .confirm-icon.info { color: var(--orange-web); }
+        .confirm-title { font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: .8rem; }
+        .confirm-desc { font-size: .9rem; color: #aaa; line-height: 1.5; margin-bottom: 1.8rem; }
+        .confirm-btns { display: flex; gap: .8rem; }
+        .confirm-btns button {
+            flex: 1; padding: .8rem; border-radius: 8px; border: none;
+            font-family: var(--font-heading); font-weight: bold; cursor: pointer; transition: all .3s;
         }
-        .confirm-icon.warn  { color: #e74c3c; }
-        .confirm-icon.info  { color: #27ae60; }
-        .confirm-title {
-            font-family: var(--font-heading);
-            font-size: 1.1rem;
-            margin-bottom: .5rem;
-        }
-        .confirm-desc {
-            color: #aaa;
-            font-size: .88rem;
-            line-height: 1.5;
-            margin-bottom: 1.5rem;
-        }
-        .confirm-desc strong { color: var(--orange-web); }
-        .confirm-actions {
-            display: flex; gap: .75rem; justify-content: center;
-        }
-        .confirm-actions button {
-            flex: 1;
-            padding: .7rem 1rem;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-family: var(--font-body);
-            font-size: .9rem;
-            font-weight: bold;
-            transition: all .2s;
-        }
-        .btn-confirm-cancel {
-            background: rgba(255,255,255,.08);
-            color: #aaa;
-            border: 1px solid #333 !important;
-        }
-        .btn-confirm-cancel:hover { background: rgba(255,255,255,.15); color: #fff; }
-        .btn-confirm-danger  { background: #e74c3c; color: #fff; }
-        .btn-confirm-danger:hover  { background: #c0392b; }
-        .btn-confirm-success { background: #27ae60; color: #fff; }
-        .btn-confirm-success:hover { background: #1e8449; }
+        .btn-confirm-cancel { background: rgba(255,255,255,.07); color: var(--white); }
+        .btn-confirm-cancel:hover { background: rgba(255,255,255,.12); }
+        .btn-confirm-danger { background: var(--error-red); color: var(--white); }
+        .btn-confirm-danger:hover { background: #c0392b; }
+        .btn-confirm-success { background: var(--success-green); color: var(--white); }
+        .btn-confirm-success:hover { background: #219150; }
     </style>
 </head>
 <body>
  
-<!-- 1. Verificando sessão -->
 <div id="tela-carregando">
-    <i class="fas fa-spinner"></i>
-    <p>Verificando sessão...</p>
+    <i class="fas fa-circle-notch"></i>
+    <p>Carregando...</p>
 </div>
  
-<!-- 2. Tela de Login -->
 <div id="tela-login">
     <div class="auth-card">
         <div class="auth-logo">
-            <h1><i class="fas fa-feather-alt"></i> BrooStore</h1>
-            <p>Área exclusiva para autores</p>
+            <h1>BrooStore <span>Autor</span></h1>
+            <p>Gerencie seus produtos e vendas</p>
         </div>
  
-        <div class="tabs">
-            <button class="tab-btn active" id="tab-entrar"   onclick="showTab('login')">Entrar</button>
-            <button class="tab-btn"        id="tab-cadastro" onclick="showTab('cadastro')">Cadastrar</button>
+        <div id="tabs-container" class="tabs">
+            <button id="tab-entrar" class="tab-btn active" onclick="showTab('login')">ENTRAR</button>
+            <button id="tab-cadastro" class="tab-btn" onclick="showTab('cadastro')">CRIAR CONTA</button>
         </div>
  
         <div id="msg" class="msg"></div>
  
+        <!-- FORM LOGIN -->
         <div id="form-login">
             <div class="form-group">
                 <label>E-mail</label>
@@ -319,16 +306,19 @@
             <div class="form-group">
                 <label>Senha</label>
                 <input type="password" id="login-senha" placeholder="••••••••">
+                <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('login-senha', this)"></i>
             </div>
-            <button class="btn-submit" id="btn-login" onclick="fazerLogin()">
+            <a class="forgot-link" onclick="showTab('forgot')">Esqueci minha senha</a>
+            <button id="btn-login" class="btn-submit" onclick="fazerLogin()">
                 <i class="fas fa-sign-in-alt"></i> Entrar
             </button>
         </div>
  
+        <!-- FORM CADASTRO -->
         <div id="form-cadastro" style="display:none;">
             <div class="form-group">
-                <label>Nome completo</label>
-                <input type="text" id="cad-nome" placeholder="Seu nome de autor">
+                <label>Nome Completo</label>
+                <input type="text" id="cad-nome" placeholder="Como quer ser chamado">
             </div>
             <div class="form-group">
                 <label>E-mail</label>
@@ -337,168 +327,162 @@
             <div class="form-group">
                 <label>Senha</label>
                 <input type="password" id="cad-senha" placeholder="Mínimo 6 caracteres">
+                <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('cad-senha', this)"></i>
             </div>
-            <button class="btn-submit" id="btn-cadastro" onclick="fazerCadastro()">
+            <button id="btn-cadastro" class="btn-submit" onclick="fazerCadastro()">
                 <i class="fas fa-user-plus"></i> Criar conta
             </button>
         </div>
+
+        <!-- FORM ESQUECI SENHA -->
+        <div id="form-forgot" style="display:none;">
+            <div class="form-group">
+                <label>E-mail de Recuperação</label>
+                <input type="email" id="forgot-email" placeholder="seu@email.com">
+            </div>
+            <button id="btn-forgot" class="btn-submit" onclick="fazerRecuperacao()">
+                <i class="fas fa-paper-plane"></i> Enviar link de recuperação
+            </button>
+            <a class="back-link" onclick="showTab('login')">Voltar para o login</a>
+        </div>
  
-        <a href="https://broostore.netlify.app" class="back-link">
-            <i class="fas fa-arrow-left"></i> Voltar à loja
-        </a>
+        <a href="/" class="back-link" id="link-voltar-loja">← Voltar para a loja</a>
     </div>
 </div>
  
-<!-- 3. Dashboard (aparece após login) -->
 <div id="tela-dashboard">
-    <div class="header">
-        <div class="header-brand">
-            <i class="fas fa-feather-alt"></i> BrooStore
-            <span id="autor-nome">...</span>
-        </div>
+    <header class="header">
+        <div class="header-brand">BrooStore <span id="autor-nome">| Autor</span></div>
         <div class="header-actions">
             <button class="btn-icon" onclick="window.location.href='/static/autor-produto.html'">
                 <i class="fas fa-plus"></i> Novo Produto
-            </button>
-            <button class="btn-icon" onclick="window.location.href='https://broostore.netlify.app'">
-                <i class="fas fa-store"></i> Ver Loja
             </button>
             <button class="btn-icon" onclick="sair()">
                 <i class="fas fa-sign-out-alt"></i> Sair
             </button>
         </div>
-    </div>
+    </header>
  
-    <div class="main">
+    <main class="main">
         <div id="dash-loading" class="loading">
-            <i class="fas fa-spinner"></i>
-            <p style="margin-top:1rem;">Carregando seus dados...</p>
+            <i class="fas fa-circle-notch"></i>
+            <p>Carregando dados...</p>
         </div>
  
         <div id="dash-conteudo" style="display:none;">
-            <h1 class="page-title">Suas <span>Vendas</span></h1>
+            <h2 class="page-title">Painel do <span>Autor</span></h2>
  
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-label">Total de Vendas</div>
-                    <div class="stat-value" id="stat-vendas">0</div>
-                    <i class="fas fa-shopping-cart stat-icon"></i>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Total Líquido (75%)</div>
-                    <div class="stat-value" id="stat-total">R$ 0,00</div>
-                    <i class="fas fa-coins stat-icon"></i>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Saldo Disponível</div>
-                    <div class="stat-value green" id="stat-saldo">R$ 0,00</div>
-                    <i class="fas fa-wallet stat-icon"></i>
-                </div>
-                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-book"></i></div>
                     <div class="stat-label">Produtos Ativos</div>
-                    <div class="stat-value" id="stat-produtos">0</div>
-                    <i class="fas fa-book stat-icon"></i>
+                    <div id="stat-produtos" class="stat-value">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
+                    <div class="stat-label">Vendas (Aprovadas)</div>
+                    <div id="stat-vendas" class="stat-value">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+                    <div class="stat-label">Total Líquido</div>
+                    <div id="stat-total" class="stat-value">R$ 0,00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
+                    <div class="stat-label">Saldo Disponível</div>
+                    <div id="stat-saldo" class="stat-value green">R$ 0,00</div>
                 </div>
             </div>
  
             <div class="section">
                 <div class="section-header">
-                    <div class="section-title">
-                        <i class="fas fa-book" style="color:var(--orange-web);margin-right:.5rem;"></i> Meus Produtos
-                    </div>
+                    <h3 class="section-title">Meus Produtos</h3>
                 </div>
                 <div class="table-wrap">
                     <table>
                         <thead>
-                            <tr><th>Produto</th><th>Preço</th><th>Vendas</th><th>Arrecadado</th><th>Status</th><th>Ações</th></tr>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Preço (Líquido)</th>
+                                <th>Vendas</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
                         </thead>
-                        <tbody id="tabela-produtos">
-                            <tr><td colspan="5" class="empty">Carregando...</td></tr>
-                        </tbody>
+                        <tbody id="tabela-produtos"></tbody>
                     </table>
                 </div>
             </div>
  
-            <div class="section">
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="fas fa-history" style="color:var(--orange-web);margin-right:.5rem;"></i> Últimas Vendas
+            <div class="form-row">
+                <div class="section">
+                    <h3 class="section-title" style="margin-bottom:1rem;">Solicitar Saque (PIX)</h3>
+                    <div class="pix-panel">
+                        <div class="pix-saldo">
+                            <span class="pix-saldo-label">Saldo para saque:</span>
+                            <span id="pix-saldo-display" class="pix-saldo-value">R$ 0,00</span>
+                        </div>
+                        <div id="msg-pix" class="msg"></div>
+                        <div class="form-group">
+                            <label>Valor do Saque</label>
+                            <input type="number" id="pix-valor" step="0.01" placeholder="0,00">
+                        </div>
+                        <div class="form-group">
+                            <label>Chave PIX</label>
+                            <input type="text" id="pix-chave" placeholder="CPF, E-mail ou Celular">
+                        </div>
+                        <button id="btn-pix" class="btn-green" onclick="solicitarPagamento()">
+                            <i class="fas fa-paper-plane"></i> Solicitar Pagamento
+                        </button>
                     </div>
                 </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr><th>Data</th><th>Produto</th><th>Valor</th><th>Status</th></tr>
-                        </thead>
-                        <tbody id="tabela-vendas">
-                            <tr><td colspan="4" class="empty">Carregando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
  
-            <div class="section">
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="fas fa-pix" style="color:var(--orange-web);margin-right:.5rem;"></i> Solicitar Pagamento
+                <div class="section">
+                    <h3 class="section-title" style="margin-bottom:1rem;">Vendas Recentes</h3>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Produto</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-vendas"></tbody>
+                        </table>
                     </div>
-                </div>
-                <div class="pix-panel">
-                    <div class="pix-saldo">
-                        <div class="pix-saldo-label">Saldo disponível para saque</div>
-                        <div class="pix-saldo-value" id="pix-saldo-display">R$ 0,00</div>
-                    </div>
-                    <div id="msg-pix" class="msg"></div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Valor a receber (R$)</label>
-                            <input type="number" id="pix-valor" placeholder="Ex: 50.00" step="0.01" min="1">
-                        </div>
-                        <div class="form-group">
-                            <label>Sua chave PIX</label>
-                            <input type="text" id="pix-chave" placeholder="CPF, e-mail, telefone ou chave aleatória">
-                        </div>
-                    </div>
-                    <button class="btn-green" id="btn-pix" onclick="solicitarPagamento()">
-                        <i class="fas fa-paper-plane"></i> Solicitar Pagamento
-                    </button>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 </div>
  
- 
-<!-- Modal de confirmação de ativar/desativar -->
-<div id="confirm-modal" class="confirm-overlay" style="display:none;">
-    <div class="confirm-box">
-        <div class="confirm-icon" id="confirm-icon"></div>
-        <div class="confirm-title" id="confirm-title"></div>
-        <div class="confirm-desc"  id="confirm-desc"></div>
-        <div class="confirm-actions">
+<!-- Modal de Confirmação -->
+<div id="confirm-modal" class="confirm-overlay">
+    <div class="confirm-card">
+        <div id="confirm-icon" class="confirm-icon"></div>
+        <h3 id="confirm-title" class="confirm-title"></h3>
+        <p id="confirm-desc" class="confirm-desc"></p>
+        <div class="confirm-btns">
             <button class="btn-confirm-cancel" onclick="fecharConfirm()">Cancelar</button>
             <button id="confirm-ok" onclick="executarConfirm()">Confirmar</button>
         </div>
     </div>
 </div>
  
- 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const SB_URL = "https://gyepvrzkwesohbagpgfa.supabase.co";
+    const SB_KEY = "SUA_ANON_KEY_AQUI"; // Substitua pela sua chave real
+    const sb     = supabase.createClient(SB_URL, SB_KEY);
  
-    let usuarioAtual = null;
+    let usuarioAtual    = null;
     let saldoDisponivel = 0;
  
-    /* ── Início: verifica sessão existente ── */
     async function iniciar() {
-        // Fecha modal ao clicar fora
-        document.getElementById('confirm-modal').addEventListener('click', function(e) {
-            if (e.target === this) fecharConfirm();
-        });
- 
         const { data: { session } } = await sb.auth.getSession();
         document.getElementById('tela-carregando').style.display = 'none';
  
@@ -530,13 +514,44 @@
         document.getElementById('dash-conteudo').style.display = 'block';
     }
  
-    /* ── Tabs ── */
+    /* ── Tabs e Estados da Tela ── */
     function showTab(tab) {
-        document.getElementById('tab-entrar').classList.toggle('active',   tab === 'login');
-        document.getElementById('tab-cadastro').classList.toggle('active', tab === 'cadastro');
-        document.getElementById('form-login').style.display    = tab === 'login'    ? 'block' : 'none';
-        document.getElementById('form-cadastro').style.display = tab === 'cadastro' ? 'block' : 'none';
+        // Esconde todos os formulários
+        document.getElementById('form-login').style.display    = 'none';
+        document.getElementById('form-cadastro').style.display = 'none';
+        document.getElementById('form-forgot').style.display   = 'none';
+        
+        // Controla visibilidade das abas e links
+        const tabsContainer = document.getElementById('tabs-container');
+        const linkVoltarLoja = document.getElementById('link-voltar-loja');
+        
+        if (tab === 'forgot') {
+            tabsContainer.style.display = 'none';
+            linkVoltarLoja.style.display = 'none';
+            document.getElementById('form-forgot').style.display = 'block';
+        } else {
+            tabsContainer.style.display = 'flex';
+            linkVoltarLoja.style.display = 'block';
+            document.getElementById('tab-entrar').classList.toggle('active',   tab === 'login');
+            document.getElementById('tab-cadastro').classList.toggle('active', tab === 'cadastro');
+            document.getElementById('form-login').style.display    = tab === 'login'    ? 'block' : 'none';
+            document.getElementById('form-cadastro').style.display = tab === 'cadastro' ? 'block' : 'none';
+        }
         limparMsg();
+    }
+
+    /* ── Ver/Ocultar Senha ── */
+    function togglePasswordVisibility(inputId, icon) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
     }
  
     function mostrarMsg(texto, tipo) {
@@ -604,6 +619,35 @@
  
         mostrarMsg('Conta criada! Verifique seu e-mail para confirmar.', 'success');
         btn.innerHTML = '<i class="fas fa-check"></i> Enviado!';
+    }
+
+    /* ── Recuperação de Senha ── */
+    async function fazerRecuperacao() {
+        const email = document.getElementById('forgot-email').value.trim();
+        const btn   = document.getElementById('btn-forgot');
+
+        if (!email) return mostrarMsg('Informe seu e-mail.', 'error');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+        const { error } = await sb.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin + '/static/autor-reset-senha.html',
+        });
+
+        if (error) {
+            mostrarMsg(error.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar link de recuperação';
+            return;
+        }
+
+        mostrarMsg('Link de recuperação enviado para seu e-mail!', 'success');
+        btn.innerHTML = '<i class="fas fa-check"></i> Enviado!';
+        
+        setTimeout(() => {
+            showTab('login');
+        }, 3000);
     }
  
     /* ── Sair ── */
@@ -707,23 +751,18 @@
     }
  
     function executarConfirm() {
-        const cb = _confirmCallback; // salva antes de limpar
-        fecharConfirm();             // limpa _confirmCallback
-        if (cb) cb();                // executa o callback salvo
+        const cb = _confirmCallback;
+        fecharConfirm();
+        if (cb) cb();
     }
  
     async function executarToggle(produtoId, novoValor) {
         const id = parseInt(produtoId, 10);
-        console.log('[toggleAtivo] iniciando →', { id, novoValor, uid: usuarioAtual.id });
- 
-        // Tenta só pelo id (RLS já garante segurança pela policy)
         const { error, data } = await sb
             .from('products')
             .update({ active: novoValor })
             .eq('id', id)
             .select();
- 
-        console.log('[toggleAtivo] resultado →', { error, data });
  
         if (error) {
             alert('Erro ao atualizar: ' + error.message);
@@ -731,7 +770,6 @@
         }
  
         if (!data || data.length === 0) {
-            // Segunda tentativa: filtra por author_id explicitamente
             const { error: e2, data: d2 } = await sb
                 .from('products')
                 .update({ active: novoValor })
@@ -739,11 +777,9 @@
                 .eq('author_id', usuarioAtual.id)
                 .select();
  
-            console.log('[toggleAtivo] tentativa 2 →', { error: e2, data: d2 });
- 
             if (e2) { alert('Erro: ' + e2.message); return; }
             if (!d2 || d2.length === 0) {
-                alert('Não foi possível atualizar.\n\nVerifique no console (F12) os logs [toggleAtivo] e envie para o suporte.');
+                alert('Não foi possível atualizar.');
                 return;
             }
         }
@@ -752,7 +788,6 @@
     }
  
     function toggleAtivo(produtoId, novoValor) {
-        // Busca o nome do produto na tabela para exibir no modal
         const linhas = document.querySelectorAll('#tabela-produtos tr');
         let nome = 'este produto';
         linhas.forEach(tr => {
@@ -874,7 +909,11 @@
     document.addEventListener('keydown', e => {
         if (e.key !== 'Enter' || document.getElementById('tela-login').style.display === 'none') return;
         const loginVisivel = document.getElementById('form-login').style.display !== 'none';
-        if (loginVisivel) fazerLogin(); else fazerCadastro();
+        const forgotVisivel = document.getElementById('form-forgot').style.display !== 'none';
+        
+        if (loginVisivel) fazerLogin(); 
+        else if (forgotVisivel) fazerRecuperacao();
+        else fazerCadastro();
     });
  
     iniciar();
@@ -882,4 +921,3 @@
  
 </body>
 </html>
- 
