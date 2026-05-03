@@ -23,7 +23,7 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: var(--font-body); background: #0a0a0a; color: var(--white); min-height: 100vh; }
-
+ 
         /* Header */
         .header {
             background: var(--oxford-blue);
@@ -46,12 +46,12 @@
             display: flex; align-items: center; gap: 6px;
         }
         .btn-icon:hover { border-color: var(--orange-web); color: var(--orange-web); }
-
+ 
         /* Layout */
         .main { padding: 2rem; max-width: 860px; margin: 0 auto; }
         .page-title { font-family: var(--font-heading); font-size: 1.6rem; margin-bottom: 2rem; }
         .page-title span { color: var(--orange-web); }
-
+ 
         /* Card do form */
         .form-card {
             background: var(--oxford-blue);
@@ -59,7 +59,7 @@
             border-radius: 16px;
             padding: 2rem;
         }
-
+ 
         /* Upload capa */
         .upload-area {
             border: 2px dashed var(--border-grey);
@@ -103,11 +103,11 @@
             background: var(--orange-web);
             transition: width .3s;
         }
-
+ 
         /* Form fields */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
         @media(max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
-
+ 
         .form-group { margin-bottom: 1.2rem; }
         .form-group.full { grid-column: 1 / -1; }
         .form-group label {
@@ -140,7 +140,7 @@
         .form-group input::placeholder,
         .form-group textarea::placeholder { color: #555; }
         .form-group textarea { resize: vertical; min-height: 100px; }
-
+ 
         /* Contador de caracteres */
         .char-counter {
             text-align: right;
@@ -151,7 +151,7 @@
         }
         .char-counter.warn   { color: var(--orange-web); }
         .char-counter.over   { color: var(--error-red); font-weight: bold; }
-
+ 
         /* Modal de Termos */
         .modal-overlay {
             position: fixed; inset: 0;
@@ -212,9 +212,9 @@
         }
         .btn-aceitar:disabled { opacity: .4; cursor: not-allowed; }
         .btn-aceitar:not(:disabled):hover { background: #ffb700; }
-
+ 
         .hint { font-size: .78rem; color: #666; margin-top: .3rem; }
-
+ 
         /* Botão */
         .btn-submit {
             width: 100%;
@@ -235,7 +235,7 @@
         }
         .btn-submit:hover { background: #ffb700; transform: translateY(-2px); }
         .btn-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-
+ 
         /* Msg */
         .msg {
             padding: .75rem 1rem;
@@ -246,7 +246,7 @@
         }
         .msg.error   { background: rgba(231,76,60,.15); border: 1px solid var(--error-red); color: #ff6b6b; display: block; }
         .msg.success { background: rgba(39,174,96,.15); border: 1px solid var(--success-green); color: #2ecc71; display: block; }
-
+ 
         /* Divisor */
         .divider {
             border: none;
@@ -264,7 +264,7 @@
     </style>
 </head>
 <body>
-
+ 
 <div class="header">
     <div class="header-brand"><i class="fas fa-feather-alt"></i> BrooStore</div>
     <div style="display:flex;gap:.75rem;">
@@ -273,13 +273,13 @@
         </button>
     </div>
 </div>
-
+ 
 <div class="main">
     <h1 class="page-title" id="page-title">Cadastrar <span>Novo Produto</span></h1>
-
+ 
     <div class="form-card">
         <div id="msg" class="msg"></div>
-
+ 
         <!-- Upload da capa -->
         <div class="section-label"><i class="fas fa-image"></i> Capa do Produto</div>
         <div class="upload-area" id="upload-area"
@@ -295,9 +295,9 @@
                 <div class="upload-progress-bar" id="upload-bar" style="width:0%"></div>
             </div>
         </div>
-
+ 
         <hr class="divider">
-
+ 
         <!-- Dados do produto -->
         <div class="section-label"><i class="fas fa-info-circle"></i> Dados do Produto</div>
         <div class="form-grid">
@@ -326,10 +326,10 @@
                     <option value="Outros">Outros</option>
                 </select>
             </div>
-
+ 
             <hr class="divider" style="grid-column:1/-1;">
             <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-book-open"></i> Informações da Página de Venda (opcional)</div>
-
+ 
             <div class="form-group">
                 <label>Autor</label>
                 <input type="text" id="autor" placeholder="Nome do autor">
@@ -346,10 +346,10 @@
                 <label>Sobre o autor <span class="char-counter" id="cnt-sobre">0/1200</span></label>
                 <textarea id="sobre-autor" maxlength="1200" placeholder="Breve biografia do autor..." style="min-height:120px;" oninput="contarChars('sobre-autor','cnt-sobre',1200)"></textarea>
             </div>
-
+ 
             <hr class="divider" style="grid-column:1/-1;">
             <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-file-pdf"></i> Arquivo do Produto (PDF)</div>
-
+ 
             <div class="form-group full">
                 <div class="upload-area" id="upload-pdf-area"
                      ondragover="onDragOverPdf(event)" ondragleave="onDragLeavePdf(event)" ondrop="onDropPdf(event)"
@@ -372,13 +372,13 @@
                 <div class="hint"><i class="fas fa-lock" style="color:var(--orange-web);"></i> O arquivo fica protegido — só quem comprar recebe o link de acesso.</div>
             </div>
         </div>
-
+ 
         <button class="btn-submit" id="btn-salvar" onclick="verificarTermosAntesDeSalvar()">
             <i class="fas fa-rocket" id="btn-icon"></i> <span id="btn-label">Publicar Produto</span>
         </button>
     </div>
 </div>
-
+ 
 <!-- Modal Termos de Uso -->
 <div class="modal-overlay" id="modal-termos" style="display:none;">
     <div class="modal-box">
@@ -388,29 +388,29 @@
         </div>
         <div class="modal-body">
             <p>Antes de publicar seu primeiro produto na <strong>BrooStore</strong>, leia atentamente os termos abaixo. Ao aceitar, você confirma que leu, compreendeu e concorda com todas as condições.</p>
-
+ 
             <h3>1. Responsabilidade pelo Conteúdo</h3>
             <p>O conteúdo publicado — incluindo textos, imagens, arquivos e descrições — é de <strong>inteira responsabilidade do autor</strong>. A BrooStore atua como plataforma intermediária e não se responsabiliza por informações incorretas, direitos autorais de terceiros, conteúdo enganoso ou qualquer dano causado ao consumidor decorrente do produto publicado.</p>
-
+ 
             <h3>2. Conformidade com a Legislação Brasileira</h3>
             <p>O autor declara que seu produto está em conformidade com a legislação brasileira vigente, especialmente: <strong>Lei nº 9.610/1998</strong> (Lei de Direitos Autorais), <strong>Lei nº 8.078/1990</strong> (Código de Defesa do Consumidor), <strong>Lei nº 13.709/2018</strong> (LGPD — Lei Geral de Proteção de Dados) e o <strong>Marco Civil da Internet (Lei nº 12.965/2014)</strong>.</p>
-
+ 
             <h3>3. Conteúdo Proibido</h3>
             <p>É expressamente vedada a publicação de conteúdo que: contenha discurso de ódio, preconceito ou incitação à violência; viole direitos autorais ou propriedade intelectual de terceiros; promova atividades ilegais; seja de natureza sexual explícita ou envolvendo menores; induza o consumidor ao erro ou contenha informações falsas.</p>
             <p>A BrooStore se reserva o direito de <strong>remover qualquer produto</strong> que viole estas diretrizes, sem aviso prévio e sem direito a reembolso da taxa.</p>
-
+ 
             <h3>4. Taxa da Plataforma</h3>
             <p>A BrooStore retém <strong>25% (vinte e cinco por cento)</strong> sobre o valor bruto de cada venda realizada como contraprestação pelos serviços de hospedagem, processamento de pagamentos e entrega digital. O autor recebe <strong>75%</strong> do valor bruto de cada venda.</p>
-
+ 
             <h3>5. Prazo de Pagamento</h3>
             <p>Após a solicitação de saque pelo autor, o pagamento via PIX será realizado em até <strong>72 horas úteis</strong>. Solicitações realizadas em fins de semana ou feriados nacionais serão processadas no próximo dia útil.</p>
-
+ 
             <h3>6. Cancelamento e Reembolso</h3>
             <p>O consumidor tem direito ao reembolso integral conforme o <strong>art. 49 do CDC</strong> (arrependimento em até 7 dias para compras digitais). Nestes casos, o valor correspondente ao autor será deduzido do saldo disponível para saque.</p>
-
+ 
             <h3>7. Alterações nos Termos</h3>
             <p>A BrooStore pode atualizar estes termos a qualquer momento. O autor será notificado por e-mail e deverá aceitar novamente para continuar publicando produtos.</p>
-
+ 
             <p style="margin-top:1rem; color:#888; font-size:.8rem;">Última atualização: Abril de 2026.</p>
         </div>
         <div class="modal-footer">
@@ -430,7 +430,7 @@
         </div>
     </div>
 </div>
-
+ 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     /* ── Contador de caracteres ── */
@@ -440,10 +440,10 @@
         el.textContent = `${len}/${max}`;
         el.className = 'char-counter' + (len >= max ? ' over' : len >= max * 0.85 ? ' warn' : '');
     }
-
+ 
     /* ── Termos de Uso ── */
     const TERMOS_KEY = 'broo_termos_aceitos';
-
+ 
     function onRadioTermos(radio) {
         const btn = document.getElementById('btn-aceitar-termos');
         if (radio.value === 'aceito') {
@@ -454,13 +454,13 @@
             btn.textContent = 'Você precisa aceitar para publicar';
         }
     }
-
+ 
     function confirmarTermos() {
         localStorage.setItem(TERMOS_KEY, '1');
         document.getElementById('modal-termos').style.display = 'none';
         salvarProduto();
     }
-
+ 
     function verificarTermosAntesDeSalvar() {
         if (modoEdicao) {
             salvarProduto();
@@ -468,7 +468,7 @@
             salvarProduto();
         }
     }
-
+ 
     function abrirTermosSeNecessario() {
         if (!modoEdicao && localStorage.getItem(TERMOS_KEY) !== '1') {
             document.querySelectorAll('input[name="termos"]').forEach(r => r.checked = false);
@@ -477,22 +477,22 @@
             document.getElementById('modal-termos').style.display = 'flex';
         }
     }
-
+ 
     const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-
+ 
     // ── Detecção de modo edição ──
     const params       = new URLSearchParams(window.location.search);
     const editId       = params.get('edit');
     const modoEdicao   = !!editId;
-
+ 
     let usuarioAtual  = null;
     let arquivoCapa   = null;
     let arquivoPdf    = null;
     let imageUrlFinal = '';
     let produtoOriginal = null;   // dados originais ao editar
-
+ 
     // Ajusta a UI para modo edição
     if (modoEdicao) {
         document.getElementById('page-title').innerHTML = 'Editar <span>Produto</span>';
@@ -500,31 +500,31 @@
         document.getElementById('btn-label').textContent = 'Salvar Alterações';
         document.title = 'BrooStore – Editar Produto';
     }
-
+ 
     // Verifica auth e carrega produto se em edição
     sb.auth.getSession().then(async ({ data: { session } }) => {
         if (!session) { window.location.href = '/static/autor-login.html'; return; }
         usuarioAtual = session.user;
-
+ 
         if (modoEdicao) {
             await carregarProdutoParaEdicao();
         } else {
             abrirTermosSeNecessario();
         }
     });
-
+ 
     async function carregarProdutoParaEdicao() {
         // Tenta com author_id (produtos novos); se falhar, tenta só por id
         // (compatibilidade com produtos inseridos manualmente antes do sistema)
         let p = null;
-
+ 
         const { data: d1 } = await sb
             .from('products')
             .select('*')
             .eq('id', editId)
             .eq('author_id', usuarioAtual.id)
             .maybeSingle();
-
+ 
         if (d1) {
             p = d1;
         } else {
@@ -534,7 +534,7 @@
                 .select('*')
                 .eq('id', editId)
                 .maybeSingle();
-
+ 
             if (e2 || !d2) {
                 alert('Produto não encontrado.');
                 window.location.href = '/static/autor-login.html';
@@ -542,9 +542,9 @@
             }
             p = d2;
         }
-
+ 
         produtoOriginal = p;
-
+ 
         // Preenche o formulário
         document.getElementById('titulo').value      = p.title      || '';
         document.getElementById('descricao').value   = p.descricao  || '';
@@ -554,13 +554,13 @@
         document.getElementById('paginas').value     = p.paginas    || '';
         document.getElementById('intro').value       = p.intro      || '';
         document.getElementById('sobre-autor').value = p.sobre_autor || '';
-
+ 
         // Atualiza contadores
         contarChars('titulo',      'cnt-titulo',   80);
         contarChars('descricao',   'cnt-descricao', 160);
         contarChars('intro',       'cnt-intro',    1200);
         contarChars('sobre-autor', 'cnt-sobre',    1200);
-
+ 
         // Mostra capa atual
         if (p.image_url) {
             const img = document.getElementById('preview-img');
@@ -569,7 +569,7 @@
             document.getElementById('upload-placeholder').style.display = 'none';
             imageUrlFinal = p.image_url;
         }
-
+ 
         // Indica PDF existente
         if (p.link_pdf) {
             document.getElementById('upload-pdf-placeholder').style.display = 'none';
@@ -578,7 +578,7 @@
             document.getElementById('pdf-tamanho').textContent = 'Selecione um novo arquivo para substituir';
         }
     }
-
+ 
     // ── Upload CAPA handlers ──
     function onDragOver(e) { e.preventDefault(); document.getElementById('upload-area').classList.add('dragover'); }
     function onDragLeave()  { document.getElementById('upload-area').classList.remove('dragover'); }
@@ -589,7 +589,7 @@
         if (file) processarArquivo(file);
     }
     function onFileSelect(e) { const file = e.target.files[0]; if (file) processarArquivo(file); }
-
+ 
     // ── Upload PDF handlers ──
     function onDragOverPdf(e) { e.preventDefault(); document.getElementById('upload-pdf-area').classList.add('dragover'); }
     function onDragLeavePdf()  { document.getElementById('upload-pdf-area').classList.remove('dragover'); }
@@ -600,7 +600,7 @@
         if (file) processarPdf(file);
     }
     function onPdfSelect(e) { const file = e.target.files[0]; if (file) processarPdf(file); }
-
+ 
     function processarPdf(file) {
         if (file.size > 12 * 1024 * 1024) { mostrarMsg('PDF muito grande. Máximo 12 MB.', 'error'); return; }
         if (file.type !== 'application/pdf') { mostrarMsg('Formato inválido. Selecione um PDF.', 'error'); return; }
@@ -612,7 +612,7 @@
         document.getElementById('pdf-tamanho').textContent = `${tamanhoMB} MB`;
         limparMsg();
     }
-
+ 
     function processarArquivo(file) {
         if (file.size > 2 * 1024 * 1024) { mostrarMsg('Arquivo muito grande. Máximo 2 MB.', 'error'); return; }
         if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
@@ -629,52 +629,52 @@
         reader.readAsDataURL(file);
         limparMsg();
     }
-
+ 
     async function uploadCapa() {
         if (!arquivoCapa) return imageUrlFinal; // mantém URL existente
         const ext  = arquivoCapa.name.split('.').pop();
         const path = `${usuarioAtual.id}/${Date.now()}.${ext}`;
-
+ 
         document.getElementById('upload-progress').style.display = 'block';
         document.getElementById('upload-bar').style.width = '30%';
-
+ 
         const { error } = await sb.storage
             .from('capas-produtos')
             .upload(path, arquivoCapa, { contentType: arquivoCapa.type, upsert: false });
-
+ 
         document.getElementById('upload-bar').style.width = '100%';
-
+ 
         if (error) { mostrarMsg('Erro ao enviar imagem: ' + error.message, 'error'); return ''; }
-
+ 
         const { data } = sb.storage.from('capas-produtos').getPublicUrl(path);
         return data.publicUrl;
     }
-
+ 
     async function uploadPdf() {
         if (!arquivoPdf) {
             // Em modo edição: mantém o link existente (pode ser vazio para produtos antigos)
             return produtoOriginal?.link_pdf ?? '__sem_pdf__';
         }
         const path = `${usuarioAtual.id}/${Date.now()}.pdf`;
-
+ 
         document.getElementById('upload-pdf-progress').style.display = 'block';
         document.getElementById('upload-pdf-bar').style.width = '30%';
-
+ 
         const { error } = await sb.storage
             .from('livros-pdf')
             .upload(path, arquivoPdf, { contentType: 'application/pdf', upsert: false });
-
+ 
         document.getElementById('upload-pdf-bar').style.width = '100%';
-
+ 
         if (error) { mostrarMsg('Erro ao enviar PDF: ' + error.message, 'error'); return ''; }
-
+ 
         const { data } = await sb.storage
             .from('livros-pdf')
             .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-
+ 
         return data?.signedUrl || '';
     }
-
+ 
     async function salvarProduto() {
         const titulo     = document.getElementById('titulo').value.trim();
         const descricao  = document.getElementById('descricao').value.trim();
@@ -685,16 +685,16 @@
         const intro      = document.getElementById('intro').value.trim();
         const sobreAutor = document.getElementById('sobre-autor').value.trim();
         const btn        = document.getElementById('btn-salvar');
-
+ 
         if (!titulo)    return mostrarMsg('Informe o título do produto.', 'error');
         if (!descricao) return mostrarMsg('Informe uma descrição.', 'error');
         if (!preco || preco <= 0) return mostrarMsg('Informe um preço válido.', 'error');
         if (!categoria) return mostrarMsg('Selecione uma categoria.', 'error');
         if (!modoEdicao && !arquivoPdf) return mostrarMsg('Selecione o arquivo PDF do produto.', 'error');
-
+ 
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando arquivos...';
-
+ 
         // Upload da capa
         const novaImageUrl = await uploadCapa();
         if (document.getElementById('msg').classList.contains('error')) {
@@ -704,9 +704,9 @@
                 : '<i class="fas fa-rocket"></i> Publicar Produto';
             return;
         }
-
+ 
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando PDF...';
-
+ 
         // Upload do PDF
         const linkPdfRaw = await uploadPdf();
         // '__sem_pdf__' = sentinela: modo edição, produto antigo sem PDF (aceita normalmente)
@@ -719,9 +719,9 @@
                 : '<i class="fas fa-rocket"></i> Publicar Produto';
             return;
         }
-
+ 
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
-
+ 
         const payload = {
             title:       titulo,
             author:      autor       || null,
@@ -735,9 +735,9 @@
         };
         // Só atualiza link_pdf se houver um valor real (não sobrescreve com null)
         if (linkPdf !== null) payload.link_pdf = linkPdf;
-
+ 
         let dbError;
-
+ 
         if (modoEdicao) {
             // Sempre grava author_id (corrige registros antigos que não tinham)
             const { error, count } = await sb
@@ -755,7 +755,7 @@
                 .insert({ ...payload, author_id: usuarioAtual.id });
             dbError = error;
         }
-
+ 
         if (dbError) {
             mostrarMsg('Erro ao salvar produto: ' + dbError.message, 'error');
             btn.disabled = false;
@@ -764,7 +764,18 @@
                 : '<i class="fas fa-rocket"></i> Publicar Produto';
             return;
         }
-
+ 
+        // Sincroniza a tabela local do Render (produtos) com o Supabase (products)
+        try {
+            await fetch('https://mercadopago-final.onrender.com/api/sync-produto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: modoEdicao ? parseInt(editId) : null })
+            });
+        } catch(e) {
+            console.warn('[sync-produto] Erro ao sincronizar com Render:', e);
+        }
+ 
         mostrarMsg(
             modoEdicao ? 'Produto atualizado com sucesso!' : 'Produto publicado com sucesso!',
             'success'
@@ -772,7 +783,7 @@
         btn.innerHTML = '<i class="fas fa-check"></i> ' + (modoEdicao ? 'Salvo!' : 'Publicado!');
         setTimeout(() => window.location.href = '/static/autor-login.html', 2000);
     }
-
+ 
     function mostrarMsg(texto, tipo) {
         const el = document.getElementById('msg');
         el.textContent = texto;
