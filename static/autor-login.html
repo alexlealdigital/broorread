@@ -345,6 +345,23 @@
             </button>
             <a class="back-link" onclick="showTab('login')">Voltar para o login</a>
         </div>
+
+        <!-- FORM NOVA SENHA (RESET) -->
+        <div id="form-reset" style="display:none;">
+            <div class="form-group">
+                <label>Nova Senha</label>
+                <input type="password" id="reset-senha" placeholder="Mínimo 6 caracteres">
+                <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('reset-senha', this)"></i>
+            </div>
+            <div class="form-group">
+                <label>Confirmar Nova Senha</label>
+                <input type="password" id="reset-confirmar" placeholder="Repita a nova senha">
+                <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('reset-confirmar', this)"></i>
+            </div>
+            <button id="btn-reset" class="btn-submit" onclick="confirmarNovaSenha()">
+                <i class="fas fa-key"></i> Alterar Senha
+            </button>
+        </div>
  
         <a href="/" class="back-link" id="link-voltar-loja">← Voltar para a loja</a>
     </div>
@@ -475,9 +492,6 @@
  
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // Configurações do Supabase
-    // DICA SAM: No Netlify/Vercel, você pode usar variáveis de ambiente injetadas no build.
-    // Para este arquivo estático, usamos as chaves diretamente.
     const SB_URL = "https://gyepvrzkwesohbagpgfa.supabase.co";
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA";
     
@@ -487,6 +501,15 @@
     let saldoDisponivel = 0;
  
     async function iniciar() {
+        // Verifica se há um token de recuperação na URL (hash)
+        const hash = window.location.hash;
+        if (hash && (hash.includes('access_token') || hash.includes('type=recovery'))) {
+            document.getElementById('tela-carregando').style.display = 'none';
+            document.getElementById('tela-login').style.display = 'flex';
+            showTab('reset');
+            return;
+        }
+
         const { data: { session } } = await sb.auth.getSession();
         document.getElementById('tela-carregando').style.display = 'none';
  
@@ -524,15 +547,16 @@
         document.getElementById('form-login').style.display    = 'none';
         document.getElementById('form-cadastro').style.display = 'none';
         document.getElementById('form-forgot').style.display   = 'none';
+        document.getElementById('form-reset').style.display    = 'none';
         
         // Controla visibilidade das abas e links
         const tabsContainer = document.getElementById('tabs-container');
         const linkVoltarLoja = document.getElementById('link-voltar-loja');
         
-        if (tab === 'forgot') {
+        if (tab === 'forgot' || tab === 'reset') {
             tabsContainer.style.display = 'none';
             linkVoltarLoja.style.display = 'none';
-            document.getElementById('form-forgot').style.display = 'block';
+            document.getElementById(tab === 'forgot' ? 'form-forgot' : 'form-reset').style.display = 'block';
         } else {
             tabsContainer.style.display = 'flex';
             linkVoltarLoja.style.display = 'block';
@@ -635,8 +659,7 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
 
-        // Padrão SAM: Redireciona para a página de reset no mesmo domínio
-        const redirectUrl = window.location.origin + '/static/autor-reset-senha.html';
+        const redirectUrl = window.location.origin + window.location.pathname;
 
         const { error } = await sb.auth.resetPasswordForEmail(email, {
             redirectTo: redirectUrl,
@@ -653,6 +676,37 @@
         btn.innerHTML = '<i class="fas fa-check"></i> Enviado!';
         
         setTimeout(() => {
+            showTab('login');
+        }, 3000);
+    }
+
+    /* ── Confirmar Nova Senha ── */
+    async function confirmarNovaSenha() {
+        const senha    = document.getElementById('reset-senha').value;
+        const confirmar = document.getElementById('reset-confirmar').value;
+        const btn      = document.getElementById('btn-reset');
+
+        if (!senha || senha.length < 6) return mostrarMsg('Senha deve ter no mínimo 6 caracteres.', 'error');
+        if (senha !== confirmar) return mostrarMsg('As senhas não coincidem.', 'error');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Alterando...';
+
+        const { error } = await sb.auth.updateUser({ password: senha });
+
+        if (error) {
+            mostrarMsg(error.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-key"></i> Alterar Senha';
+            return;
+        }
+
+        mostrarMsg('Senha alterada com sucesso! Redirecionando...', 'success');
+        btn.innerHTML = '<i class="fas fa-check"></i> Sucesso!';
+        
+        setTimeout(() => {
+            // Limpa o hash da URL e volta para o login
+            window.location.hash = '';
             showTab('login');
         }, 3000);
     }
@@ -917,9 +971,11 @@
         if (e.key !== 'Enter' || document.getElementById('tela-login').style.display === 'none') return;
         const loginVisivel = document.getElementById('form-login').style.display !== 'none';
         const forgotVisivel = document.getElementById('form-forgot').style.display !== 'none';
+        const resetVisivel = document.getElementById('form-reset').style.display !== 'none';
         
         if (loginVisivel) fazerLogin(); 
         else if (forgotVisivel) fazerRecuperacao();
+        else if (resetVisivel) confirmarNovaSenha();
         else fazerCadastro();
     });
  
