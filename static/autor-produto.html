@@ -23,8 +23,9 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: var(--font-body); background: #0a0a0a; color: var(--white); min-height: 100vh; }
- 
-        /* Header */
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         .header {
             background: var(--oxford-blue);
             border-bottom: 1px solid var(--border-grey);
@@ -46,21 +47,18 @@
             display: flex; align-items: center; gap: 6px;
         }
         .btn-icon:hover { border-color: var(--orange-web); color: var(--orange-web); }
- 
-        /* Layout */
+
         .main { padding: 2rem; max-width: 860px; margin: 0 auto; }
         .page-title { font-family: var(--font-heading); font-size: 1.6rem; margin-bottom: 2rem; }
         .page-title span { color: var(--orange-web); }
- 
-        /* Card do form */
+
         .form-card {
             background: var(--oxford-blue);
             border: 1px solid var(--border-grey);
             border-radius: 16px;
             padding: 2rem;
         }
- 
-        /* Upload capa */
+
         .upload-area {
             border: 2px dashed var(--border-grey);
             border-radius: 12px;
@@ -83,55 +81,32 @@
         .upload-area strong { color: var(--orange-web); }
         .upload-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
         .preview-img {
-            width: 120px;
-            height: 160px;
-            object-fit: cover;
-            border-radius: 8px;
+            width: 120px; height: 160px;
+            object-fit: cover; border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0,0,0,.5);
         }
-        .upload-progress {
-            width: 100%;
-            height: 4px;
-            background: #333;
-            border-radius: 2px;
-            margin-top: .5rem;
-            overflow: hidden;
-            display: none;
-        }
-        .upload-progress-bar {
-            height: 100%;
-            background: var(--orange-web);
-            transition: width .3s;
-        }
- 
-        /* Form fields */
+        .upload-progress { width: 100%; height: 4px; background: #333; border-radius: 2px; margin-top: .5rem; overflow: hidden; display: none; }
+        .upload-progress-bar { height: 100%; background: var(--orange-web); transition: width .3s; }
+
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
         @media(max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
- 
+
         .form-group { margin-bottom: 1.2rem; }
         .form-group.full { grid-column: 1 / -1; }
         .form-group label {
-            display: block;
-            font-size: .8rem;
-            font-weight: bold;
-            color: var(--orange-web);
-            margin-bottom: .4rem;
-            text-transform: uppercase;
-            letter-spacing: .5px;
+            display: block; font-size: .8rem; font-weight: bold;
+            color: var(--orange-web); margin-bottom: .4rem;
+            text-transform: uppercase; letter-spacing: .5px;
         }
         .form-group input,
         .form-group select,
         .form-group textarea {
-            width: 100%;
-            padding: .75rem 1rem;
+            width: 100%; padding: .75rem 1rem;
             background: rgba(255,255,255,.06);
             border: 1px solid var(--border-grey);
-            border-radius: 8px;
-            color: var(--white);
-            font-family: var(--font-body);
-            font-size: .95rem;
-            outline: none;
-            transition: border-color .3s;
+            border-radius: 8px; color: var(--white);
+            font-family: var(--font-body); font-size: .95rem;
+            outline: none; transition: border-color .3s;
         }
         .form-group select option { background: var(--oxford-blue); }
         .form-group input:focus,
@@ -140,19 +115,76 @@
         .form-group input::placeholder,
         .form-group textarea::placeholder { color: #555; }
         .form-group textarea { resize: vertical; min-height: 100px; }
- 
-        /* Contador de caracteres */
-        .char-counter {
-            text-align: right;
-            font-size: .75rem;
-            color: #666;
-            margin-top: .3rem;
-            transition: color .3s;
+
+        /* Preço bloqueado */
+        .form-group input[readonly] {
+            opacity: .55;
+            cursor: not-allowed;
+            border-color: #2a2a2a;
         }
-        .char-counter.warn   { color: var(--orange-web); }
-        .char-counter.over   { color: var(--error-red); font-weight: bold; }
- 
-        /* Modal de Termos */
+        .preco-locked-msg {
+            display: flex; align-items: center; gap: .5rem;
+            background: rgba(252,163,17,.08);
+            border: 1px solid rgba(252,163,17,.25);
+            border-radius: 8px;
+            padding: .6rem .9rem;
+            font-size: .8rem;
+            color: var(--orange-web);
+            margin-top: .4rem;
+        }
+
+        /* Classificação indicativa */
+        .classif-grid {
+            display: flex; flex-wrap: wrap; gap: .6rem;
+            margin-top: .5rem;
+        }
+        .classif-btn {
+            position: relative;
+        }
+        .classif-btn input[type=radio] {
+            position: absolute; opacity: 0; width: 0; height: 0;
+        }
+        .classif-label {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 72px; height: 72px;
+            border-radius: 12px;
+            border: 2px solid #333;
+            cursor: pointer;
+            transition: all .25s;
+            font-weight: bold;
+            font-size: .75rem;
+            gap: 4px;
+            background: rgba(255,255,255,.04);
+        }
+        .classif-label .cl-age {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+        .classif-label .cl-desc { font-size: .62rem; color: #888; }
+
+        /* Cores por faixa */
+        .classif-btn input:checked + .classif-label { border-width: 2px; transform: scale(1.08); }
+        .cl-L  .classif-label { color: #2ecc71; }
+        .cl-L  input:checked + .classif-label { border-color: #2ecc71; background: rgba(46,204,113,.12); box-shadow: 0 0 12px rgba(46,204,113,.3); }
+        .cl-10 .classif-label { color: #3498db; }
+        .cl-10 input:checked + .classif-label { border-color: #3498db; background: rgba(52,152,219,.12); box-shadow: 0 0 12px rgba(52,152,219,.3); }
+        .cl-12 .classif-label { color: #f39c12; }
+        .cl-12 input:checked + .classif-label { border-color: #f39c12; background: rgba(243,156,18,.12); box-shadow: 0 0 12px rgba(243,156,18,.3); }
+        .cl-14 .classif-label { color: #e67e22; }
+        .cl-14 input:checked + .classif-label { border-color: #e67e22; background: rgba(230,126,34,.12); box-shadow: 0 0 12px rgba(230,126,34,.3); }
+        .cl-16 .classif-label { color: #e74c3c; }
+        .cl-16 input:checked + .classif-label { border-color: #e74c3c; background: rgba(231,76,60,.12); box-shadow: 0 0 12px rgba(231,76,60,.3); }
+        .cl-18 .classif-label { color: #8e44ad; }
+        .cl-18 input:checked + .classif-label { border-color: #8e44ad; background: rgba(142,68,173,.12); box-shadow: 0 0 12px rgba(142,68,173,.3); }
+
+        .classif-label:hover { border-color: #555; transform: scale(1.04); }
+
+        .char-counter { text-align: right; font-size: .75rem; color: #666; margin-top: .3rem; transition: color .3s; }
+        .char-counter.warn { color: var(--orange-web); }
+        .char-counter.over { color: var(--error-red); font-weight: bold; }
+
+        /* Modal */
         .modal-overlay {
             position: fixed; inset: 0;
             background: rgba(0,0,0,.85);
@@ -177,17 +209,12 @@
         .modal-header h2 { font-family: var(--font-heading); font-size: 1.2rem; }
         .modal-body {
             padding: 1.5rem 2rem;
-            overflow-y: auto;
-            flex: 1;
-            font-size: .88rem;
-            line-height: 1.7;
-            color: #ccc;
+            overflow-y: auto; flex: 1;
+            font-size: .88rem; line-height: 1.7; color: #ccc;
         }
         .modal-body h3 {
-            color: var(--orange-web);
-            font-family: var(--font-heading);
-            font-size: .95rem;
-            margin: 1.2rem 0 .4rem;
+            color: var(--orange-web); font-family: var(--font-heading);
+            font-size: .95rem; margin: 1.2rem 0 .4rem;
         }
         .modal-body p { margin-bottom: .6rem; }
         .modal-footer {
@@ -195,76 +222,45 @@
             border-top: 1px solid var(--border-grey);
             display: flex; flex-direction: column; gap: .75rem;
         }
-        .radio-group {
-            display: flex; gap: 1.5rem;
-        }
-        .radio-group label {
-            display: flex; align-items: center; gap: .5rem;
-            cursor: pointer; font-size: .9rem;
-        }
+        .radio-group { display: flex; gap: 1.5rem; }
+        .radio-group label { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .9rem; }
         .radio-group input[type=radio] { accent-color: var(--orange-web); width: 16px; height: 16px; }
         .btn-aceitar {
             width: 100%; padding: .85rem;
             background: var(--orange-web); border: none; border-radius: 8px;
             color: var(--black); font-family: var(--font-heading);
-            font-size: 1rem; font-weight: bold; cursor: pointer;
-            transition: all .3s;
+            font-size: 1rem; font-weight: bold; cursor: pointer; transition: all .3s;
         }
         .btn-aceitar:disabled { opacity: .4; cursor: not-allowed; }
         .btn-aceitar:not(:disabled):hover { background: #ffb700; }
- 
+
         .hint { font-size: .78rem; color: #666; margin-top: .3rem; }
- 
-        /* Botão */
+
         .btn-submit {
-            width: 100%;
-            padding: 1rem;
-            background: var(--orange-web);
-            border: none;
-            border-radius: 8px;
-            color: var(--black);
-            font-family: var(--font-heading);
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all .3s;
+            width: 100%; padding: 1rem;
+            background: var(--orange-web); border: none; border-radius: 8px;
+            color: var(--black); font-family: var(--font-heading);
+            font-size: 1rem; font-weight: bold; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 1px; transition: all .3s;
             display: flex; align-items: center; justify-content: center; gap: 8px;
             margin-top: .5rem;
         }
         .btn-submit:hover { background: #ffb700; transform: translateY(-2px); }
         .btn-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
- 
-        /* Msg */
-        .msg {
-            padding: .75rem 1rem;
-            border-radius: 8px;
-            font-size: .88rem;
-            margin-bottom: 1.2rem;
-            display: none;
-        }
+
+        .msg { padding: .75rem 1rem; border-radius: 8px; font-size: .88rem; margin-bottom: 1.2rem; display: none; }
         .msg.error   { background: rgba(231,76,60,.15); border: 1px solid var(--error-red); color: #ff6b6b; display: block; }
         .msg.success { background: rgba(39,174,96,.15); border: 1px solid var(--success-green); color: #2ecc71; display: block; }
- 
-        /* Divisor */
-        .divider {
-            border: none;
-            border-top: 1px solid var(--border-grey);
-            margin: 1.5rem 0;
-        }
+
+        .divider { border: none; border-top: 1px solid var(--border-grey); margin: 1.5rem 0; }
         .section-label {
-            font-family: var(--font-heading);
-            font-size: .9rem;
-            color: #888;
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: .5px;
+            font-family: var(--font-heading); font-size: .9rem; color: #888;
+            margin-bottom: 1rem; text-transform: uppercase; letter-spacing: .5px;
         }
     </style>
 </head>
 <body>
- 
+
 <div class="header">
     <div class="header-brand"><i class="fas fa-feather-alt"></i> BrooStore</div>
     <div style="display:flex;gap:.75rem;">
@@ -273,13 +269,13 @@
         </button>
     </div>
 </div>
- 
+
 <div class="main">
     <h1 class="page-title" id="page-title">Cadastrar <span>Novo Produto</span></h1>
- 
+
     <div class="form-card">
         <div id="msg" class="msg"></div>
- 
+
         <!-- Upload da capa -->
         <div class="section-label"><i class="fas fa-image"></i> Capa do Produto</div>
         <div class="upload-area" id="upload-area"
@@ -295,9 +291,9 @@
                 <div class="upload-progress-bar" id="upload-bar" style="width:0%"></div>
             </div>
         </div>
- 
+
         <hr class="divider">
- 
+
         <!-- Dados do produto -->
         <div class="section-label"><i class="fas fa-info-circle"></i> Dados do Produto</div>
         <div class="form-grid">
@@ -309,10 +305,17 @@
                 <label>Descrição curta * <span class="char-counter" id="cnt-descricao">0/160</span></label>
                 <textarea id="descricao" maxlength="160" placeholder="Uma frase que resume seu produto..." oninput="contarChars('descricao','cnt-descricao',160)"></textarea>
             </div>
-            <div class="form-group">
+
+            <!-- Preço -->
+            <div class="form-group" id="grupo-preco">
                 <label>Preço (R$) *</label>
                 <input type="number" id="preco" placeholder="Ex: 49.90" step="0.01" min="1">
+                <div id="preco-locked-info" class="preco-locked-msg" style="display:none;">
+                    <i class="fas fa-lock"></i>
+                    <span>Preço fixo após a primeira venda. Use cupons para oferecer descontos.</span>
+                </div>
             </div>
+
             <div class="form-group">
                 <label>Categoria *</label>
                 <select id="categoria">
@@ -323,13 +326,65 @@
                     <option value="Família e Relacionamento">Família e Relacionamento</option>
                     <option value="Negócios">Negócios</option>
                     <option value="Saúde">Saúde</option>
+                    <option value="Quadrinhos">Quadrinhos</option>
+                    <option value="Mangá">Mangá</option>
                     <option value="Outros">Outros</option>
                 </select>
             </div>
- 
+
+            <!-- Classificação Indicativa -->
+            <div class="form-group full">
+                <label><i class="fas fa-shield-alt" style="margin-right:.3rem;"></i> Classificação Indicativa *</label>
+                <div class="classif-grid">
+                    <div class="classif-btn cl-L">
+                        <input type="radio" name="classificacao" id="cl-L" value="L">
+                        <label class="classif-label" for="cl-L">
+                            <span class="cl-age">L</span>
+                            <span class="cl-desc">Livre</span>
+                        </label>
+                    </div>
+                    <div class="classif-btn cl-10">
+                        <input type="radio" name="classificacao" id="cl-10" value="10">
+                        <label class="classif-label" for="cl-10">
+                            <span class="cl-age">10+</span>
+                            <span class="cl-desc">10 anos</span>
+                        </label>
+                    </div>
+                    <div class="classif-btn cl-12">
+                        <input type="radio" name="classificacao" id="cl-12" value="12">
+                        <label class="classif-label" for="cl-12">
+                            <span class="cl-age">12+</span>
+                            <span class="cl-desc">12 anos</span>
+                        </label>
+                    </div>
+                    <div class="classif-btn cl-14">
+                        <input type="radio" name="classificacao" id="cl-14" value="14">
+                        <label class="classif-label" for="cl-14">
+                            <span class="cl-age">14+</span>
+                            <span class="cl-desc">14 anos</span>
+                        </label>
+                    </div>
+                    <div class="classif-btn cl-16">
+                        <input type="radio" name="classificacao" id="cl-16" value="16">
+                        <label class="classif-label" for="cl-16">
+                            <span class="cl-age">16+</span>
+                            <span class="cl-desc">16 anos</span>
+                        </label>
+                    </div>
+                    <div class="classif-btn cl-18">
+                        <input type="radio" name="classificacao" id="cl-18" value="18">
+                        <label class="classif-label" for="cl-18">
+                            <span class="cl-age">18+</span>
+                            <span class="cl-desc">Adulto</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="hint" style="margin-top:.6rem;"><i class="fas fa-info-circle" style="color:var(--orange-web);"></i> Selecione a classificação correta. Você é responsável pela classificação da sua obra conforme a legislação brasileira.</div>
+            </div>
+
             <hr class="divider" style="grid-column:1/-1;">
             <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-book-open"></i> Informações da Página de Venda (opcional)</div>
- 
+
             <div class="form-group">
                 <label>Autor</label>
                 <input type="text" id="autor" placeholder="Nome do autor">
@@ -346,10 +401,10 @@
                 <label>Sobre o autor <span class="char-counter" id="cnt-sobre">0/1200</span></label>
                 <textarea id="sobre-autor" maxlength="1200" placeholder="Breve biografia do autor..." style="min-height:120px;" oninput="contarChars('sobre-autor','cnt-sobre',1200)"></textarea>
             </div>
- 
+
             <hr class="divider" style="grid-column:1/-1;">
             <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-file-pdf"></i> Arquivo do Produto (PDF)</div>
- 
+
             <div class="form-group full">
                 <div class="upload-area" id="upload-pdf-area"
                      ondragover="onDragOverPdf(event)" ondragleave="onDragLeavePdf(event)" ondrop="onDropPdf(event)"
@@ -372,13 +427,13 @@
                 <div class="hint"><i class="fas fa-lock" style="color:var(--orange-web);"></i> O arquivo fica protegido — só quem comprar recebe o link de acesso.</div>
             </div>
         </div>
- 
+
         <button class="btn-submit" id="btn-salvar" onclick="verificarTermosAntesDeSalvar()">
             <i class="fas fa-rocket" id="btn-icon"></i> <span id="btn-label">Publicar Produto</span>
         </button>
     </div>
 </div>
- 
+
 <!-- Modal Termos de Uso -->
 <div class="modal-overlay" id="modal-termos" style="display:none;">
     <div class="modal-box">
@@ -388,30 +443,38 @@
         </div>
         <div class="modal-body">
             <p>Antes de publicar seu primeiro produto na <strong>BrooStore</strong>, leia atentamente os termos abaixo. Ao aceitar, você confirma que leu, compreendeu e concorda com todas as condições.</p>
- 
+
             <h3>1. Responsabilidade pelo Conteúdo</h3>
             <p>O conteúdo publicado — incluindo textos, imagens, arquivos e descrições — é de <strong>inteira responsabilidade do autor</strong>. A BrooStore atua como plataforma intermediária e não se responsabiliza por informações incorretas, direitos autorais de terceiros, conteúdo enganoso ou qualquer dano causado ao consumidor decorrente do produto publicado.</p>
- 
+
             <h3>2. Conformidade com a Legislação Brasileira</h3>
-            <p>O autor declara que seu produto está em conformidade com a legislação brasileira vigente, especialmente: <strong>Lei nº 9.610/1998</strong> (Lei de Direitos Autorais), <strong>Lei nº 8.078/1990</strong> (Código de Defesa do Consumidor), <strong>Lei nº 13.709/2018</strong> (LGPD — Lei Geral de Proteção de Dados) e o <strong>Marco Civil da Internet (Lei nº 12.965/2014)</strong>.</p>
- 
-            <h3>3. Conteúdo Proibido</h3>
-            <p>É expressamente vedada a publicação de conteúdo que: contenha discurso de ódio, preconceito ou incitação à violência; viole direitos autorais ou propriedade intelectual de terceiros; promova atividades ilegais; seja de natureza sexual explícita ou envolvendo menores; induza o consumidor ao erro ou contenha informações falsas.</p>
-            <p>A BrooStore se reserva o direito de <strong>remover qualquer produto</strong> que viole estas diretrizes, sem aviso prévio e sem direito a reembolso da taxa.</p>
- 
-            <h3>4. Taxa da Plataforma</h3>
-            <p>A BrooStore retém <strong>25% (vinte e cinco por cento)</strong> sobre o valor bruto de cada venda realizada como contraprestação pelos serviços de hospedagem, processamento de pagamentos e entrega digital. O autor recebe <strong>75%</strong> do valor bruto de cada venda.</p>
- 
-            <h3>5. Prazo de Pagamento</h3>
-            <p>Após a solicitação de saque pelo autor, o pagamento via PIX será realizado em até <strong>72 horas úteis</strong>. Solicitações realizadas em fins de semana ou feriados nacionais serão processadas no próximo dia útil.</p>
- 
-            <h3>6. Cancelamento e Reembolso</h3>
-            <p>O consumidor tem direito ao reembolso integral conforme o <strong>art. 49 do CDC</strong> (arrependimento em até 7 dias para compras digitais). Nestes casos, o valor correspondente ao autor será deduzido do saldo disponível para saque.</p>
- 
-            <h3>7. Alterações nos Termos</h3>
+            <p>O autor declara que seu produto está em conformidade com a legislação brasileira vigente, especialmente: <strong>Lei nº 9.610/1998</strong> (Lei de Direitos Autorais), <strong>Lei nº 8.078/1990</strong> (Código de Defesa do Consumidor), <strong>Lei nº 13.709/2018</strong> (LGPD) e o <strong>Marco Civil da Internet (Lei nº 12.965/2014)</strong>.</p>
+
+            <h3>3. Classificação Indicativa</h3>
+            <p>O autor é <strong>integralmente responsável pela classificação indicativa</strong> atribuída à sua obra, conforme as diretrizes do Ministério da Justiça e Segurança Pública do Brasil. A classificação deve refletir com fidelidade o conteúdo da obra — incluindo temas de violência, linguagem, sexualidade e conteúdo adulto.</p>
+            <p>Obras com classificação <strong>18 anos</strong> ficarão ocultas por padrão na loja e serão exibidas somente para usuários que confirmarem ser maiores de idade. A BrooStore se reserva o direito de reclassificar ou remover produtos cuja classificação declarada seja incompatível com o conteúdo real.</p>
+
+            <h3>4. Conteúdo Proibido</h3>
+            <p>É expressamente vedada a publicação de conteúdo que: contenha discurso de ódio, preconceito ou incitação à violência; viole direitos autorais ou propriedade intelectual de terceiros; promova atividades ilegais; seja de natureza sexual explícita envolvendo menores; induza o consumidor ao erro ou contenha informações falsas.</p>
+            <p>A BrooStore se reserva o direito de <strong>remover qualquer produto</strong> que viole estas diretrizes, sem aviso prévio.</p>
+
+            <h3>5. Taxa da Plataforma</h3>
+            <p>A BrooStore retém <strong>25% (vinte e cinco por cento)</strong> sobre o valor bruto de cada venda. O autor recebe <strong>75%</strong> do valor bruto de cada venda realizada.</p>
+
+            <h3>6. Política de Preços e Cupons de Desconto</h3>
+            <p>O autor define livremente o preço de seu produto no momento da publicação. <strong>Após a realização da primeira venda, o preço do produto fica fixo e não poderá ser alterado.</strong> Esta política garante transparência e confiança ao consumidor que já adquiriu o produto pelo preço original.</p>
+            <p>Para oferecer descontos após a primeira venda, o autor deverá utilizar o <strong>sistema de cupons</strong> disponível no dashboard. Cupons têm validade máxima de 30 dias e o autor pode manter até 3 cupons ativos simultaneamente por produto.</p>
+
+            <h3>7. Prazo de Pagamento</h3>
+            <p>Após a solicitação de saque, o pagamento via PIX será realizado em até <strong>72 horas úteis</strong>. Solicitações em fins de semana ou feriados serão processadas no próximo dia útil.</p>
+
+            <h3>8. Cancelamento e Reembolso</h3>
+            <p>O consumidor tem direito ao reembolso integral conforme o <strong>art. 49 do CDC</strong> (arrependimento em até 7 dias para compras digitais). O valor correspondente será deduzido do saldo disponível do autor.</p>
+
+            <h3>9. Alterações nos Termos</h3>
             <p>A BrooStore pode atualizar estes termos a qualquer momento. O autor será notificado por e-mail e deverá aceitar novamente para continuar publicando produtos.</p>
- 
-            <p style="margin-top:1rem; color:#888; font-size:.8rem;">Última atualização: Abril de 2026.</p>
+
+            <p style="margin-top:1rem; color:#888; font-size:.8rem;">Última atualização: Maio de 2026.</p>
         </div>
         <div class="modal-footer">
             <div class="radio-group">
@@ -430,111 +493,87 @@
         </div>
     </div>
 </div>
- 
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    /* ── Contador de caracteres ── */
     function contarChars(fieldId, counterId, max) {
         const len = document.getElementById(fieldId).value.length;
         const el  = document.getElementById(counterId);
         el.textContent = `${len}/${max}`;
         el.className = 'char-counter' + (len >= max ? ' over' : len >= max * 0.85 ? ' warn' : '');
     }
- 
-    /* ── Termos de Uso ── */
+
     const TERMOS_KEY = 'broo_termos_aceitos';
- 
+
     function onRadioTermos(radio) {
         const btn = document.getElementById('btn-aceitar-termos');
-        if (radio.value === 'aceito') {
-            btn.disabled = false;
-            btn.textContent = 'Continuar para Publicação';
-        } else {
-            btn.disabled = true;
-            btn.textContent = 'Você precisa aceitar para publicar';
-        }
+        btn.disabled = radio.value !== 'aceito';
+        btn.textContent = radio.value === 'aceito' ? 'Continuar para Publicação' : 'Você precisa aceitar para publicar';
     }
- 
+
     function confirmarTermos() {
         localStorage.setItem(TERMOS_KEY, '1');
         document.getElementById('modal-termos').style.display = 'none';
         salvarProduto();
     }
- 
+
     function verificarTermosAntesDeSalvar() {
-        if (modoEdicao) {
-            salvarProduto();
-        } else {
-            salvarProduto();
-        }
-    }
- 
-    function abrirTermosSeNecessario() {
         if (!modoEdicao && localStorage.getItem(TERMOS_KEY) !== '1') {
             document.querySelectorAll('input[name="termos"]').forEach(r => r.checked = false);
             document.getElementById('btn-aceitar-termos').disabled = true;
             document.getElementById('btn-aceitar-termos').textContent = 'Continuar para Publicação';
             document.getElementById('modal-termos').style.display = 'flex';
+        } else {
+            salvarProduto();
         }
     }
- 
+
     const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
- 
-    // ── Detecção de modo edição ──
-    const params       = new URLSearchParams(window.location.search);
-    const editId       = params.get('edit');
-    const modoEdicao   = !!editId;
- 
-    let usuarioAtual  = null;
-    let arquivoCapa   = null;
-    let arquivoPdf    = null;
-    let imageUrlFinal = '';
-    let produtoOriginal = null;   // dados originais ao editar
- 
-    // Ajusta a UI para modo edição
+
+    const params     = new URLSearchParams(window.location.search);
+    const editId     = params.get('edit');
+    const modoEdicao = !!editId;
+
+    let usuarioAtual    = null;
+    let arquivoCapa     = null;
+    let arquivoPdf      = null;
+    let imageUrlFinal   = '';
+    let produtoOriginal = null;
+    let precoLocked     = false;
+
     if (modoEdicao) {
-        document.getElementById('page-title').innerHTML = 'Editar <span>Produto</span>';
-        document.getElementById('btn-icon').className   = 'fas fa-save';
+        document.getElementById('page-title').innerHTML  = 'Editar <span>Produto</span>';
+        document.getElementById('btn-icon').className    = 'fas fa-save';
         document.getElementById('btn-label').textContent = 'Salvar Alterações';
         document.title = 'BrooStore – Editar Produto';
     }
- 
-    // Verifica auth e carrega produto se em edição
+
     sb.auth.getSession().then(async ({ data: { session } }) => {
         if (!session) { window.location.href = '/static/autor-login.html'; return; }
         usuarioAtual = session.user;
- 
         if (modoEdicao) {
             await carregarProdutoParaEdicao();
         } else {
-            abrirTermosSeNecessario();
+            // Novo produto: abre termos se necessário
+            if (localStorage.getItem(TERMOS_KEY) !== '1') {
+                document.querySelectorAll('input[name="termos"]').forEach(r => r.checked = false);
+                document.getElementById('btn-aceitar-termos').disabled = true;
+                document.getElementById('modal-termos').style.display = 'flex';
+            }
         }
     });
- 
+
     async function carregarProdutoParaEdicao() {
-        // Tenta com author_id (produtos novos); se falhar, tenta só por id
-        // (compatibilidade com produtos inseridos manualmente antes do sistema)
         let p = null;
- 
-        const { data: d1 } = await sb
-            .from('products')
-            .select('*')
-            .eq('id', editId)
-            .eq('author_id', usuarioAtual.id)
-            .maybeSingle();
- 
+        const { data: d1 } = await sb.from('products').select('*')
+            .eq('id', editId).eq('author_id', usuarioAtual.id).maybeSingle();
         if (d1) {
             p = d1;
         } else {
-            // Produto sem author_id — carrega e, ao salvar, preencherá o author_id
-            const { data: d2, error: e2 } = await sb
-                .from('products')
-                .select('*')
-                .eq('id', editId)
-                .maybeSingle();
- 
+            const { data: d2, error: e2 } = await sb.from('products').select('*')
+                .eq('id', editId).maybeSingle();
             if (e2 || !d2) {
                 alert('Produto não encontrado.');
                 window.location.href = '/static/autor-login.html';
@@ -542,10 +581,8 @@
             }
             p = d2;
         }
- 
         produtoOriginal = p;
- 
-        // Preenche o formulário
+
         document.getElementById('titulo').value      = p.title      || '';
         document.getElementById('descricao').value   = p.descricao  || '';
         document.getElementById('preco').value       = p.price      || '';
@@ -554,127 +591,103 @@
         document.getElementById('paginas').value     = p.paginas    || '';
         document.getElementById('intro').value       = p.intro      || '';
         document.getElementById('sobre-autor').value = p.sobre_autor || '';
- 
-        // Atualiza contadores
-        contarChars('titulo',      'cnt-titulo',   80);
-        contarChars('descricao',   'cnt-descricao', 160);
-        contarChars('intro',       'cnt-intro',    1200);
-        contarChars('sobre-autor', 'cnt-sobre',    1200);
- 
-        // Mostra capa atual
+
+        // Classificação
+        const cl = p.classificacao || 'L';
+        const radio = document.querySelector(`input[name="classificacao"][value="${cl}"]`);
+        if (radio) radio.checked = true;
+
+        contarChars('titulo','cnt-titulo',80);
+        contarChars('descricao','cnt-descricao',160);
+        contarChars('intro','cnt-intro',1200);
+        contarChars('sobre-autor','cnt-sobre',1200);
+
         if (p.image_url) {
-            const img = document.getElementById('preview-img');
-            img.src = p.image_url;
-            img.style.display = 'block';
+            document.getElementById('preview-img').src = p.image_url;
+            document.getElementById('preview-img').style.display = 'block';
             document.getElementById('upload-placeholder').style.display = 'none';
             imageUrlFinal = p.image_url;
         }
- 
-        // Indica PDF existente
         if (p.link_pdf) {
             document.getElementById('upload-pdf-placeholder').style.display = 'none';
             document.getElementById('pdf-selecionado').style.display = 'block';
-            document.getElementById('pdf-nome').textContent  = 'PDF atual mantido';
+            document.getElementById('pdf-nome').textContent    = 'PDF atual mantido';
             document.getElementById('pdf-tamanho').textContent = 'Selecione um novo arquivo para substituir';
         }
+
+        // Verifica se tem vendas — bloqueia preço se sim
+        const { data: vendas } = await sb.from('sales').select('id')
+            .eq('product_id', editId).in('status', ['approved','paid']).limit(1);
+
+        if (vendas && vendas.length > 0) {
+            precoLocked = true;
+            const campoPreco = document.getElementById('preco');
+            campoPreco.readOnly = true;
+            document.getElementById('preco-locked-info').style.display = 'flex';
+        }
     }
- 
-    // ── Upload CAPA handlers ──
-    function onDragOver(e) { e.preventDefault(); document.getElementById('upload-area').classList.add('dragover'); }
-    function onDragLeave()  { document.getElementById('upload-area').classList.remove('dragover'); }
-    function onDrop(e) {
-        e.preventDefault();
-        document.getElementById('upload-area').classList.remove('dragover');
-        const file = e.dataTransfer.files[0];
-        if (file) processarArquivo(file);
-    }
-    function onFileSelect(e) { const file = e.target.files[0]; if (file) processarArquivo(file); }
- 
-    // ── Upload PDF handlers ──
+
+    // Upload handlers
+    function onDragOver(e)    { e.preventDefault(); document.getElementById('upload-area').classList.add('dragover'); }
+    function onDragLeave()    { document.getElementById('upload-area').classList.remove('dragover'); }
+    function onDrop(e)        { e.preventDefault(); document.getElementById('upload-area').classList.remove('dragover'); const f=e.dataTransfer.files[0]; if(f) processarArquivo(f); }
+    function onFileSelect(e)  { const f=e.target.files[0]; if(f) processarArquivo(f); }
     function onDragOverPdf(e) { e.preventDefault(); document.getElementById('upload-pdf-area').classList.add('dragover'); }
-    function onDragLeavePdf()  { document.getElementById('upload-pdf-area').classList.remove('dragover'); }
-    function onDropPdf(e) {
-        e.preventDefault();
-        document.getElementById('upload-pdf-area').classList.remove('dragover');
-        const file = e.dataTransfer.files[0];
-        if (file) processarPdf(file);
-    }
-    function onPdfSelect(e) { const file = e.target.files[0]; if (file) processarPdf(file); }
- 
+    function onDragLeavePdf() { document.getElementById('upload-pdf-area').classList.remove('dragover'); }
+    function onDropPdf(e)     { e.preventDefault(); document.getElementById('upload-pdf-area').classList.remove('dragover'); const f=e.dataTransfer.files[0]; if(f) processarPdf(f); }
+    function onPdfSelect(e)   { const f=e.target.files[0]; if(f) processarPdf(f); }
+
     function processarPdf(file) {
-        if (file.size > 12 * 1024 * 1024) { mostrarMsg('PDF muito grande. Máximo 12 MB.', 'error'); return; }
-        if (file.type !== 'application/pdf') { mostrarMsg('Formato inválido. Selecione um PDF.', 'error'); return; }
+        if (file.size > 12*1024*1024) { mostrarMsg('PDF muito grande. Máximo 12 MB.','error'); return; }
+        if (file.type !== 'application/pdf') { mostrarMsg('Formato inválido. Selecione um PDF.','error'); return; }
         arquivoPdf = file;
-        const tamanhoMB = (file.size / 1024 / 1024).toFixed(2);
+        const mb = (file.size/1024/1024).toFixed(2);
         document.getElementById('upload-pdf-placeholder').style.display = 'none';
         document.getElementById('pdf-selecionado').style.display = 'block';
         document.getElementById('pdf-nome').textContent    = file.name;
-        document.getElementById('pdf-tamanho').textContent = `${tamanhoMB} MB`;
+        document.getElementById('pdf-tamanho').textContent = `${mb} MB`;
         limparMsg();
     }
- 
+
     function processarArquivo(file) {
-        if (file.size > 2 * 1024 * 1024) { mostrarMsg('Arquivo muito grande. Máximo 2 MB.', 'error'); return; }
-        if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
-            mostrarMsg('Formato inválido. Use JPG, PNG ou WEBP.', 'error'); return;
-        }
+        if (file.size > 2*1024*1024) { mostrarMsg('Arquivo muito grande. Máximo 2 MB.','error'); return; }
+        if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { mostrarMsg('Formato inválido. Use JPG, PNG ou WEBP.','error'); return; }
         arquivoCapa = file;
         const reader = new FileReader();
         reader.onload = e => {
-            const img = document.getElementById('preview-img');
-            img.src = e.target.result;
-            img.style.display = 'block';
+            document.getElementById('preview-img').src = e.target.result;
+            document.getElementById('preview-img').style.display = 'block';
             document.getElementById('upload-placeholder').style.display = 'none';
         };
         reader.readAsDataURL(file);
         limparMsg();
     }
- 
+
     async function uploadCapa() {
-        if (!arquivoCapa) return imageUrlFinal; // mantém URL existente
+        if (!arquivoCapa) return imageUrlFinal;
         const ext  = arquivoCapa.name.split('.').pop();
         const path = `${usuarioAtual.id}/${Date.now()}.${ext}`;
- 
         document.getElementById('upload-progress').style.display = 'block';
         document.getElementById('upload-bar').style.width = '30%';
- 
-        const { error } = await sb.storage
-            .from('capas-produtos')
-            .upload(path, arquivoCapa, { contentType: arquivoCapa.type, upsert: false });
- 
+        const { error } = await sb.storage.from('capas-produtos').upload(path, arquivoCapa, { contentType: arquivoCapa.type, upsert: false });
         document.getElementById('upload-bar').style.width = '100%';
- 
-        if (error) { mostrarMsg('Erro ao enviar imagem: ' + error.message, 'error'); return ''; }
- 
+        if (error) { mostrarMsg('Erro ao enviar imagem: '+error.message,'error'); return ''; }
         const { data } = sb.storage.from('capas-produtos').getPublicUrl(path);
         return data.publicUrl;
     }
- 
+
     async function uploadPdf() {
-        if (!arquivoPdf) {
-            // Em modo edição: mantém o link existente (pode ser vazio para produtos antigos)
-            return produtoOriginal?.link_pdf ?? '__sem_pdf__';
-        }
+        if (!arquivoPdf) return produtoOriginal?.link_pdf ?? '__sem_pdf__';
         const path = `${usuarioAtual.id}/${Date.now()}.pdf`;
- 
         document.getElementById('upload-pdf-progress').style.display = 'block';
         document.getElementById('upload-pdf-bar').style.width = '30%';
- 
-        const { error } = await sb.storage
-            .from('livros-pdf')
-            .upload(path, arquivoPdf, { contentType: 'application/pdf', upsert: false });
- 
+        const { error } = await sb.storage.from('livros-pdf').upload(path, arquivoPdf, { contentType: 'application/pdf', upsert: false });
         document.getElementById('upload-pdf-bar').style.width = '100%';
- 
-        if (error) { mostrarMsg('Erro ao enviar PDF: ' + error.message, 'error'); return ''; }
- 
-        const { data } = await sb.storage
-            .from('livros-pdf')
-            .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
- 
+        if (error) { mostrarMsg('Erro ao enviar PDF: '+error.message,'error'); return ''; }
+        const { data } = await sb.storage.from('livros-pdf').createSignedUrl(path, 60*60*24*365*10);
         return data?.signedUrl || '';
     }
- 
+
     async function salvarProduto() {
         const titulo     = document.getElementById('titulo').value.trim();
         const descricao  = document.getElementById('descricao').value.trim();
@@ -684,113 +697,96 @@
         const paginas    = document.getElementById('paginas').value.trim();
         const intro      = document.getElementById('intro').value.trim();
         const sobreAutor = document.getElementById('sobre-autor').value.trim();
+        const classifEl  = document.querySelector('input[name="classificacao"]:checked');
         const btn        = document.getElementById('btn-salvar');
- 
-        if (!titulo)    return mostrarMsg('Informe o título do produto.', 'error');
-        if (!descricao) return mostrarMsg('Informe uma descrição.', 'error');
-        if (!preco || preco <= 0) return mostrarMsg('Informe um preço válido.', 'error');
-        if (!categoria) return mostrarMsg('Selecione uma categoria.', 'error');
-        if (!modoEdicao && !arquivoPdf) return mostrarMsg('Selecione o arquivo PDF do produto.', 'error');
- 
+
+        if (!titulo)    return mostrarMsg('Informe o título do produto.','error');
+        if (!descricao) return mostrarMsg('Informe uma descrição.','error');
+        if (!preco || preco <= 0) return mostrarMsg('Informe um preço válido.','error');
+        if (!categoria) return mostrarMsg('Selecione uma categoria.','error');
+        if (!classifEl) return mostrarMsg('Selecione a classificação indicativa da obra.','error');
+        if (!modoEdicao && !arquivoPdf) return mostrarMsg('Selecione o arquivo PDF do produto.','error');
+
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando arquivos...';
- 
-        // Upload da capa
+
         const novaImageUrl = await uploadCapa();
         if (document.getElementById('msg').classList.contains('error')) {
             btn.disabled = false;
-            btn.innerHTML = modoEdicao
-                ? '<i class="fas fa-save"></i> Salvar Alterações'
-                : '<i class="fas fa-rocket"></i> Publicar Produto';
+            btn.innerHTML = modoEdicao ? '<i class="fas fa-save"></i> Salvar Alterações' : '<i class="fas fa-rocket"></i> Publicar Produto';
             return;
         }
- 
+
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando PDF...';
- 
-        // Upload do PDF
+
         const linkPdfRaw = await uploadPdf();
-        // '__sem_pdf__' = sentinela: modo edição, produto antigo sem PDF (aceita normalmente)
-        const linkPdf = linkPdfRaw === '__sem_pdf__' ? null : linkPdfRaw;
+        const linkPdf    = linkPdfRaw === '__sem_pdf__' ? null : linkPdfRaw;
         if (linkPdfRaw !== '__sem_pdf__' && !linkPdf) {
-            // uploadPdf retornou '' = erro real no upload
             btn.disabled = false;
-            btn.innerHTML = modoEdicao
-                ? '<i class="fas fa-save"></i> Salvar Alterações'
-                : '<i class="fas fa-rocket"></i> Publicar Produto';
+            btn.innerHTML = modoEdicao ? '<i class="fas fa-save"></i> Salvar Alterações' : '<i class="fas fa-rocket"></i> Publicar Produto';
             return;
         }
- 
+
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
- 
+
         const payload = {
-            title:       titulo,
-            author:      autor       || null,
-            price:       preco,
-            category:    categoria,
-            image_url:   novaImageUrl || null,
-            descricao:   descricao    || null,
-            paginas:     paginas ? parseInt(paginas) : null,
-            intro:       intro        || null,
-            sobre_autor: sobreAutor   || null,
+            title:          titulo,
+            author:         autor       || null,
+            category:       categoria,
+            image_url:      novaImageUrl || null,
+            descricao:      descricao    || null,
+            paginas:        paginas ? parseInt(paginas) : null,
+            intro:          intro        || null,
+            sobre_autor:    sobreAutor   || null,
+            classificacao:  classifEl.value,
         };
-        // Só atualiza link_pdf se houver um valor real (não sobrescreve com null)
+
+        // Só inclui preço se não estiver bloqueado
+        if (!precoLocked) payload.price = preco;
         if (linkPdf !== null) payload.link_pdf = linkPdf;
- 
+
         let dbError;
- 
         if (modoEdicao) {
-            // Sempre grava author_id (corrige registros antigos que não tinham)
-            const { error, count } = await sb
-                .from('products')
+            const { error, data } = await sb.from('products')
                 .update({ ...payload, author_id: usuarioAtual.id })
-                .eq('id', editId)
-                .select();
+                .eq('id', editId).select();
             dbError = error;
-            if (!error && count === 0) {
-                dbError = { message: 'Nenhuma linha atualizada. Verifique as permissões da tabela no Supabase (RLS).' };
+            if (!error && (!data || data.length === 0)) {
+                dbError = { message: 'Nenhuma linha atualizada. Verifique as permissões (RLS).' };
             }
         } else {
-            const { error } = await sb
-                .from('products')
+            const { error } = await sb.from('products')
                 .insert({ ...payload, author_id: usuarioAtual.id });
             dbError = error;
         }
- 
+
         if (dbError) {
-            mostrarMsg('Erro ao salvar produto: ' + dbError.message, 'error');
+            mostrarMsg('Erro ao salvar: ' + dbError.message, 'error');
             btn.disabled = false;
-            btn.innerHTML = modoEdicao
-                ? '<i class="fas fa-save"></i> Salvar Alterações'
-                : '<i class="fas fa-rocket"></i> Publicar Produto';
+            btn.innerHTML = modoEdicao ? '<i class="fas fa-save"></i> Salvar Alterações' : '<i class="fas fa-rocket"></i> Publicar Produto';
             return;
         }
- 
-        // Sincroniza a tabela local do Render (produtos) com o Supabase (products)
+
         try {
             await fetch('https://mercadopago-final.onrender.com/api/sync-produto', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ product_id: modoEdicao ? parseInt(editId) : null })
             });
-        } catch(e) {
-            console.warn('[sync-produto] Erro ao sincronizar com Render:', e);
-        }
- 
-        mostrarMsg(
-            modoEdicao ? 'Produto atualizado com sucesso!' : 'Produto publicado com sucesso!',
-            'success'
-        );
+        } catch(e) { console.warn('[sync-produto]', e); }
+
+        mostrarMsg(modoEdicao ? 'Produto atualizado com sucesso!' : 'Produto publicado com sucesso!', 'success');
         btn.innerHTML = '<i class="fas fa-check"></i> ' + (modoEdicao ? 'Salvo!' : 'Publicado!');
         setTimeout(() => window.location.href = '/static/autor-login.html', 2000);
     }
- 
+
     function mostrarMsg(texto, tipo) {
         const el = document.getElementById('msg');
         el.textContent = texto;
         el.className = `msg ${tipo}`;
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    function limparMsg() { const el = document.getElementById('msg'); el.className = 'msg'; }
+    function limparMsg() { document.getElementById('msg').className = 'msg'; }
 </script>
 </body>
 </html>
