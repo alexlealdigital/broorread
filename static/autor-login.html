@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrooStore – Área do Autor</title>
+    <title>BrooStore – Produto</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@700&display=swap" rel="stylesheet">
@@ -26,91 +26,218 @@
  
         @keyframes spin { to { transform: rotate(360deg); } }
  
-        /* ── Carregamento inicial ── */
-        #tela-carregando {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 1rem;
-            color: #555;
+        .header {
+            background: var(--oxford-blue);
+            border-bottom: 1px solid var(--border-grey);
+            padding: 1rem 2rem;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
         }
-        #tela-carregando i {
-            font-size: 2.5rem;
-            animation: spin 1s linear infinite;
-            color: var(--orange-web);
+        .header-brand { font-family: var(--font-heading); color: var(--orange-web); font-size: 1.2rem; }
+        .btn-icon {
+            background: rgba(255,255,255,.07);
+            border: 1px solid var(--border-grey);
+            color: var(--white);
+            padding: .5rem .9rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-size: .85rem;
+            transition: all .3s;
+            display: flex; align-items: center; gap: 6px;
         }
+        .btn-icon:hover { border-color: var(--orange-web); color: var(--orange-web); }
  
-        /* ══════════════════════════════
-           TELA DE LOGIN
-           ══════════════════════════════ */
-        #tela-login {
-            min-height: 100vh;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-        .auth-card {
+        .main { padding: 2rem; max-width: 860px; margin: 0 auto; }
+        .page-title { font-family: var(--font-heading); font-size: 1.6rem; margin-bottom: 2rem; }
+        .page-title span { color: var(--orange-web); }
+ 
+        .form-card {
             background: var(--oxford-blue);
             border: 1px solid var(--border-grey);
             border-radius: 16px;
-            padding: 2.5rem 2rem;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            padding: 2rem;
         }
-        .auth-logo { text-align: center; margin-bottom: 2rem; }
-        .auth-logo h1 { font-family: var(--font-heading); font-size: 1.4rem; color: var(--orange-web); }
-        .auth-logo p { font-size: .85rem; color: #aaa; margin-top: .25rem; }
  
-        .tabs {
+        .upload-area {
+            border: 2px dashed var(--border-grey);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all .3s;
+            margin-bottom: 1.5rem;
+            position: relative;
+            min-height: 180px;
             display: flex;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--border-grey);
-            margin-bottom: 1.8rem;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
         }
-        .tab-btn {
-            flex: 1; padding: .7rem;
-            background: transparent; border: none;
-            color: #888; font-family: var(--font-body); font-weight: bold;
-            font-size: .9rem; cursor: pointer; transition: all .3s;
+        .upload-area:hover, .upload-area.dragover { border-color: var(--orange-web); background: rgba(252,163,17,.05); }
+        .upload-area i { font-size: 2.5rem; color: #444; }
+        .upload-area p { color: #666; font-size: .9rem; }
+        .upload-area strong { color: var(--orange-web); }
+        .upload-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .preview-img {
+            width: 120px; height: 160px;
+            object-fit: cover; border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.5);
         }
-        .tab-btn.active { background: var(--orange-web); color: var(--black); }
+        .upload-progress { width: 100%; height: 4px; background: #333; border-radius: 2px; margin-top: .5rem; overflow: hidden; display: none; }
+        .upload-progress-bar { height: 100%; background: var(--orange-web); transition: width .3s; }
  
-        .form-group { margin-bottom: 1.2rem; position: relative; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media(max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+ 
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group.full { grid-column: 1 / -1; }
         .form-group label {
             display: block; font-size: .8rem; font-weight: bold;
             color: var(--orange-web); margin-bottom: .4rem;
             text-transform: uppercase; letter-spacing: .5px;
         }
-        .form-group input {
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
             width: 100%; padding: .75rem 1rem;
             background: rgba(255,255,255,.06);
             border: 1px solid var(--border-grey);
             border-radius: 8px; color: var(--white);
             font-family: var(--font-body); font-size: .95rem;
-            transition: border-color .3s; outline: none;
+            outline: none; transition: border-color .3s;
         }
-        .form-group input:focus { border-color: var(--orange-web); }
-        .form-group input::placeholder { color: #555; }
-
-        /* Estilo para o botão de ver senha */
-        .toggle-password {
-            position: absolute;
-            right: 12px;
-            top: 35px;
-            color: #888;
+        .form-group select option { background: var(--oxford-blue); }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus { border-color: var(--orange-web); }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder { color: #555; }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+ 
+        /* Preço bloqueado */
+        .form-group input[readonly] {
+            opacity: .55;
+            cursor: not-allowed;
+            border-color: #2a2a2a;
+        }
+        .preco-locked-msg {
+            display: flex; align-items: center; gap: .5rem;
+            background: rgba(252,163,17,.08);
+            border: 1px solid rgba(252,163,17,.25);
+            border-radius: 8px;
+            padding: .6rem .9rem;
+            font-size: .8rem;
+            color: var(--orange-web);
+            margin-top: .4rem;
+        }
+ 
+        /* Classificação indicativa */
+        .classif-grid {
+            display: flex; flex-wrap: wrap; gap: .6rem;
+            margin-top: .5rem;
+        }
+        .classif-btn {
+            position: relative;
+        }
+        .classif-btn input[type=radio] {
+            position: absolute; opacity: 0; width: 0; height: 0;
+        }
+        .classif-label {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 72px; height: 72px;
+            border-radius: 12px;
+            border: 2px solid #333;
             cursor: pointer;
-            transition: color 0.3s;
-            z-index: 10;
+            transition: all .25s;
+            font-weight: bold;
+            font-size: .75rem;
+            gap: 4px;
+            background: rgba(255,255,255,.04);
         }
-        .toggle-password:hover { color: var(--orange-web); }
+        .classif-label .cl-age {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+        .classif-label .cl-desc { font-size: .62rem; color: #888; }
+ 
+        /* Cores por faixa */
+        .classif-btn input:checked + .classif-label { border-width: 2px; transform: scale(1.08); }
+        .cl-L  .classif-label { color: #2ecc71; }
+        .cl-L  input:checked + .classif-label { border-color: #2ecc71; background: rgba(46,204,113,.12); box-shadow: 0 0 12px rgba(46,204,113,.3); }
+        .cl-10 .classif-label { color: #3498db; }
+        .cl-10 input:checked + .classif-label { border-color: #3498db; background: rgba(52,152,219,.12); box-shadow: 0 0 12px rgba(52,152,219,.3); }
+        .cl-12 .classif-label { color: #f39c12; }
+        .cl-12 input:checked + .classif-label { border-color: #f39c12; background: rgba(243,156,18,.12); box-shadow: 0 0 12px rgba(243,156,18,.3); }
+        .cl-14 .classif-label { color: #e67e22; }
+        .cl-14 input:checked + .classif-label { border-color: #e67e22; background: rgba(230,126,34,.12); box-shadow: 0 0 12px rgba(230,126,34,.3); }
+        .cl-16 .classif-label { color: #e74c3c; }
+        .cl-16 input:checked + .classif-label { border-color: #e74c3c; background: rgba(231,76,60,.12); box-shadow: 0 0 12px rgba(231,76,60,.3); }
+        .cl-18 .classif-label { color: #8e44ad; }
+        .cl-18 input:checked + .classif-label { border-color: #8e44ad; background: rgba(142,68,173,.12); box-shadow: 0 0 12px rgba(142,68,173,.3); }
+ 
+        .classif-label:hover { border-color: #555; transform: scale(1.04); }
+ 
+        .char-counter { text-align: right; font-size: .75rem; color: #666; margin-top: .3rem; transition: color .3s; }
+        .char-counter.warn { color: var(--orange-web); }
+        .char-counter.over { color: var(--error-red); font-weight: bold; }
+ 
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.85);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999; padding: 1rem;
+        }
+        .modal-box {
+            background: var(--oxford-blue);
+            border: 1px solid var(--border-grey);
+            border-radius: 16px;
+            width: 100%; max-width: 680px;
+            max-height: 90vh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border-grey);
+            display: flex; align-items: center; gap: .75rem;
+        }
+        .modal-header i { color: var(--orange-web); font-size: 1.4rem; }
+        .modal-header h2 { font-family: var(--font-heading); font-size: 1.2rem; }
+        .modal-body {
+            padding: 1.5rem 2rem;
+            overflow-y: auto; flex: 1;
+            font-size: .88rem; line-height: 1.7; color: #ccc;
+        }
+        .modal-body h3 {
+            color: var(--orange-web); font-family: var(--font-heading);
+            font-size: .95rem; margin: 1.2rem 0 .4rem;
+        }
+        .modal-body p { margin-bottom: .6rem; }
+        .modal-footer {
+            padding: 1.2rem 2rem;
+            border-top: 1px solid var(--border-grey);
+            display: flex; flex-direction: column; gap: .75rem;
+        }
+        .radio-group { display: flex; gap: 1.5rem; }
+        .radio-group label { display: flex; align-items: center; gap: .5rem; cursor: pointer; font-size: .9rem; }
+        .radio-group input[type=radio] { accent-color: var(--orange-web); width: 16px; height: 16px; }
+        .btn-aceitar {
+            width: 100%; padding: .85rem;
+            background: var(--orange-web); border: none; border-radius: 8px;
+            color: var(--black); font-family: var(--font-heading);
+            font-size: 1rem; font-weight: bold; cursor: pointer; transition: all .3s;
+        }
+        .btn-aceitar:disabled { opacity: .4; cursor: not-allowed; }
+        .btn-aceitar:not(:disabled):hover { background: #ffb700; }
+ 
+        .hint { font-size: .78rem; color: #666; margin-top: .3rem; }
  
         .btn-submit {
-            width: 100%; padding: .9rem;
+            width: 100%; padding: 1rem;
             background: var(--orange-web); border: none; border-radius: 8px;
             color: var(--black); font-family: var(--font-heading);
             font-size: 1rem; font-weight: bold; cursor: pointer;
@@ -121,866 +248,545 @@
         .btn-submit:hover { background: #ffb700; transform: translateY(-2px); }
         .btn-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
  
-        .msg {
-            padding: .75rem 1rem; border-radius: 8px; font-size: .88rem;
-            margin-bottom: 1rem; display: none;
-        }
+        .msg { padding: .75rem 1rem; border-radius: 8px; font-size: .88rem; margin-bottom: 1.2rem; display: none; }
         .msg.error   { background: rgba(231,76,60,.15); border: 1px solid var(--error-red); color: #ff6b6b; display: block; }
         .msg.success { background: rgba(39,174,96,.15); border: 1px solid var(--success-green); color: #2ecc71; display: block; }
  
-        .back-link {
-            display: block; text-align: center; margin-top: 1.5rem;
-            color: #666; font-size: .85rem; transition: color .3s; text-decoration: none;
-            cursor: pointer;
+        .divider { border: none; border-top: 1px solid var(--border-grey); margin: 1.5rem 0; }
+        .section-label {
+            font-family: var(--font-heading); font-size: .9rem; color: #888;
+            margin-bottom: 1rem; text-transform: uppercase; letter-spacing: .5px;
         }
-        .back-link:hover { color: var(--orange-web); }
-
-        .forgot-link {
-            display: block; text-align: right; margin-top: -0.8rem; margin-bottom: 1.2rem;
-            color: #666; font-size: 0.8rem; text-decoration: none; cursor: pointer;
-        }
-        .forgot-link:hover { color: var(--orange-web); }
- 
-        /* ══════════════════════════════
-           TELA DO DASHBOARD
-           ══════════════════════════════ */
-        #tela-dashboard { display: none; }
- 
-        .header {
-            background: var(--oxford-blue);
-            border-bottom: 1px solid var(--border-grey);
-            padding: 1rem 2rem;
-            display: flex; align-items: center; justify-content: space-between;
-            position: sticky; top: 0; z-index: 100;
-        }
-        .header-brand { font-family: var(--font-heading); color: var(--orange-web); font-size: 1.2rem; }
-        .header-brand span { color: var(--white); font-size: .85rem; font-family: var(--font-body); margin-left: .5rem; }
-        .header-actions { display: flex; gap: .75rem; align-items: center; }
- 
-        .btn-icon {
-            background: rgba(255,255,255,.07); border: 1px solid var(--border-grey);
-            color: var(--white); padding: .5rem .9rem; border-radius: 8px;
-            cursor: pointer; font-family: var(--font-body); font-size: .85rem;
-            transition: all .3s; display: flex; align-items: center; gap: 6px;
-        }
-        .btn-icon:hover { border-color: var(--orange-web); color: var(--orange-web); }
- 
-        .main { padding: 2rem; max-width: 1100px; margin: 0 auto; }
-        .page-title { font-family: var(--font-heading); font-size: 1.6rem; margin-bottom: 2rem; }
-        .page-title span { color: var(--orange-web); }
- 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem; margin-bottom: 2.5rem;
-        }
-        .stat-card {
-            background: var(--oxford-blue); border: 1px solid var(--border-grey);
-            border-radius: 12px; padding: 1.5rem; transition: border-color .3s;
-        }
-        .stat-card:hover { border-color: var(--orange-web); }
-        .stat-label { font-size: .8rem; color: #888; text-transform: uppercase; letter-spacing: .5px; margin-bottom: .5rem; }
-        .stat-value { font-family: var(--font-heading); font-size: 1.8rem; color: var(--orange-web); }
-        .stat-value.green { color: var(--success-green); }
-        .stat-icon { font-size: 1.5rem; color: #333; float: right; margin-top: -2rem; }
- 
-        .section { margin-bottom: 2.5rem; }
-        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-        .section-title { font-family: var(--font-heading); font-size: 1.1rem; }
- 
-        .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-grey); }
-        table { width: 100%; border-collapse: collapse; }
-        th {
-            background: var(--oxford-blue); padding: .8rem 1rem; text-align: left;
-            font-size: .8rem; text-transform: uppercase; letter-spacing: .5px; color: #888;
-        }
-        td { padding: .9rem 1rem; border-top: 1px solid var(--border-grey); font-size: .9rem; }
-        tr:hover td { background: rgba(255,255,255,.03); }
- 
-        .badge { display: inline-block; padding: .2rem .6rem; border-radius: 20px; font-size: .75rem; font-weight: bold; }
-        .badge-green  { background: rgba(39,174,96,.2);  color: #2ecc71; }
-        .badge-yellow { background: rgba(252,163,17,.2); color: var(--orange-web); }
-        .badge-grey   { background: rgba(255,255,255,.1); color: #aaa; }
- 
-        .pix-panel {
-            background: var(--oxford-blue); border: 1px solid var(--border-grey);
-            border-radius: 12px; padding: 1.5rem;
-        }
-        .pix-saldo {
-            display: flex; align-items: center; justify-content: space-between;
-            background: rgba(0,0,0,.3); border-radius: 8px;
-            padding: 1rem 1.2rem; margin-bottom: 1.2rem;
-        }
-        .pix-saldo-label { font-size: .85rem; color: #888; }
-        .pix-saldo-value { font-family: var(--font-heading); font-size: 1.6rem; color: var(--success-green); }
- 
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-        @media(max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
- 
-        .btn-green {
-            width: 100%; padding: .85rem; background: var(--success-green); border: none;
-            border-radius: 8px; color: var(--white); font-family: var(--font-heading);
-            font-size: 1rem; font-weight: bold; cursor: pointer; transition: all .3s;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-        .btn-green:hover { background: #2ecc71; }
-        .btn-green:disabled { opacity: .5; cursor: not-allowed; }
- 
-        .loading { text-align: center; padding: 3rem; color: #555; }
-        .loading i { font-size: 2rem; animation: spin 1s linear infinite; }
-        .empty { text-align: center; padding: 2rem; color: #555; font-size: .9rem; }
- 
-        /* Botões de ação na tabela */
-        .btn-acao {
-            background: rgba(255,255,255,.07);
-            border: 1px solid var(--border-grey);
-            color: var(--white);
-            padding: .35rem .6rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: .8rem;
-            transition: all .2s;
-            margin: 0 2px;
-        }
-        .btn-editar:hover   { border-color: var(--orange-web); color: var(--orange-web); }
-        .btn-desativar:hover{ border-color: #e74c3c; color: #e74c3c; }
-        .btn-ativar:hover   { border-color: var(--success-green); color: var(--success-green); }
- 
-        /* ── Modal de confirmação ── */
-        .confirm-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
-            display: none; align-items: center; justify-content: center; z-index: 1000;
-            padding: 1.5rem;
-        }
-        .confirm-card {
-            background: var(--oxford-blue); border: 1px solid var(--border-grey);
-            border-radius: 16px; padding: 2rem; width: 100%; max-width: 400px;
-            text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-        }
-        .confirm-icon { font-size: 2.5rem; margin-bottom: 1rem; }
-        .confirm-icon.warn { color: var(--error-red); }
-        .confirm-icon.info { color: var(--orange-web); }
-        .confirm-title { font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: .8rem; }
-        .confirm-desc { font-size: .9rem; color: #aaa; line-height: 1.5; margin-bottom: 1.8rem; }
-        .confirm-btns { display: flex; gap: .8rem; }
-        .confirm-btns button {
-            flex: 1; padding: .8rem; border-radius: 8px; border: none;
-            font-family: var(--font-heading); font-weight: bold; cursor: pointer; transition: all .3s;
-        }
-        .btn-confirm-cancel { background: rgba(255,255,255,.07); color: var(--white); }
-        .btn-confirm-cancel:hover { background: rgba(255,255,255,.12); }
-        .btn-confirm-danger { background: var(--error-red); color: var(--white); }
-        .btn-confirm-danger:hover { background: #c0392b; }
-        .btn-confirm-success { background: var(--success-green); color: var(--white); }
-        .btn-confirm-success:hover { background: #219150; }
     </style>
 </head>
 <body>
  
-<div id="tela-carregando">
-    <i class="fas fa-circle-notch"></i>
-    <p>Carregando...</p>
-</div>
- 
-<div id="tela-login">
-    <div class="auth-card">
-        <div class="auth-logo">
-            <h1>BrooStore <span>Autor</span></h1>
-            <p>Gerencie seus produtos e vendas</p>
-        </div>
- 
-        <div id="tabs-container" class="tabs">
-            <button id="tab-entrar" class="tab-btn active" onclick="showTab('login')">ENTRAR</button>
-            <button id="tab-cadastro" class="tab-btn" onclick="showTab('cadastro')">CRIAR CONTA</button>
-        </div>
- 
-        <div id="msg" class="msg"></div>
- 
-        <!-- FORM LOGIN -->
-        <div id="form-login">
-            <div class="form-group">
-                <label>E-mail</label>
-                <input type="email" id="login-email" placeholder="seu@email.com">
-            </div>
-            <div class="form-group">
-                <label>Senha</label>
-                <input type="password" id="login-senha" placeholder="••••••••">
-                <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('login-senha', this)"></i>
-            </div>
-            <a class="forgot-link" onclick="showTab('forgot')">Esqueci minha senha</a>
-            <button id="btn-login" class="btn-submit" onclick="fazerLogin()">
-                <i class="fas fa-sign-in-alt"></i> Entrar
-            </button>
-        </div>
- 
-        <!-- FORM CADASTRO -->
-        <div id="form-cadastro" style="display:none;">
-            <div class="form-group">
-                <label>Nome Completo</label>
-                <input type="text" id="cad-nome" placeholder="Como quer ser chamado">
-            </div>
-            <div class="form-group">
-                <label>E-mail</label>
-                <input type="email" id="cad-email" placeholder="seu@email.com">
-            </div>
-            <div class="form-group">
-                <label>Senha</label>
-                <input type="password" id="cad-senha" placeholder="Mínimo 6 caracteres">
-                <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('cad-senha', this)"></i>
-            </div>
-            <button id="btn-cadastro" class="btn-submit" onclick="fazerCadastro()">
-                <i class="fas fa-user-plus"></i> Criar conta
-            </button>
-        </div>
-
-        <!-- FORM ESQUECI SENHA -->
-        <div id="form-forgot" style="display:none;">
-            <div class="form-group">
-                <label>E-mail de Recuperação</label>
-                <input type="email" id="forgot-email" placeholder="seu@email.com">
-            </div>
-            <button id="btn-forgot" class="btn-submit" onclick="fazerRecuperacao()">
-                <i class="fas fa-paper-plane"></i> Enviar link de recuperação
-            </button>
-            <a class="back-link" onclick="showTab('login')">Voltar para o login</a>
-        </div>
-
-        <!-- FORM NOVA SENHA (RESET) -->
-        <div id="form-reset" style="display:none;">
-            <div class="form-group">
-                <label>Nova Senha</label>
-                <input type="password" id="reset-senha" placeholder="Mínimo 6 caracteres">
-                <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('reset-senha', this)"></i>
-            </div>
-            <div class="form-group">
-                <label>Confirmar Nova Senha</label>
-                <input type="password" id="reset-confirmar" placeholder="Repita a nova senha">
-                <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('reset-confirmar', this)"></i>
-            </div>
-            <button id="btn-reset" class="btn-submit" onclick="confirmarNovaSenha()">
-                <i class="fas fa-key"></i> Alterar Senha
-            </button>
-        </div>
- 
-        <a href="/" class="back-link" id="link-voltar-loja">← Voltar para a loja</a>
+<div class="header">
+    <div class="header-brand"><i class="fas fa-feather-alt"></i> BrooStore</div>
+    <div style="display:flex;gap:.75rem;">
+        <button class="btn-icon" onclick="window.location.href='/static/autor-login.html'">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </button>
     </div>
 </div>
  
-<div id="tela-dashboard">
-    <header class="header">
-        <div class="header-brand">BrooStore <span id="autor-nome">| Autor</span></div>
-        <div class="header-actions">
-            <button class="btn-icon" onclick="window.location.href='/static/autor-produto.html'">
-                <i class="fas fa-plus"></i> Novo Produto
-            </button>
-            <button class="btn-icon" onclick="sair()">
-                <i class="fas fa-sign-out-alt"></i> Sair
-            </button>
+<div class="main">
+    <h1 class="page-title" id="page-title">Cadastrar <span>Novo Produto</span></h1>
+ 
+    <div class="form-card">
+        <div id="msg" class="msg"></div>
+ 
+        <!-- Upload da capa -->
+        <div class="section-label"><i class="fas fa-image"></i> Capa do Produto</div>
+        <div class="upload-area" id="upload-area"
+             ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <input type="file" id="input-capa" accept="image/jpeg,image/png,image/webp" onchange="onFileSelect(event)">
+            <div id="upload-placeholder">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Arraste a capa aqui ou <strong>clique para selecionar</strong></p>
+                <p style="font-size:.78rem;color:#555;">JPG, PNG ou WEBP — máx. 2 MB</p>
+            </div>
+            <img id="preview-img" class="preview-img" style="display:none;" alt="preview">
+            <div class="upload-progress" id="upload-progress">
+                <div class="upload-progress-bar" id="upload-bar" style="width:0%"></div>
+            </div>
         </div>
-    </header>
  
-    <main class="main">
-        <div id="dash-loading" class="loading">
-            <i class="fas fa-circle-notch"></i>
-            <p>Carregando dados...</p>
-        </div>
+        <hr class="divider">
  
-        <div id="dash-conteudo" style="display:none;">
-            <h2 class="page-title">Painel do <span>Autor</span></h2>
+        <!-- Dados do produto -->
+        <div class="section-label"><i class="fas fa-info-circle"></i> Dados do Produto</div>
+        <div class="form-grid">
+            <div class="form-group full">
+                <label>Título do Produto * <span class="char-counter" id="cnt-titulo">0/80</span></label>
+                <input type="text" id="titulo" maxlength="80" placeholder="Ex: Física Geral: Teoria do Tudo" oninput="contarChars('titulo','cnt-titulo',80)">
+            </div>
+            <div class="form-group full">
+                <label>Descrição curta * <span class="char-counter" id="cnt-descricao">0/160</span></label>
+                <textarea id="descricao" maxlength="160" placeholder="Uma frase que resume seu produto..." oninput="contarChars('descricao','cnt-descricao',160)"></textarea>
+            </div>
  
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-book"></i></div>
-                    <div class="stat-label">Produtos Ativos</div>
-                    <div id="stat-produtos" class="stat-value">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
-                    <div class="stat-label">Vendas (Aprovadas)</div>
-                    <div id="stat-vendas" class="stat-value">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-wallet"></i></div>
-                    <div class="stat-label">Total Líquido</div>
-                    <div id="stat-total" class="stat-value">R$ 0,00</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
-                    <div class="stat-label">Saldo Disponível</div>
-                    <div id="stat-saldo" class="stat-value green">R$ 0,00</div>
+            <!-- Preço -->
+            <div class="form-group" id="grupo-preco">
+                <label>Preço (R$) *</label>
+                <input type="number" id="preco" placeholder="Ex: 49.90" step="0.01" min="1">
+                <div id="preco-locked-info" class="preco-locked-msg" style="display:none;">
+                    <i class="fas fa-lock"></i>
+                    <span>Preço fixo após a primeira venda. Use cupons para oferecer descontos.</span>
                 </div>
             </div>
  
-            <div class="section">
-                <div class="section-header">
-                    <h3 class="section-title">Meus Produtos</h3>
-                </div>
-                <div class="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Produto</th>
-                                <th>Preço (Líquido)</th>
-                                <th>Vendas</th>
-                                <th>Total</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabela-produtos"></tbody>
-                    </table>
-                </div>
+            <div class="form-group">
+                <label>Categoria *</label>
+                <select id="categoria">
+                    <option value="">Selecione...</option>
+                    <option value="Tecnologia">Tecnologia</option>
+                    <option value="Ciência">Ciência</option>
+                    <option value="Games">Games</option>
+                    <option value="Família e Relacionamento">Família e Relacionamento</option>
+                    <option value="Negócios">Negócios</option>
+                    <option value="Saúde">Saúde</option>
+                    <option value="Quadrinhos">Quadrinhos</option>
+                    <option value="Mangá">Mangá</option>
+                    <option value="Outros">Outros</option>
+                </select>
             </div>
  
-            <div class="form-row">
-                <div class="section">
-                    <h3 class="section-title" style="margin-bottom:1rem;">Solicitar Saque (PIX)</h3>
-                    <div class="pix-panel">
-                        <div class="pix-saldo">
-                            <span class="pix-saldo-label">Saldo para saque:</span>
-                            <span id="pix-saldo-display" class="pix-saldo-value">R$ 0,00</span>
-                        </div>
-                        <div id="msg-pix" class="msg"></div>
-                        <div class="form-group">
-                            <label>Valor do Saque</label>
-                            <input type="number" id="pix-valor" step="0.01" placeholder="0,00">
-                        </div>
-                        <div class="form-group">
-                            <label>Chave PIX</label>
-                            <input type="text" id="pix-chave" placeholder="CPF, E-mail ou Celular">
-                        </div>
-                        <button id="btn-pix" class="btn-green" onclick="solicitarPagamento()">
-                            <i class="fas fa-paper-plane"></i> Solicitar Pagamento
-                        </button>
+            <!-- Classificação Indicativa -->
+            <div class="form-group full">
+                <label><i class="fas fa-shield-alt" style="margin-right:.3rem;"></i> Classificação Indicativa *</label>
+                <div class="classif-grid">
+                    <div class="classif-btn cl-L">
+                        <input type="radio" name="classificacao" id="cl-L" value="L">
+                        <label class="classif-label" for="cl-L">
+                            <span class="cl-age">L</span>
+                            <span class="cl-desc">Livre</span>
+                        </label>
+                    </div>
+                    <div class="classif-btn cl-10">
+                        <input type="radio" name="classificacao" id="cl-10" value="10">
+                        <label class="classif-label" for="cl-10">
+                            <span class="cl-age">10+</span>
+                            <span class="cl-desc">10 anos</span>
+                        </label>
+                    </div>
+                    <div class="classif-btn cl-12">
+                        <input type="radio" name="classificacao" id="cl-12" value="12">
+                        <label class="classif-label" for="cl-12">
+                            <span class="cl-age">12+</span>
+                            <span class="cl-desc">12 anos</span>
+                        </label>
+                    </div>
+                    <div class="classif-btn cl-14">
+                        <input type="radio" name="classificacao" id="cl-14" value="14">
+                        <label class="classif-label" for="cl-14">
+                            <span class="cl-age">14+</span>
+                            <span class="cl-desc">14 anos</span>
+                        </label>
+                    </div>
+                    <div class="classif-btn cl-16">
+                        <input type="radio" name="classificacao" id="cl-16" value="16">
+                        <label class="classif-label" for="cl-16">
+                            <span class="cl-age">16+</span>
+                            <span class="cl-desc">16 anos</span>
+                        </label>
+                    </div>
+                    <div class="classif-btn cl-18">
+                        <input type="radio" name="classificacao" id="cl-18" value="18">
+                        <label class="classif-label" for="cl-18">
+                            <span class="cl-age">18+</span>
+                            <span class="cl-desc">Adulto</span>
+                        </label>
                     </div>
                 </div>
+                <div class="hint" style="margin-top:.6rem;"><i class="fas fa-info-circle" style="color:var(--orange-web);"></i> Selecione a classificação correta. Você é responsável pela classificação da sua obra conforme a legislação brasileira.</div>
+            </div>
  
-                <div class="section">
-                    <h3 class="section-title" style="margin-bottom:1rem;">Vendas Recentes</h3>
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Data</th>
-                                    <th>Produto</th>
-                                    <th>Valor</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabela-vendas"></tbody>
-                        </table>
+            <hr class="divider" style="grid-column:1/-1;">
+            <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-book-open"></i> Informações da Página de Venda (opcional)</div>
+ 
+            <div class="form-group">
+                <label>Autor</label>
+                <input type="text" id="autor" placeholder="Nome do autor">
+            </div>
+            <div class="form-group">
+                <label>Número de páginas</label>
+                <input type="number" id="paginas" placeholder="Ex: 312" min="1">
+            </div>
+            <div class="form-group full">
+                <label>Introdução do livro <span class="char-counter" id="cnt-intro">0/1200</span></label>
+                <textarea id="intro" maxlength="1200" placeholder="Trecho introdutório para atrair o leitor..." style="min-height:120px;" oninput="contarChars('intro','cnt-intro',1200)"></textarea>
+            </div>
+            <div class="form-group full">
+                <label>Sobre o autor <span class="char-counter" id="cnt-sobre">0/1200</span></label>
+                <textarea id="sobre-autor" maxlength="1200" placeholder="Breve biografia do autor..." style="min-height:120px;" oninput="contarChars('sobre-autor','cnt-sobre',1200)"></textarea>
+            </div>
+ 
+            <hr class="divider" style="grid-column:1/-1;">
+            <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-file-pdf"></i> Arquivo do Produto (PDF)</div>
+ 
+            <div class="form-group full">
+                <div class="upload-area" id="upload-pdf-area"
+                     ondragover="onDragOverPdf(event)" ondragleave="onDragLeavePdf(event)" ondrop="onDropPdf(event)"
+                     style="min-height:120px;">
+                    <input type="file" id="input-pdf" accept="application/pdf" onchange="onPdfSelect(event)">
+                    <div id="upload-pdf-placeholder">
+                        <i class="fas fa-file-pdf" style="font-size:2rem;color:#e74c3c;"></i>
+                        <p>Arraste o PDF aqui ou <strong>clique para selecionar</strong></p>
+                        <p style="font-size:.78rem;color:#555;">Somente PDF — máx. 12 MB</p>
+                    </div>
+                    <div id="pdf-selecionado" style="display:none;text-align:center;">
+                        <i class="fas fa-file-pdf" style="font-size:2rem;color:#e74c3c;"></i>
+                        <p id="pdf-nome" style="color:var(--orange-web);margin-top:.5rem;font-weight:bold;"></p>
+                        <p id="pdf-tamanho" style="color:#666;font-size:.8rem;"></p>
+                    </div>
+                    <div class="upload-progress" id="upload-pdf-progress">
+                        <div class="upload-progress-bar" id="upload-pdf-bar" style="width:0%"></div>
                     </div>
                 </div>
+                <div class="hint"><i class="fas fa-lock" style="color:var(--orange-web);"></i> O arquivo fica protegido — só quem comprar recebe o link de acesso.</div>
             </div>
         </div>
-    </main>
+ 
+        <button class="btn-submit" id="btn-salvar" onclick="verificarTermosAntesDeSalvar()">
+            <i class="fas fa-rocket" id="btn-icon"></i> <span id="btn-label">Publicar Produto</span>
+        </button>
+    </div>
 </div>
  
-<!-- Modal de Confirmação -->
-<div id="confirm-modal" class="confirm-overlay">
-    <div class="confirm-card">
-        <div id="confirm-icon" class="confirm-icon"></div>
-        <h3 id="confirm-title" class="confirm-title"></h3>
-        <p id="confirm-desc" class="confirm-desc"></p>
-        <div class="confirm-btns">
-            <button class="btn-confirm-cancel" onclick="fecharConfirm()">Cancelar</button>
-            <button id="confirm-ok" onclick="executarConfirm()">Confirmar</button>
+<!-- Modal Termos de Uso -->
+<div class="modal-overlay" id="modal-termos" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <i class="fas fa-file-contract"></i>
+            <h2>Termos de Uso — Publicação de Produtos</h2>
+        </div>
+        <div class="modal-body">
+            <p>Antes de publicar seu primeiro produto na <strong>BrooStore</strong>, leia atentamente os termos abaixo. Ao aceitar, você confirma que leu, compreendeu e concorda com todas as condições.</p>
+ 
+            <h3>1. Responsabilidade pelo Conteúdo</h3>
+            <p>O conteúdo publicado — incluindo textos, imagens, arquivos e descrições — é de <strong>inteira responsabilidade do autor</strong>. A BrooStore atua como plataforma intermediária e não se responsabiliza por informações incorretas, direitos autorais de terceiros, conteúdo enganoso ou qualquer dano causado ao consumidor decorrente do produto publicado.</p>
+ 
+            <h3>2. Conformidade com a Legislação Brasileira</h3>
+            <p>O autor declara que seu produto está em conformidade com a legislação brasileira vigente, especialmente: <strong>Lei nº 9.610/1998</strong> (Lei de Direitos Autorais), <strong>Lei nº 8.078/1990</strong> (Código de Defesa do Consumidor), <strong>Lei nº 13.709/2018</strong> (LGPD) e o <strong>Marco Civil da Internet (Lei nº 12.965/2014)</strong>.</p>
+ 
+            <h3>3. Classificação Indicativa</h3>
+            <p>O autor é <strong>integralmente responsável pela classificação indicativa</strong> atribuída à sua obra, conforme as diretrizes do Ministério da Justiça e Segurança Pública do Brasil. A classificação deve refletir com fidelidade o conteúdo da obra — incluindo temas de violência, linguagem, sexualidade e conteúdo adulto.</p>
+            <p>Obras com classificação <strong>18 anos</strong> ficarão ocultas por padrão na loja e serão exibidas somente para usuários que confirmarem ser maiores de idade. A BrooStore se reserva o direito de reclassificar ou remover produtos cuja classificação declarada seja incompatível com o conteúdo real.</p>
+ 
+            <h3>4. Conteúdo Proibido</h3>
+            <p>É expressamente vedada a publicação de conteúdo que: contenha discurso de ódio, preconceito ou incitação à violência; viole direitos autorais ou propriedade intelectual de terceiros; promova atividades ilegais; seja de natureza sexual explícita envolvendo menores; induza o consumidor ao erro ou contenha informações falsas.</p>
+            <p>A BrooStore se reserva o direito de <strong>remover qualquer produto</strong> que viole estas diretrizes, sem aviso prévio.</p>
+ 
+            <h3>5. Taxa da Plataforma</h3>
+            <p>A BrooStore retém <strong>25% (vinte e cinco por cento)</strong> sobre o valor bruto de cada venda. O autor recebe <strong>75%</strong> do valor bruto de cada venda realizada.</p>
+ 
+            <h3>6. Política de Preços e Cupons de Desconto</h3>
+            <p>O autor define livremente o preço de seu produto no momento da publicação. <strong>Após a realização da primeira venda, o preço do produto fica fixo e não poderá ser alterado.</strong> Esta política garante transparência e confiança ao consumidor que já adquiriu o produto pelo preço original.</p>
+            <p>Para oferecer descontos após a primeira venda, o autor deverá utilizar o <strong>sistema de cupons</strong> disponível no dashboard. Cupons têm validade máxima de 30 dias e o autor pode manter até 3 cupons ativos simultaneamente por produto.</p>
+ 
+            <h3>7. Prazo de Pagamento</h3>
+            <p>Após a solicitação de saque, o pagamento via PIX será realizado em até <strong>72 horas úteis</strong>. Solicitações em fins de semana ou feriados serão processadas no próximo dia útil.</p>
+ 
+            <h3>8. Cancelamento e Reembolso</h3>
+            <p>O consumidor tem direito ao reembolso integral conforme o <strong>art. 49 do CDC</strong> (arrependimento em até 7 dias para compras digitais). O valor correspondente será deduzido do saldo disponível do autor.</p>
+ 
+            <h3>9. Alterações nos Termos</h3>
+            <p>A BrooStore pode atualizar estes termos a qualquer momento. O autor será notificado por e-mail e deverá aceitar novamente para continuar publicando produtos.</p>
+ 
+            <p style="margin-top:1rem; color:#888; font-size:.8rem;">Última atualização: Maio de 2026.</p>
+        </div>
+        <div class="modal-footer">
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="termos" value="aceito" onchange="onRadioTermos(this)">
+                    Aceito os Termos de Uso
+                </label>
+                <label>
+                    <input type="radio" name="termos" value="recuso" onchange="onRadioTermos(this)">
+                    Não aceito
+                </label>
+            </div>
+            <button class="btn-aceitar" id="btn-aceitar-termos" disabled onclick="confirmarTermos()">
+                Continuar para Publicação
+            </button>
         </div>
     </div>
 </div>
  
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    const SB_URL = "https://gyepvrzkwesohbagpgfa.supabase.co";
-    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA";
-    
-    const sb = supabase.createClient(SB_URL, SB_KEY);
+    function contarChars(fieldId, counterId, max) {
+        const len = document.getElementById(fieldId).value.length;
+        const el  = document.getElementById(counterId);
+        el.textContent = `${len}/${max}`;
+        el.className = 'char-counter' + (len >= max ? ' over' : len >= max * 0.85 ? ' warn' : '');
+    }
+ 
+    const TERMOS_KEY = 'broo_termos_aceitos';
+ 
+    function onRadioTermos(radio) {
+        const btn = document.getElementById('btn-aceitar-termos');
+        btn.disabled = radio.value !== 'aceito';
+        btn.textContent = radio.value === 'aceito' ? 'Continuar para Publicação' : 'Você precisa aceitar para publicar';
+    }
+ 
+    function confirmarTermos() {
+        localStorage.setItem(TERMOS_KEY, '1');
+        document.getElementById('modal-termos').style.display = 'none';
+        salvarProduto();
+    }
+ 
+    function verificarTermosAntesDeSalvar() {
+        if (!modoEdicao && localStorage.getItem(TERMOS_KEY) !== '1') {
+            document.querySelectorAll('input[name="termos"]').forEach(r => r.checked = false);
+            document.getElementById('btn-aceitar-termos').disabled = true;
+            document.getElementById('btn-aceitar-termos').textContent = 'Continuar para Publicação';
+            document.getElementById('modal-termos').style.display = 'flex';
+        } else {
+            salvarProduto();
+        }
+    }
+ 
+    const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+ 
+    const params     = new URLSearchParams(window.location.search);
+    const editId     = params.get('edit');
+    const modoEdicao = !!editId;
  
     let usuarioAtual    = null;
-    let saldoDisponivel = 0;
+    let arquivoCapa     = null;
+    let arquivoPdf      = null;
+    let imageUrlFinal   = '';
+    let produtoOriginal = null;
+    let precoLocked     = false;
  
-    async function iniciar() {
-        // Verifica se há um token de recuperação na URL (hash)
-        const hash = window.location.hash;
-        if (hash && (hash.includes('access_token') || hash.includes('type=recovery'))) {
-            document.getElementById('tela-carregando').style.display = 'none';
-            document.getElementById('tela-login').style.display = 'flex';
-            showTab('reset');
-            return;
-        }
-
-        const { data: { session } } = await sb.auth.getSession();
-        document.getElementById('tela-carregando').style.display = 'none';
+    if (modoEdicao) {
+        document.getElementById('page-title').innerHTML  = 'Editar <span>Produto</span>';
+        document.getElementById('btn-icon').className    = 'fas fa-save';
+        document.getElementById('btn-label').textContent = 'Salvar Alterações';
+        document.title = 'BrooStore – Editar Produto';
+    }
  
-        if (session) {
-            usuarioAtual = session.user;
-            abrirDashboard();
+    sb.auth.getSession().then(async ({ data: { session } }) => {
+        if (!session) { window.location.href = '/static/autor-login.html'; return; }
+        usuarioAtual = session.user;
+        if (modoEdicao) {
+            await carregarProdutoParaEdicao();
         } else {
-            document.getElementById('tela-login').style.display = 'flex';
+            // Novo produto: abre termos se necessário
+            if (localStorage.getItem(TERMOS_KEY) !== '1') {
+                document.querySelectorAll('input[name="termos"]').forEach(r => r.checked = false);
+                document.getElementById('btn-aceitar-termos').disabled = true;
+                document.getElementById('modal-termos').style.display = 'flex';
+            }
+        }
+    });
+ 
+    async function carregarProdutoParaEdicao() {
+        let p = null;
+        const { data: d1 } = await sb.from('products').select('*')
+            .eq('id', editId).eq('author_id', usuarioAtual.id).maybeSingle();
+        if (d1) {
+            p = d1;
+        } else {
+            const { data: d2, error: e2 } = await sb.from('products').select('*')
+                .eq('id', editId).maybeSingle();
+            if (e2 || !d2) {
+                alert('Produto não encontrado.');
+                window.location.href = '/static/autor-login.html';
+                return;
+            }
+            p = d2;
+        }
+        produtoOriginal = p;
+ 
+        document.getElementById('titulo').value      = p.title      || '';
+        document.getElementById('descricao').value   = p.descricao  || '';
+        document.getElementById('preco').value       = p.price      || '';
+        document.getElementById('categoria').value   = p.category   || '';
+        document.getElementById('autor').value       = p.author     || '';
+        document.getElementById('paginas').value     = p.paginas    || '';
+        document.getElementById('intro').value       = p.intro      || '';
+        document.getElementById('sobre-autor').value = p.sobre_autor || '';
+ 
+        // Classificação
+        const cl = p.classificacao || 'L';
+        const radio = document.querySelector(`input[name="classificacao"][value="${cl}"]`);
+        if (radio) radio.checked = true;
+ 
+        contarChars('titulo','cnt-titulo',80);
+        contarChars('descricao','cnt-descricao',160);
+        contarChars('intro','cnt-intro',1200);
+        contarChars('sobre-autor','cnt-sobre',1200);
+ 
+        if (p.image_url) {
+            document.getElementById('preview-img').src = p.image_url;
+            document.getElementById('preview-img').style.display = 'block';
+            document.getElementById('upload-placeholder').style.display = 'none';
+            imageUrlFinal = p.image_url;
+        }
+        if (p.link_pdf) {
+            document.getElementById('upload-pdf-placeholder').style.display = 'none';
+            document.getElementById('pdf-selecionado').style.display = 'block';
+            document.getElementById('pdf-nome').textContent    = 'PDF atual mantido';
+            document.getElementById('pdf-tamanho').textContent = 'Selecione um novo arquivo para substituir';
+        }
+ 
+        // Verifica se tem vendas — bloqueia preço se sim
+        const { data: vendas } = await sb.from('sales').select('id')
+            .eq('product_id', editId).in('status', ['approved','paid']).limit(1);
+ 
+        if (vendas && vendas.length > 0) {
+            precoLocked = true;
+            const campoPreco = document.getElementById('preco');
+            campoPreco.readOnly = true;
+            document.getElementById('preco-locked-info').style.display = 'flex';
         }
     }
  
-    /* ── Abre o dashboard sem redirecionar ── */
-    async function abrirDashboard() {
-        document.getElementById('tela-login').style.display     = 'none';
-        document.getElementById('tela-dashboard').style.display = 'block';
-        document.getElementById('dash-loading').style.display   = 'block';
-        document.getElementById('dash-conteudo').style.display  = 'none';
+    // Upload handlers
+    function onDragOver(e)    { e.preventDefault(); document.getElementById('upload-area').classList.add('dragover'); }
+    function onDragLeave()    { document.getElementById('upload-area').classList.remove('dragover'); }
+    function onDrop(e)        { e.preventDefault(); document.getElementById('upload-area').classList.remove('dragover'); const f=e.dataTransfer.files[0]; if(f) processarArquivo(f); }
+    function onFileSelect(e)  { const f=e.target.files[0]; if(f) processarArquivo(f); }
+    function onDragOverPdf(e) { e.preventDefault(); document.getElementById('upload-pdf-area').classList.add('dragover'); }
+    function onDragLeavePdf() { document.getElementById('upload-pdf-area').classList.remove('dragover'); }
+    function onDropPdf(e)     { e.preventDefault(); document.getElementById('upload-pdf-area').classList.remove('dragover'); const f=e.dataTransfer.files[0]; if(f) processarPdf(f); }
+    function onPdfSelect(e)   { const f=e.target.files[0]; if(f) processarPdf(f); }
  
-        const { data: profile } = await sb
-            .from('profiles').select('full_name')
-            .eq('id', usuarioAtual.id).single();
- 
-        document.getElementById('autor-nome').textContent =
-            `| ${profile?.full_name || usuarioAtual.email}`;
- 
-        await Promise.all([carregarProdutos(), carregarVendas()]);
- 
-        document.getElementById('dash-loading').style.display  = 'none';
-        document.getElementById('dash-conteudo').style.display = 'block';
-    }
- 
-    /* ── Tabs e Estados da Tela ── */
-    function showTab(tab) {
-        // Esconde todos os formulários
-        document.getElementById('form-login').style.display    = 'none';
-        document.getElementById('form-cadastro').style.display = 'none';
-        document.getElementById('form-forgot').style.display   = 'none';
-        document.getElementById('form-reset').style.display    = 'none';
-        
-        // Controla visibilidade das abas e links
-        const tabsContainer = document.getElementById('tabs-container');
-        const linkVoltarLoja = document.getElementById('link-voltar-loja');
-        
-        if (tab === 'forgot' || tab === 'reset') {
-            tabsContainer.style.display = 'none';
-            linkVoltarLoja.style.display = 'none';
-            document.getElementById(tab === 'forgot' ? 'form-forgot' : 'form-reset').style.display = 'block';
-        } else {
-            tabsContainer.style.display = 'flex';
-            linkVoltarLoja.style.display = 'block';
-            document.getElementById('tab-entrar').classList.toggle('active',   tab === 'login');
-            document.getElementById('tab-cadastro').classList.toggle('active', tab === 'cadastro');
-            document.getElementById('form-login').style.display    = tab === 'login'    ? 'block' : 'none';
-            document.getElementById('form-cadastro').style.display = tab === 'cadastro' ? 'block' : 'none';
-        }
+    function processarPdf(file) {
+        if (file.size > 12*1024*1024) { mostrarMsg('PDF muito grande. Máximo 12 MB.','error'); return; }
+        if (file.type !== 'application/pdf') { mostrarMsg('Formato inválido. Selecione um PDF.','error'); return; }
+        arquivoPdf = file;
+        const mb = (file.size/1024/1024).toFixed(2);
+        document.getElementById('upload-pdf-placeholder').style.display = 'none';
+        document.getElementById('pdf-selecionado').style.display = 'block';
+        document.getElementById('pdf-nome').textContent    = file.name;
+        document.getElementById('pdf-tamanho').textContent = `${mb} MB`;
         limparMsg();
     }
-
-    /* ── Ver/Ocultar Senha ── */
-    function togglePasswordVisibility(inputId, icon) {
-        const input = document.getElementById(inputId);
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
+ 
+    function processarArquivo(file) {
+        if (file.size > 2*1024*1024) { mostrarMsg('Arquivo muito grande. Máximo 2 MB.','error'); return; }
+        if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { mostrarMsg('Formato inválido. Use JPG, PNG ou WEBP.','error'); return; }
+        arquivoCapa = file;
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('preview-img').src = e.target.result;
+            document.getElementById('preview-img').style.display = 'block';
+            document.getElementById('upload-placeholder').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+        limparMsg();
+    }
+ 
+    async function uploadCapa() {
+        if (!arquivoCapa) return imageUrlFinal;
+        const ext  = arquivoCapa.name.split('.').pop();
+        const path = `${usuarioAtual.id}/${Date.now()}.${ext}`;
+        document.getElementById('upload-progress').style.display = 'block';
+        document.getElementById('upload-bar').style.width = '30%';
+        const { error } = await sb.storage.from('capas-produtos').upload(path, arquivoCapa, { contentType: arquivoCapa.type, upsert: false });
+        document.getElementById('upload-bar').style.width = '100%';
+        if (error) { mostrarMsg('Erro ao enviar imagem: '+error.message,'error'); return ''; }
+        const { data } = sb.storage.from('capas-produtos').getPublicUrl(path);
+        return data.publicUrl;
+    }
+ 
+    async function uploadPdf() {
+        if (!arquivoPdf) return produtoOriginal?.link_pdf ?? '__sem_pdf__';
+        const path = `${usuarioAtual.id}/${Date.now()}.pdf`;
+        document.getElementById('upload-pdf-progress').style.display = 'block';
+        document.getElementById('upload-pdf-bar').style.width = '30%';
+        const { error } = await sb.storage.from('livros-pdf').upload(path, arquivoPdf, { contentType: 'application/pdf', upsert: false });
+        document.getElementById('upload-pdf-bar').style.width = '100%';
+        if (error) { mostrarMsg('Erro ao enviar PDF: '+error.message,'error'); return ''; }
+        const { data } = await sb.storage.from('livros-pdf').createSignedUrl(path, 60*60*24*365*10);
+        return data?.signedUrl || '';
+    }
+ 
+    async function salvarProduto() {
+        const titulo     = document.getElementById('titulo').value.trim();
+        const descricao  = document.getElementById('descricao').value.trim();
+        const preco      = parseFloat(document.getElementById('preco').value);
+        const categoria  = document.getElementById('categoria').value;
+        const autor      = document.getElementById('autor').value.trim();
+        const paginas    = document.getElementById('paginas').value.trim();
+        const intro      = document.getElementById('intro').value.trim();
+        const sobreAutor = document.getElementById('sobre-autor').value.trim();
+        const classifEl  = document.querySelector('input[name="classificacao"]:checked');
+        const btn        = document.getElementById('btn-salvar');
+ 
+        if (!titulo)    return mostrarMsg('Informe o título do produto.','error');
+        if (!descricao) return mostrarMsg('Informe uma descrição.','error');
+        if (!preco || preco <= 0) return mostrarMsg('Informe um preço válido.','error');
+        if (!categoria) return mostrarMsg('Selecione uma categoria.','error');
+        if (!classifEl) return mostrarMsg('Selecione a classificação indicativa da obra.','error');
+        if (!modoEdicao && !arquivoPdf) return mostrarMsg('Selecione o arquivo PDF do produto.','error');
+ 
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando arquivos...';
+ 
+        const novaImageUrl = await uploadCapa();
+        if (document.getElementById('msg').classList.contains('error')) {
+            btn.disabled = false;
+            btn.innerHTML = modoEdicao ? '<i class="fas fa-save"></i> Salvar Alterações' : '<i class="fas fa-rocket"></i> Publicar Produto';
+            return;
         }
+ 
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando PDF...';
+ 
+        const linkPdfRaw = await uploadPdf();
+        const linkPdf    = linkPdfRaw === '__sem_pdf__' ? null : linkPdfRaw;
+        if (linkPdfRaw !== '__sem_pdf__' && !linkPdf) {
+            btn.disabled = false;
+            btn.innerHTML = modoEdicao ? '<i class="fas fa-save"></i> Salvar Alterações' : '<i class="fas fa-rocket"></i> Publicar Produto';
+            return;
+        }
+ 
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+ 
+        const payload = {
+            title:          titulo,
+            author:         autor       || null,
+            category:       categoria,
+            image_url:      novaImageUrl || null,
+            descricao:      descricao    || null,
+            paginas:        paginas ? parseInt(paginas) : null,
+            intro:          intro        || null,
+            sobre_autor:    sobreAutor   || null,
+            classificacao:  classifEl.value,
+        };
+ 
+        // Só inclui preço se não estiver bloqueado
+        if (!precoLocked) payload.price = preco;
+        if (linkPdf !== null) payload.link_pdf = linkPdf;
+ 
+        let dbError;
+        if (modoEdicao) {
+            const { error, data } = await sb.from('products')
+                .update({ ...payload, author_id: usuarioAtual.id })
+                .eq('id', editId).select();
+            dbError = error;
+            if (!error && (!data || data.length === 0)) {
+                dbError = { message: 'Nenhuma linha atualizada. Verifique as permissões (RLS).' };
+            }
+        } else {
+            const { error } = await sb.from('products')
+                .insert({ ...payload, author_id: usuarioAtual.id });
+            dbError = error;
+        }
+ 
+        if (dbError) {
+            mostrarMsg('Erro ao salvar: ' + dbError.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = modoEdicao ? '<i class="fas fa-save"></i> Salvar Alterações' : '<i class="fas fa-rocket"></i> Publicar Produto';
+            return;
+        }
+ 
+        try {
+            await fetch('https://mercadopago-final.onrender.com/api/sync-produto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: modoEdicao ? parseInt(editId) : null })
+            });
+        } catch(e) { console.warn('[sync-produto]', e); }
+ 
+        mostrarMsg(modoEdicao ? 'Produto atualizado com sucesso!' : 'Produto publicado com sucesso!', 'success');
+        btn.innerHTML = '<i class="fas fa-check"></i> ' + (modoEdicao ? 'Salvo!' : 'Publicado!');
+        setTimeout(() => window.location.href = '/static/autor-login.html', 2000);
     }
  
     function mostrarMsg(texto, tipo) {
         const el = document.getElementById('msg');
         el.textContent = texto;
         el.className = `msg ${tipo}`;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    function limparMsg() {
-        const el = document.getElementById('msg');
-        el.className = 'msg'; el.textContent = '';
-    }
- 
-    /* ── Login ── */
-    async function fazerLogin() {
-        const email = document.getElementById('login-email').value.trim();
-        const senha = document.getElementById('login-senha').value;
-        const btn   = document.getElementById('btn-login');
- 
-        if (!email || !senha) return mostrarMsg('Preencha e-mail e senha.', 'error');
- 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
- 
-        const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
- 
-        if (error) {
-            mostrarMsg('E-mail ou senha incorretos.', 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
-            return;
-        }
- 
-        usuarioAtual = data.user;
-        abrirDashboard();
-    }
- 
-    /* ── Cadastro ── */
-    async function fazerCadastro() {
-        const nome  = document.getElementById('cad-nome').value.trim();
-        const email = document.getElementById('cad-email').value.trim();
-        const senha = document.getElementById('cad-senha').value;
-        const btn   = document.getElementById('btn-cadastro');
- 
-        if (!nome || !email || !senha) return mostrarMsg('Preencha todos os campos.', 'error');
-        if (senha.length < 6) return mostrarMsg('Senha deve ter no mínimo 6 caracteres.', 'error');
- 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando conta...';
- 
-        const { data, error } = await sb.auth.signUp({
-            email, password: senha,
-            options: { data: { full_name: nome } }
-        });
- 
-        if (error) {
-            mostrarMsg(error.message, 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-user-plus"></i> Criar conta';
-            return;
-        }
- 
-        if (data.user) {
-            await sb.from('profiles').upsert({ id: data.user.id, full_name: nome });
-        }
- 
-        mostrarMsg('Conta criada! Verifique seu e-mail para confirmar.', 'success');
-        btn.innerHTML = '<i class="fas fa-check"></i> Enviado!';
-    }
-
-    /* ── Recuperação de Senha ── */
-    async function fazerRecuperacao() {
-        const email = document.getElementById('forgot-email').value.trim();
-        const btn   = document.getElementById('btn-forgot');
-
-        if (!email) return mostrarMsg('Informe seu e-mail.', 'error');
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-
-        const redirectUrl = window.location.origin + window.location.pathname;
-
-        const { error } = await sb.auth.resetPasswordForEmail(email, {
-            redirectTo: redirectUrl,
-        });
-
-        if (error) {
-            mostrarMsg(error.message, 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar link de recuperação';
-            return;
-        }
-
-        mostrarMsg('Link de recuperação enviado para seu e-mail!', 'success');
-        btn.innerHTML = '<i class="fas fa-check"></i> Enviado!';
-        
-        setTimeout(() => {
-            showTab('login');
-        }, 3000);
-    }
-
-    /* ── Confirmar Nova Senha ── */
-    async function confirmarNovaSenha() {
-        const senha    = document.getElementById('reset-senha').value;
-        const confirmar = document.getElementById('reset-confirmar').value;
-        const btn      = document.getElementById('btn-reset');
-
-        if (!senha || senha.length < 6) return mostrarMsg('Senha deve ter no mínimo 6 caracteres.', 'error');
-        if (senha !== confirmar) return mostrarMsg('As senhas não coincidem.', 'error');
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Alterando...';
-
-        const { error } = await sb.auth.updateUser({ password: senha });
-
-        if (error) {
-            mostrarMsg(error.message, 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-key"></i> Alterar Senha';
-            return;
-        }
-
-        mostrarMsg('Senha alterada com sucesso! Redirecionando...', 'success');
-        btn.innerHTML = '<i class="fas fa-check"></i> Sucesso!';
-        
-        setTimeout(() => {
-            // Limpa o hash da URL e volta para o login
-            window.location.hash = '';
-            showTab('login');
-        }, 3000);
-    }
- 
-    /* ── Sair ── */
-    async function sair() {
-        await sb.auth.signOut();
-        usuarioAtual = null;
-        document.getElementById('tela-dashboard').style.display = 'none';
-        document.getElementById('tela-login').style.display     = 'flex';
-        document.getElementById('login-email').value = '';
-        document.getElementById('login-senha').value = '';
-        limparMsg();
-    }
- 
-    /* ── Utilitários ── */
-    const fmt = val => 'R$ ' + parseFloat(val || 0).toFixed(2).replace('.', ',');
-    function fmtData(iso) {
-        const d = new Date(iso);
-        return d.toLocaleDateString('pt-BR') + ' ' +
-               d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-    }
-    function badgeStatus(s) {
-        if (['approved','paid','pago'].includes(s))
-            return `<span class="badge badge-green">${s}</span>`;
-        if (s === 'pending')
-            return `<span class="badge badge-yellow">pendente</span>`;
-        return `<span class="badge badge-grey">${s}</span>`;
-    }
- 
-    /* ── Produtos ── */
-    async function carregarProdutos() {
-        const { data: produtos, error } = await sb
-            .from('products').select('id, title, price, category, active')
-            .eq('author_id', usuarioAtual.id)
-            .order('id', { ascending: false });
- 
-        if (error || !produtos?.length) {
-            document.getElementById('tabela-produtos').innerHTML =
-                `<tr><td colspan="6" class="empty"><i class="fas fa-book-open"></i> Nenhum produto ainda.
-                 <a href="/static/autor-produto.html" style="color:var(--orange-web);">Adicionar</a></td></tr>`;
-            document.getElementById('stat-produtos').textContent = '0';
-            return;
-        }
- 
-        const ativos = produtos.filter(p => p.active !== false).length;
-        document.getElementById('stat-produtos').textContent = ativos;
-        const TAXA = 0.25;
-        let html = '';
- 
-        for (const p of produtos) {
-            const ativo = p.active !== false;
-            const { data: vendas } = await sb
-                .from('sales').select('amount')
-                .eq('product_id', p.id).in('status', ['approved','paid']);
- 
-            const qv    = vendas?.length || 0;
-            const bruto = vendas?.reduce((a, v) => a + parseFloat(v.amount||0), 0) || 0;
-            const badgeAtivo = ativo
-                ? `<span class="badge badge-green">ativo</span>`
-                : `<span class="badge badge-grey">inativo</span>`;
-            const btnDesativar = ativo
-                ? `<button class="btn-acao btn-desativar" onclick="toggleAtivo(${p.id}, false)" title="Desativar"><i class="fas fa-eye-slash"></i></button>`
-                : `<button class="btn-acao btn-ativar"    onclick="toggleAtivo(${p.id}, true)"  title="Ativar"><i class="fas fa-eye"></i></button>`;
- 
-            html += `
-                <tr style="${ativo ? '' : 'opacity:.55;'}">
-                    <td><strong>${p.title}</strong><br><small style="color:#666;">${p.category||''}</small></td>
-                    <td>${fmt(p.price*(1-TAXA))}<br><small style="color:#555;font-size:.75rem;">bruto: ${fmt(p.price)} — taxa 25%</small></td>
-                    <td>${qv}</td>
-                    <td>${fmt(bruto*(1-TAXA))}</td>
-                    <td>${badgeAtivo}</td>
-                    <td style="white-space:nowrap;">
-                        <button class="btn-acao btn-editar" onclick="editarProduto(${p.id})" title="Editar"><i class="fas fa-pencil-alt"></i></button>
-                        ${btnDesativar}
-                    </td>
-                </tr>`;
-        }
-        document.getElementById('tabela-produtos').innerHTML = html;
-    }
- 
-    // ── Confirmação de ativar/desativar ──
-    let _confirmCallback = null;
- 
-    function pedirConfirm(produtoId, novoValor, nomeproduto) {
-        const desativar = !novoValor;
-        document.getElementById('confirm-icon').className  = 'confirm-icon ' + (desativar ? 'warn' : 'info');
-        document.getElementById('confirm-icon').innerHTML  = desativar ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
-        document.getElementById('confirm-title').textContent = desativar ? 'Desativar produto?' : 'Reativar produto?';
-        document.getElementById('confirm-desc').innerHTML  = desativar
-            ? `O produto <strong>${nomeproduto}</strong> ficará invisível na loja e não poderá ser comprado. Você pode reativá-lo a qualquer momento.`
-            : `O produto <strong>${nomeproduto}</strong> voltará a aparecer na loja e ficará disponível para compra.`;
-        const btn = document.getElementById('confirm-ok');
-        btn.className = desativar ? 'btn-confirm-danger' : 'btn-confirm-success';
-        btn.textContent = desativar ? 'Sim, desativar' : 'Sim, reativar';
-        _confirmCallback = () => executarToggle(produtoId, novoValor);
-        document.getElementById('confirm-modal').style.display = 'flex';
-    }
- 
-    function fecharConfirm() {
-        document.getElementById('confirm-modal').style.display = 'none';
-        _confirmCallback = null;
-    }
- 
-    function executarConfirm() {
-        const cb = _confirmCallback;
-        fecharConfirm();
-        if (cb) cb();
-    }
- 
-    async function executarToggle(produtoId, novoValor) {
-        const id = parseInt(produtoId, 10);
-        const { error, data } = await sb
-            .from('products')
-            .update({ active: novoValor })
-            .eq('id', id)
-            .select();
- 
-        if (error) {
-            alert('Erro ao atualizar: ' + error.message);
-            return;
-        }
- 
-        if (!data || data.length === 0) {
-            const { error: e2, data: d2 } = await sb
-                .from('products')
-                .update({ active: novoValor })
-                .eq('id', id)
-                .eq('author_id', usuarioAtual.id)
-                .select();
- 
-            if (e2) { alert('Erro: ' + e2.message); return; }
-            if (!d2 || d2.length === 0) {
-                alert('Não foi possível atualizar.');
-                return;
-            }
-        }
- 
-        await carregarProdutos();
-    }
- 
-    function toggleAtivo(produtoId, novoValor) {
-        const linhas = document.querySelectorAll('#tabela-produtos tr');
-        let nome = 'este produto';
-        linhas.forEach(tr => {
-            const btn = tr.querySelector(`[onclick*="toggleAtivo(${produtoId},"]`);
-            if (btn) {
-                const strong = tr.querySelector('strong');
-                if (strong) nome = strong.textContent;
-            }
-        });
-        pedirConfirm(produtoId, novoValor, nome);
-    }
- 
-    function editarProduto(produtoId) {
-        window.location.href = `/static/autor-produto.html?edit=${produtoId}`;
-    }
- 
-    /* ── Vendas ── */
-    async function carregarVendas() {
-        const { data: vendas, error } = await sb
-            .from('sales')
-            .select('created_at, product_id, amount, status, products(title)')
-            .eq('author_id', usuarioAtual.id)
-            .order('created_at', { ascending: false })
-            .limit(20);
- 
-        if (error || !vendas?.length) {
-            document.getElementById('tabela-vendas').innerHTML =
-                `<tr><td colspan="4" class="empty"><i class="fas fa-inbox"></i> Nenhuma venda ainda.</td></tr>`;
-            ['stat-vendas','stat-total','stat-saldo','pix-saldo-display'].forEach(id => {
-                document.getElementById(id).textContent = id === 'stat-vendas' ? '0' : fmt(0);
-            });
-            return;
-        }
- 
-        const aprovadas = vendas.filter(v => ['approved','paid'].includes(v.status));
-        const bruto = aprovadas.reduce((a, v) => a + parseFloat(v.amount||0), 0);
-        const TAXA  = 0.25;
-        const liq   = bruto * (1 - TAXA);
- 
-        const { data: sols } = await sb
-            .from('payment_requests').select('valor, status')
-            .eq('autor_id', usuarioAtual.id).in('status', ['pendente','pago']);
- 
-        const solicitado = sols?.reduce((a, s) => a + parseFloat(s.valor||0), 0) || 0;
-        saldoDisponivel  = Math.max(0, liq - solicitado);
- 
-        document.getElementById('stat-vendas').textContent       = aprovadas.length;
-        document.getElementById('stat-total').textContent        = fmt(liq);
-        document.getElementById('stat-saldo').textContent        = fmt(saldoDisponivel);
-        document.getElementById('pix-saldo-display').textContent = fmt(saldoDisponivel);
- 
-        document.getElementById('tabela-vendas').innerHTML = vendas.map(v => `
-            <tr>
-                <td>${fmtData(v.created_at)}</td>
-                <td>${v.products?.title || `Produto #${v.product_id}`}</td>
-                <td>${fmt(v.amount)}</td>
-                <td>${badgeStatus(v.status)}</td>
-            </tr>`).join('');
-    }
- 
-    /* ── PIX ── */
-    async function solicitarPagamento() {
-        const valor = parseFloat(document.getElementById('pix-valor').value);
-        const chave = document.getElementById('pix-chave').value.trim();
-        const btn   = document.getElementById('btn-pix');
- 
-        document.getElementById('msg-pix').className = 'msg';
- 
-        if (!valor || valor <= 0)    { msgPix('Informe um valor válido.', 'error'); return; }
-        if (valor > saldoDisponivel) { msgPix(`Maior que o saldo (${fmt(saldoDisponivel)}).`, 'error'); return; }
-        if (!chave)                  { msgPix('Informe sua chave PIX.', 'error'); return; }
- 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
- 
-        const { data: profile } = await sb.from('profiles').select('full_name').eq('id', usuarioAtual.id).single();
- 
-        const resp = await fetch('https://gyepvrzkwesohbagpgfa.supabase.co/functions/v1/solicitar-pagamento-simples', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                autor_id: usuarioAtual.id,
-                nome:     profile?.full_name || '',
-                email:    usuarioAtual.email,
-                pix_key:  chave,
-                valor:    valor
-            })
-        });
- 
-        if (!resp.ok) {
-            msgPix('Erro ao solicitar. Tente novamente.', 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Solicitar Pagamento';
-            return;
-        }
- 
-        msgPix('Solicitação enviada! Você receberá o PIX em breve.', 'success');
-        btn.innerHTML = '<i class="fas fa-check"></i> Enviado!';
-        document.getElementById('pix-valor').value = '';
-        document.getElementById('pix-chave').value = '';
- 
-        saldoDisponivel -= valor;
-        document.getElementById('stat-saldo').textContent        = fmt(saldoDisponivel);
-        document.getElementById('pix-saldo-display').textContent = fmt(saldoDisponivel);
- 
-        setTimeout(() => {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Solicitar Pagamento';
-        }, 3000);
-    }
- 
-    function msgPix(texto, tipo) {
-        const el = document.getElementById('msg-pix');
-        el.textContent = texto;
-        el.className = `msg ${tipo}`;
-    }
- 
-    /* ── Enter no login ── */
-    document.addEventListener('keydown', e => {
-        if (e.key !== 'Enter' || document.getElementById('tela-login').style.display === 'none') return;
-        const loginVisivel = document.getElementById('form-login').style.display !== 'none';
-        const forgotVisivel = document.getElementById('form-forgot').style.display !== 'none';
-        const resetVisivel = document.getElementById('form-reset').style.display !== 'none';
-        
-        if (loginVisivel) fazerLogin(); 
-        else if (forgotVisivel) fazerRecuperacao();
-        else if (resetVisivel) confirmarNovaSenha();
-        else fazerCadastro();
-    });
- 
-    iniciar();
+    function limparMsg() { document.getElementById('msg').className = 'msg'; }
 </script>
- 
 </body>
 </html>
