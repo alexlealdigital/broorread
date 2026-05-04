@@ -475,9 +475,13 @@
  
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    // Configurações do Supabase
+    // DICA SAM: No Netlify/Vercel, você pode usar variáveis de ambiente injetadas no build.
+    // Para este arquivo estático, usamos as chaves diretamente.
     const SB_URL = "https://gyepvrzkwesohbagpgfa.supabase.co";
-    const SB_KEY = "SUA_ANON_KEY_AQUI"; // Substitua pela sua chave real
-    const sb     = supabase.createClient(SB_URL, SB_KEY);
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA";
+    
+    const sb = supabase.createClient(SB_URL, SB_KEY);
  
     let usuarioAtual    = null;
     let saldoDisponivel = 0;
@@ -631,8 +635,11 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
 
+        // Padrão SAM: Redireciona para a página de reset no mesmo domínio
+        const redirectUrl = window.location.origin + '/static/autor-reset-senha.html';
+
         const { error } = await sb.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin + '/static/autor-reset-senha.html',
+            redirectTo: redirectUrl,
         });
 
         if (error) {
