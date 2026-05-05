@@ -21,10 +21,11 @@ import requests as http_requests
 app = Flask(__name__, static_folder='static')
  
 # Configuração de CORS
-NETLIFY_ORIGIN_PROD = "https://rread.netlify.app"
-RENDER_ORIGIN = "https://mercadopago-final.onrender.com" 
-NETLIFY_ORIGIN_TEST = "https://rankedsale.netlify.app" 
-CORS(app, origins=[NETLIFY_ORIGIN_PROD, RENDER_ORIGIN, NETLIFY_ORIGIN_TEST])
+NETLIFY_ORIGIN_PROD  = "https://rread.netlify.app"
+RENDER_ORIGIN        = "https://mercadopago-final.onrender.com"
+NETLIFY_ORIGIN_TEST  = "https://rankedsale.netlify.app"
+BROOSTORE_ORIGIN     = "https://broostore.netlify.app"
+CORS(app, origins=[NETLIFY_ORIGIN_PROD, RENDER_ORIGIN, NETLIFY_ORIGIN_TEST, BROOSTORE_ORIGIN])
  
 # ---------- CONFIGURAÇÃO DO BANCO DE DADOS E EXTENSÕES ----------
 db_url = os.environ.get("DATABASE_URL", "sqlite:///cobrancas.db")
@@ -866,3 +867,4 @@ def get_ranking():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+ 
