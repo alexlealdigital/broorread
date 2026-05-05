@@ -274,6 +274,63 @@
         .btn-confirm-danger:hover { background: #c0392b; }
         .btn-confirm-success { background: var(--success-green); color: var(--white); }
         .btn-confirm-success:hover { background: #219150; }
+
+        /* ── Seção de Cupons ── */
+        .cupom-panel {
+            background: var(--oxford-blue);
+            border: 1px solid var(--border-grey);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .cupom-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: .75rem;
+            align-items: end;
+            margin-bottom: 1.2rem;
+        }
+        @media(max-width:700px) { .cupom-form-grid { grid-template-columns: 1fr 1fr; } }
+        .cupom-form-grid .form-group { margin-bottom: 0; }
+        .cupom-form-grid label {
+            display: block; font-size: .75rem; font-weight: bold;
+            color: var(--orange-web); margin-bottom: .35rem;
+            text-transform: uppercase; letter-spacing: .5px;
+        }
+        .cupom-form-grid input,
+        .cupom-form-grid select {
+            width: 100%; padding: .65rem .9rem;
+            background: rgba(255,255,255,.06);
+            border: 1px solid var(--border-grey);
+            border-radius: 8px; color: var(--white);
+            font-family: var(--font-body); font-size: .9rem;
+            outline: none; transition: border-color .3s;
+        }
+        .cupom-form-grid input:focus,
+        .cupom-form-grid select:focus { border-color: var(--orange-web); }
+        .cupom-form-grid select option { background: var(--oxford-blue); }
+        .btn-criar-cupom {
+            padding: .65rem 1.2rem;
+            background: var(--orange-web); border: none; border-radius: 8px;
+            color: var(--black); font-family: var(--font-heading);
+            font-size: .85rem; font-weight: bold; cursor: pointer;
+            transition: all .3s; white-space: nowrap;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .btn-criar-cupom:hover { background: #ffb700; }
+        .btn-criar-cupom:disabled { opacity: .5; cursor: not-allowed; }
+        .cupom-hint {
+            font-size: .75rem; color: #666; margin-bottom: 1rem;
+            display: flex; align-items: center; gap: .4rem;
+        }
+        .cupom-hint i { color: var(--orange-web); }
+        .badge-cupom-ativo    { background: rgba(39,174,96,.2);   color: #2ecc71; }
+        .badge-cupom-expirado { background: rgba(255,255,255,.08); color: #666; }
+        .btn-desativar-cupom {
+            background: none; border: 1px solid #444; color: #888;
+            padding: .25rem .55rem; border-radius: 6px; cursor: pointer;
+            font-size: .75rem; transition: all .2s;
+        }
+        .btn-desativar-cupom:hover { border-color: var(--error-red); color: var(--error-red); }
     </style>
 </head>
 <body>
@@ -433,6 +490,62 @@
                 </div>
             </div>
  
+            <!-- ══ SEÇÃO CUPONS ══ -->
+            <div class="section">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-tag" style="color:var(--orange-web);margin-right:.5rem;"></i>
+                        Cupons de Desconto
+                    </h3>
+                </div>
+                <div class="cupom-panel">
+                    <div class="cupom-hint">
+                        <i class="fas fa-info-circle"></i>
+                        Máximo 3 cupons ativos por produto · Validade máxima 30 dias · Usos ilimitados até expirar
+                    </div>
+                    <div id="msg-cupom" class="msg"></div>
+                    <div class="cupom-form-grid">
+                        <div class="form-group">
+                            <label>Produto</label>
+                            <select id="cupom-produto">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo</label>
+                            <select id="cupom-tipo">
+                                <option value="percentual">% Percentual</option>
+                                <option value="fixo">R$ Valor Fixo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label id="cupom-valor-label">Desconto (%)</label>
+                            <input type="number" id="cupom-valor" placeholder="Ex: 20" min="1" max="90" step="1">
+                        </div>
+                        <button class="btn-criar-cupom" id="btn-criar-cupom" onclick="criarCupom()">
+                            <i class="fas fa-plus"></i> Criar
+                        </button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Produto</th>
+                                    <th>Desconto</th>
+                                    <th>Válido até</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-cupons">
+                                <tr><td colspan="6" class="empty">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div class="form-row">
                 <div class="section">
                     <h3 class="section-title" style="margin-bottom:1rem;">Solicitar Saque (PIX)</h3>
@@ -535,7 +648,11 @@
         document.getElementById('autor-nome').textContent =
             `| ${profile?.full_name || usuarioAtual.email}`;
  
-        await Promise.all([carregarProdutos(), carregarVendas()]);
+        const [produtosData] = await Promise.all([carregarProdutos(), carregarVendas(), carregarCupons()]);
+        // popula select de produtos no formulário de cupom
+        const { data: prods } = await sb.from('products').select('id, title, active')
+            .eq('author_id', usuarioAtual.id).order('title');
+        carregarProdutosNoCupom(prods);
  
         document.getElementById('dash-loading').style.display  = 'none';
         document.getElementById('dash-conteudo').style.display = 'block';
@@ -979,6 +1096,153 @@
         else fazerCadastro();
     });
  
+    /* ══ CUPONS ══ */
+    document.getElementById('cupom-tipo').addEventListener('change', function() {
+        const label = document.getElementById('cupom-valor-label');
+        const input = document.getElementById('cupom-valor');
+        if (this.value === 'percentual') {
+            label.textContent = 'Desconto (%)';
+            input.placeholder = 'Ex: 20';
+            input.max = '90';
+        } else {
+            label.textContent = 'Desconto (R$)';
+            input.placeholder = 'Ex: 5.00';
+            input.max = '9999';
+        }
+    });
+
+    function gerarCodigoCupom() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        return code;
+    }
+
+    async function carregarProdutosNoCupom(produtos) {
+        const sel = document.getElementById('cupom-produto');
+        sel.innerHTML = '<option value="">Selecione o produto...</option>';
+        (produtos || []).filter(p => p.active !== false).forEach(p => {
+            sel.innerHTML += `<option value="${p.id}">${p.title}</option>`;
+        });
+    }
+
+    async function carregarCupons() {
+        const { data: cupons, error } = await sb
+            .from('cupons')
+            .select('id, codigo, produto_id, tipo, valor, valido_ate, ativo, products(title)')
+            .eq('author_id', usuarioAtual.id)
+            .order('id', { ascending: false });
+
+        if (error || !cupons?.length) {
+            document.getElementById('tabela-cupons').innerHTML =
+                '<tr><td colspan="6" class="empty"><i class="fas fa-tag"></i> Nenhum cupom criado ainda.</td></tr>';
+            return;
+        }
+
+        const hoje = new Date(); hoje.setHours(0,0,0,0);
+        document.getElementById('tabela-cupons').innerHTML = cupons.map(c => {
+            const expirado = !c.ativo || new Date(c.valido_ate) < hoje;
+            const badge    = expirado
+                ? '<span class="badge badge-cupom-expirado">expirado</span>'
+                : '<span class="badge badge-cupom-ativo">ativo</span>';
+            const desconto = c.tipo === 'percentual'
+                ? `${c.valor}% off`
+                : `R$ ${parseFloat(c.valor).toFixed(2).replace('.',',')} off`;
+            const validade = new Date(c.valido_ate + 'T00:00:00').toLocaleDateString('pt-BR');
+            const btnDes   = !expirado
+                ? `<button class="btn-desativar-cupom" onclick="desativarCupom(${c.id})" title="Desativar">
+                       <i class="fas fa-times"></i>
+                   </button>`
+                : '';
+            return `<tr style="${expirado ? 'opacity:.5;' : ''}">
+                <td><code style="font-family:monospace;color:var(--orange-web);letter-spacing:1px;">${c.codigo}</code></td>
+                <td>${c.products?.title || `#${c.produto_id}`}</td>
+                <td>${desconto}</td>
+                <td>${validade}</td>
+                <td>${badge}</td>
+                <td>${btnDes}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function criarCupom() {
+        const produtoId = document.getElementById('cupom-produto').value;
+        const tipo      = document.getElementById('cupom-tipo').value;
+        const valor     = parseFloat(document.getElementById('cupom-valor').value);
+        const btn       = document.getElementById('btn-criar-cupom');
+
+        const msgEl = document.getElementById('msg-cupom');
+        msgEl.className = 'msg';
+
+        if (!produtoId) return msgCupom('Selecione um produto.', 'error');
+        if (!valor || valor <= 0) return msgCupom('Informe o valor do desconto.', 'error');
+        if (tipo === 'percentual' && valor > 90) return msgCupom('Desconto máximo: 90%.', 'error');
+
+        // Verifica limite de 3 cupons ativos
+        const hoje = new Date().toISOString().split('T')[0];
+        const { data: ativos } = await sb.from('cupons')
+            .select('id')
+            .eq('author_id', usuarioAtual.id)
+            .eq('produto_id', produtoId)
+            .eq('ativo', true)
+            .gte('valido_ate', hoje);
+
+        if (ativos && ativos.length >= 3) {
+            return msgCupom('Limite de 3 cupons ativos por produto atingido. Desative um antes de criar outro.', 'error');
+        }
+
+        // Validade: hoje + 30 dias
+        const validadeDate = new Date();
+        validadeDate.setDate(validadeDate.getDate() + 30);
+        const validade = validadeDate.toISOString().split('T')[0];
+        const codigo   = gerarCodigoCupom();
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        const { error } = await sb.from('cupons').insert({
+            codigo,
+            produto_id:   parseInt(produtoId),
+            author_id:    usuarioAtual.id,
+            tipo,
+            valor,
+            valido_de:    new Date().toISOString().split('T')[0],
+            valido_ate:   validade,
+            ativo:        true,
+            usos_maximos: 9999,
+            usos_atuais:  0,
+        });
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-plus"></i> Criar';
+
+        if (error) {
+            msgCupom('Erro ao criar cupom: ' + error.message, 'error');
+            return;
+        }
+
+        msgCupom(`Cupom <strong>${codigo}</strong> criado! Válido por 30 dias.`, 'success');
+        document.getElementById('cupom-valor').value  = '';
+        document.getElementById('cupom-produto').value = '';
+        await carregarCupons();
+    }
+
+    async function desativarCupom(cupomId) {
+        const { error } = await sb.from('cupons')
+            .update({ ativo: false })
+            .eq('id', cupomId)
+            .eq('author_id', usuarioAtual.id);
+
+        if (error) { alert('Erro: ' + error.message); return; }
+        await carregarCupons();
+    }
+
+    function msgCupom(html, tipo) {
+        const el = document.getElementById('msg-cupom');
+        el.innerHTML = html;
+        el.className = `msg ${tipo}`;
+    }
+
     iniciar();
 </script>
  
