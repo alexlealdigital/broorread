@@ -455,20 +455,21 @@ async function activateSpotlightMode(id) {
         if (sb) {
             const { data } = await sb
                 .from('products')
-                .select('title, price, image_url, descricao, author, paginas, intro, sobre_autor')
+                .select('title, price, image_url, descricao, author, paginas, intro, sobre_autor, classificacao')
                 .eq('id', id)
                 .single();
  
             if (data) {
                 produto = {
-                    img:        data.image_url || '',
-                    name:       data.title,
-                    price:      String(data.price),
-                    desc:       data.descricao   || '',
-                    autor:      data.author       || '',
-                    paginas:    data.paginas ? String(data.paginas) : '',
-                    intro:      data.intro        || '',
-                    sobreAutor: data.sobre_autor  || '',
+                    img:          data.image_url || '',
+                    name:         data.title,
+                    price:        String(data.price),
+                    desc:         data.descricao   || '',
+                    autor:        data.author       || '',
+                    paginas:      data.paginas ? String(data.paginas) : '',
+                    intro:        data.intro        || '',
+                    sobreAutor:   data.sobre_autor  || '',
+                    classificacao: data.classificacao || 'L',
                 };
             }
         }
@@ -496,6 +497,36 @@ async function activateSpotlightMode(id) {
         spotlightContainer.style.display = 'flex';
  
         document.getElementById('spot-img').src = produto.img;
+
+        // Badge de classificação indicativa
+        const clMap = {
+            'L':  { label: 'L',   color: '#27ae60', text: '#fff', title: 'Livre para todos os públicos' },
+            '10': { label: '10+', color: '#2980b9', text: '#fff', title: '10 anos ou mais' },
+            '12': { label: '12+', color: '#f39c12', text: '#000', title: '12 anos ou mais' },
+            '14': { label: '14+', color: '#e67e22', text: '#fff', title: '14 anos ou mais' },
+            '16': { label: '16+', color: '#e74c3c', text: '#fff', title: '16 anos ou mais' },
+            '18': { label: '18+', color: '#6c3483', text: '#fff', title: 'Adulto — 18 anos ou mais' },
+        };
+        const cl = clMap[produto.classificacao] || clMap['L'];
+        let spotClassifEl = document.getElementById('spot-classif-badge');
+        if (!spotClassifEl) {
+            spotClassifEl = document.createElement('div');
+            spotClassifEl.id = 'spot-classif-badge';
+            spotClassifEl.style.cssText = `
+                display:inline-flex;align-items:center;gap:.4rem;
+                background:${cl.color};color:${cl.text};
+                padding:.3rem .75rem;border-radius:20px;
+                font-weight:bold;font-size:.8rem;
+                margin-bottom:.75rem;
+            `;
+            const priceEl = document.getElementById('spot-price');
+            priceEl.parentNode.insertBefore(spotClassifEl, priceEl);
+        } else {
+            spotClassifEl.style.background = cl.color;
+            spotClassifEl.style.color = cl.text;
+        }
+        spotClassifEl.title   = cl.title;
+        spotClassifEl.innerHTML = `<i class="fas fa-shield-alt"></i> Classificação: ${cl.label}`;
         document.getElementById('spot-title').innerText = produto.name;
         document.getElementById('spot-desc').innerText  = produto.desc;
         document.getElementById('spot-price').innerText = `R$ ${produto.price.replace('.', ',')}`;
