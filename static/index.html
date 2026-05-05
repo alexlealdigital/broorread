@@ -382,6 +382,27 @@
             .spotlight-details { padding: 2rem; }
             .modal-content { margin: 2vh auto; padding: 1.5rem; }
         }
+
+        /* Abas PIX / Cartao */
+        .payment-tabs{display:flex;border-radius:8px;overflow:hidden;border:1px solid #333;margin-bottom:1.2rem;}
+        .payment-tab{flex:1;padding:.65rem;background:transparent;border:none;color:#888;font-family:inherit;font-size:.88rem;font-weight:bold;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:.4rem;}
+        .payment-tab.active{background:#009ee3;color:#fff;}
+        #card-form .form-group input{background:rgba(255,255,255,.08);border:1px solid #444;border-radius:8px;color:#fff;padding:.7rem 1rem;width:100%;font-family:inherit;font-size:.9rem;outline:none;transition:border-color .3s;}
+        #card-form .form-group input:focus{border-color:#009ee3;}
+        #card-form .form-group input::placeholder{color:#666;}
+        #card-form .form-group label{display:block;font-size:.75rem;font-weight:bold;color:#009ee3;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.35rem;}
+        .card-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+        .installments-select{width:100%;padding:.7rem 1rem;background:rgba(255,255,255,.08);border:1px solid #444;border-radius:8px;color:#fff;font-family:inherit;font-size:.9rem;outline:none;cursor:pointer;}
+        .installments-select option{background:#14213d;}
+        .card-input-wrap{position:relative;}
+        .card-brand-icon{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);height:24px;pointer-events:none;}
+        .btn-pagar-cartao{width:100%;padding:.95rem;background:linear-gradient(135deg,#009ee3,#0070b3);border:none;border-radius:8px;color:#fff;font-family:inherit;font-size:1rem;font-weight:bold;cursor:pointer;transition:all .3s;margin-top:.5rem;display:flex;align-items:center;justify-content:center;gap:8px;}
+        .btn-pagar-cartao:hover{opacity:.9;transform:translateY(-1px);}
+        .btn-pagar-cartao:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+        .card-resultado{border-radius:8px;padding:1rem;text-align:center;margin-top:.75rem;display:none;font-size:.9rem;}
+        .card-resultado.success{background:rgba(39,174,96,.15);border:1px solid #27ae60;color:#2ecc71;display:block;}
+        .card-resultado.error{background:rgba(231,76,60,.15);border:1px solid #e74c3c;color:#ff6b6b;display:block;}
+        .card-resultado.processing{background:rgba(243,156,18,.15);border:1px solid #f39c12;color:#f39c12;display:block;}
     </style>
 </head>
 <body>
@@ -621,9 +642,61 @@
                     </div>
                 </div>
                 
-                <button type="submit" class="btn-confirmar-pagamento" id="btn-submit-checkout">
-                    <i class="fas fa-lock"></i> Pagar com PIX
-                </button>
+                <!-- Abas -->
+                <div class="payment-tabs">
+                    <button class="payment-tab active" id="tab-pix" onclick="switchPaymentTab('pix')">
+                        <i class="fas fa-qrcode"></i> PIX
+                    </button>
+                    <button class="payment-tab" id="tab-cartao" onclick="switchPaymentTab('cartao')">
+                        <i class="fas fa-credit-card"></i> Cartão
+                    </button>
+                </div>
+                <div id="pix-section">
+                    <button type="submit" class="btn-confirmar-pagamento" id="btn-submit-checkout">
+                        <i class="fas fa-lock"></i> Gerar QR Code PIX
+                    </button>
+                </div>
+                <div id="cartao-section" style="display:none;">
+                    <div id="card-form">
+                        <div class="form-group">
+                            <label>Número do Cartão</label>
+                            <div class="card-input-wrap">
+                                <input type="text" id="card-number" placeholder="0000 0000 0000 0000"
+                                       maxlength="19" oninput="formatCardNumber(this)" autocomplete="cc-number">
+                                <img id="card-brand-img" class="card-brand-icon" src="" style="display:none;" alt="bandeira">
+                            </div>
+                        </div>
+                        <div class="card-row">
+                            <div class="form-group">
+                                <label>Validade</label>
+                                <input type="text" id="card-expiry" placeholder="MM/AA"
+                                       maxlength="5" oninput="formatExpiry(this)" autocomplete="cc-exp">
+                            </div>
+                            <div class="form-group">
+                                <label>CVV</label>
+                                <input type="text" id="card-cvv" placeholder="123" maxlength="4" autocomplete="cc-csc">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Nome no Cartão</label>
+                            <input type="text" id="card-name" placeholder="NOME COMO ESTÁ NO CARTÃO"
+                                   oninput="this.value=this.value.toUpperCase()" autocomplete="cc-name">
+                        </div>
+                        <div class="form-group">
+                            <label>CPF do Titular</label>
+                            <input type="text" id="card-cpf" placeholder="000.000.000-00"
+                                   maxlength="14" oninput="formatCPF(this)">
+                        </div>
+                        <div class="form-group" id="installments-group" style="display:none;">
+                            <label>Parcelamento</label>
+                            <select class="installments-select" id="card-installments"></select>
+                        </div>
+                        <div id="card-resultado" class="card-resultado"></div>
+                        <button type="button" class="btn-pagar-cartao" id="btn-pagar-cartao" onclick="pagarCartao()">
+                            <i class="fas fa-lock"></i> Pagar com Cartão
+                        </button>
+                    </div>
+                </div>
             </form>
             <div id="checkout-resultado">
                  <div class="loading-spinner" id="checkout-spinner"></div>
@@ -636,6 +709,7 @@
         <span class="toast-message"></span>
     </div>
 
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
 </body>
