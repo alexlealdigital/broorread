@@ -420,7 +420,7 @@
             </button>
         </div>
  
-        <a href="/" class="back-link" id="link-voltar-loja">← Voltar para a loja</a>
+        <a href="https://broostore.netlify.app" class="back-link" id="link-voltar-loja">← Voltar para a loja</a>
     </div>
 </div>
  
@@ -984,12 +984,29 @@
  
     /* ── Vendas ── */
     async function carregarVendas() {
-        const { data: vendas, error } = await sb
+        // Busca IDs dos produtos do autor (para incluir vendas antigas sem author_id)
+        const { data: produtosAutor } = await sb
+            .from('products')
+            .select('id')
+            .eq('author_id', usuarioAtual.id);
+
+        const produtoIds = (produtosAutor || []).map(p => p.id);
+
+        // Busca vendas com author_id OU cujo product_id pertence ao autor
+        let query = sb
             .from('sales')
             .select('created_at, product_id, amount, status, products(title)')
-            .eq('author_id', usuarioAtual.id)
             .order('created_at', { ascending: false })
             .limit(20);
+
+        if (produtoIds.length > 0) {
+            // Traz vendas do autor (por author_id) + vendas dos seus produtos (legados)
+            query = query.or(`author_id.eq.${usuarioAtual.id},product_id.in.(${produtoIds.join(',')})`);
+        } else {
+            query = query.eq('author_id', usuarioAtual.id);
+        }
+
+        const { data: vendas, error } = await query;
  
         if (error || !vendas?.length) {
             document.getElementById('tabela-vendas').innerHTML =
