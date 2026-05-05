@@ -224,6 +224,7 @@ function resetarCupom() {
 function openCheckoutModal(productId, nome, preco) {
     resetCheckoutModal(); 
     resetarCupom();
+    if (typeof resetCardForm === 'function') resetCardForm();
  
     valorOriginal = parseFloat(preco);
     valorFinal = valorOriginal;
@@ -455,21 +456,20 @@ async function activateSpotlightMode(id) {
         if (sb) {
             const { data } = await sb
                 .from('products')
-                .select('title, price, image_url, descricao, author, paginas, intro, sobre_autor, classificacao')
+                .select('title, price, image_url, descricao, author, paginas, intro, sobre_autor')
                 .eq('id', id)
                 .single();
  
             if (data) {
                 produto = {
-                    img:          data.image_url || '',
-                    name:         data.title,
-                    price:        String(data.price),
-                    desc:         data.descricao   || '',
-                    autor:        data.author       || '',
-                    paginas:      data.paginas ? String(data.paginas) : '',
-                    intro:        data.intro        || '',
-                    sobreAutor:   data.sobre_autor  || '',
-                    classificacao: data.classificacao || 'L',
+                    img:        data.image_url || '',
+                    name:       data.title,
+                    price:      String(data.price),
+                    desc:       data.descricao   || '',
+                    autor:      data.author       || '',
+                    paginas:    data.paginas ? String(data.paginas) : '',
+                    intro:      data.intro        || '',
+                    sobreAutor: data.sobre_autor  || '',
                 };
             }
         }
@@ -497,36 +497,6 @@ async function activateSpotlightMode(id) {
         spotlightContainer.style.display = 'flex';
  
         document.getElementById('spot-img').src = produto.img;
-
-        // Badge de classificação indicativa
-        const clMap = {
-            'L':  { label: 'L',   color: '#27ae60', text: '#fff', title: 'Livre para todos os públicos' },
-            '10': { label: '10+', color: '#2980b9', text: '#fff', title: '10 anos ou mais' },
-            '12': { label: '12+', color: '#f39c12', text: '#000', title: '12 anos ou mais' },
-            '14': { label: '14+', color: '#e67e22', text: '#fff', title: '14 anos ou mais' },
-            '16': { label: '16+', color: '#e74c3c', text: '#fff', title: '16 anos ou mais' },
-            '18': { label: '18+', color: '#6c3483', text: '#fff', title: 'Adulto — 18 anos ou mais' },
-        };
-        const cl = clMap[produto.classificacao] || clMap['L'];
-        let spotClassifEl = document.getElementById('spot-classif-badge');
-        if (!spotClassifEl) {
-            spotClassifEl = document.createElement('div');
-            spotClassifEl.id = 'spot-classif-badge';
-            spotClassifEl.style.cssText = `
-                display:inline-flex;align-items:center;gap:.4rem;
-                background:${cl.color};color:${cl.text};
-                padding:.3rem .75rem;border-radius:20px;
-                font-weight:bold;font-size:.8rem;
-                margin-bottom:.75rem;
-            `;
-            const priceEl = document.getElementById('spot-price');
-            priceEl.parentNode.insertBefore(spotClassifEl, priceEl);
-        } else {
-            spotClassifEl.style.background = cl.color;
-            spotClassifEl.style.color = cl.text;
-        }
-        spotClassifEl.title   = cl.title;
-        spotClassifEl.innerHTML = `<i class="fas fa-shield-alt"></i> Classificação: ${cl.label}`;
         document.getElementById('spot-title').innerText = produto.name;
         document.getElementById('spot-desc').innerText  = produto.desc;
         document.getElementById('spot-price').innerText = `R$ ${produto.price.replace('.', ',')}`;
@@ -596,4 +566,223 @@ function initStoreButtons() {
             }
         });
     });
+}
+
+/* ═══════════════════════════════════════════════
+   PAGAMENTO COM CARTÃO DE CRÉDITO
+   Checkout Transparente — Mercado Pago SDK JS v2
+═══════════════════════════════════════════════ */
+
+const CARTAO_API_URL = 'https://mercadopago-final.onrender.com/api/cobrancas-cartao';
+// IMPORTANTE: substitua pela sua chave pública real do Mercado Pago
+// Encontre em: Mercado Pago → Suas integrações → Credenciais → Chave pública
+const MP_PUBLIC_KEY = 'APP_USR-cc363414-8a58-4bf6-8a2f-fd1efda8176e';
+
+let mpInstance = null;
+
+function initMercadoPago() {
+    if (typeof MercadoPago !== 'undefined') {
+        mpInstance = new MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
+        console.log('[MP] SDK inicializado');
+    } else {
+        console.warn('[MP] SDK não carregado');
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMercadoPago);
+} else {
+    initMercadoPago();
+}
+
+// ── Troca de aba PIX / Cartão ──
+function switchPaymentTab(tab) {
+    document.getElementById('tab-pix').classList.toggle('active',    tab === 'pix');
+    document.getElementById('tab-cartao').classList.toggle('active', tab === 'cartao');
+    document.getElementById('pix-section').style.display    = tab === 'pix'    ? 'block' : 'none';
+    document.getElementById('cartao-section').style.display = tab === 'cartao' ? 'block' : 'none';
+    setCardResultado('', '');
+}
+
+// ── Formatação dos campos ──
+function formatCardNumber(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 16);
+    input.value = v.replace(/(.{4})/g, '$1 ').trim();
+    if (v.length >= 6) {
+        detectarBandeira(v);
+        buscarParcelamento(v.slice(0, 6));
+    } else {
+        document.getElementById('card-brand-img').style.display = 'none';
+        document.getElementById('installments-group').style.display = 'none';
+    }
+}
+
+function formatExpiry(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 4);
+    if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+    input.value = v;
+}
+
+function formatCPF(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 11);
+    if      (v.length > 9) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9);
+    else if (v.length > 6) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);
+    else if (v.length > 3) v = v.slice(0,3)+'.'+v.slice(3);
+    input.value = v;
+}
+
+// ── Detectar bandeira ──
+async function detectarBandeira(numero) {
+    if (!mpInstance || numero.length < 6) return;
+    try {
+        const pm = await mpInstance.getPaymentMethods({ bin: numero.slice(0, 6) });
+        if (pm.results && pm.results.length > 0) {
+            const img = document.getElementById('card-brand-img');
+            img.src = pm.results[0].thumbnail || '';
+            img.style.display = pm.results[0].thumbnail ? 'block' : 'none';
+        }
+    } catch(e) { /* silencioso */ }
+}
+
+// ── Buscar parcelamento ──
+async function buscarParcelamento(bin) {
+    const valor = valorFinal || valorOriginal;
+    if (!mpInstance || !valor || bin.length < 6) return;
+    try {
+        const inst = await mpInstance.getInstallments({ bin, amount: valor });
+        if (inst && inst.length > 0) {
+            const sel = document.getElementById('card-installments');
+            sel.innerHTML = '';
+            inst[0].payer_costs.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.installments;
+                opt.dataset.issuer = inst[0].issuer?.id || '';
+                opt.dataset.pm     = inst[0].payment_method_id;
+                opt.textContent    = p.recommended_message;
+                sel.appendChild(opt);
+            });
+            document.getElementById('installments-group').style.display = 'block';
+        }
+    } catch(e) { /* silencioso */ }
+}
+
+// ── Pagar com cartão ──
+async function pagarCartao() {
+    if (!mpInstance) {
+        setCardResultado('<i class="fas fa-exclamation-circle"></i> SDK do Mercado Pago não carregado. Recarregue a página.', 'error');
+        return;
+    }
+
+    const numero   = document.getElementById('card-number').value.replace(/\s/g, '');
+    const validade = document.getElementById('card-expiry').value;
+    const cvv      = document.getElementById('card-cvv').value.trim();
+    const nome     = document.getElementById('card-name').value.trim();
+    const cpf      = document.getElementById('card-cpf').value.replace(/\D/g, '');
+    const email    = checkoutEmailInput?.value?.trim() || '';
+    const nomeCliente = checkoutNomeInput?.value?.trim() || 'Cliente';
+    const productId   = checkoutProductIdInput?.value;
+    const cupomId     = checkoutCupomIdInput?.value || null;
+    const selInst     = document.getElementById('card-installments');
+    const installments = selInst?.value ? parseInt(selInst.value) : 1;
+    const issuerId    = selInst?.selectedOptions[0]?.dataset?.issuer || null;
+    const pmId        = selInst?.selectedOptions[0]?.dataset?.pm     || null;
+
+    if (!numero || numero.length < 13) return setCardResultado('<i class="fas fa-times-circle"></i> Número do cartão inválido.', 'error');
+    if (!validade.match(/^\d{2}\/\d{2}$/))  return setCardResultado('<i class="fas fa-times-circle"></i> Validade inválida (MM/AA).', 'error');
+    if (!cvv || cvv.length < 3)               return setCardResultado('<i class="fas fa-times-circle"></i> CVV inválido.', 'error');
+    if (!nome)                                return setCardResultado('<i class="fas fa-times-circle"></i> Informe o nome do titular.', 'error');
+    if (cpf.length !== 11)                    return setCardResultado('<i class="fas fa-times-circle"></i> CPF inválido (somente números).', 'error');
+    if (!email || !isValidEmail(email))       return setCardResultado('<i class="fas fa-times-circle"></i> Preencha seu e-mail no formulário acima.', 'error');
+
+    const [mes, ano] = validade.split('/');
+    const btn = document.getElementById('btn-pagar-cartao');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando token...';
+
+    try {
+        const tokenData = await mpInstance.createCardToken({
+            cardNumber:           numero,
+            cardholderName:       nome,
+            cardExpirationMonth:  mes,
+            cardExpirationYear:   '20' + ano,
+            securityCode:         cvv,
+            identificationType:   'CPF',
+            identificationNumber: cpf,
+        });
+
+        if (!tokenData || tokenData.error || !tokenData.id) {
+            const motivo = tokenData?.cause?.[0]?.description || 'Dados do cartão inválidos.';
+            throw new Error(motivo);
+        }
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando pagamento...';
+
+        const resp = await fetch(CARTAO_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token:             tokenData.id,
+                payment_method_id: pmId || tokenData.payment_method_id,
+                issuer_id:         issuerId,
+                installments,
+                email,
+                nome:              nomeCliente,
+                cpf,
+                product_id:        productId,
+                cupom_id:          cupomId ? parseInt(cupomId) : null,
+            })
+        });
+
+        const data = await resp.json();
+
+        if (data.status === 'approved') {
+            setCardResultado(
+                '<i class="fas fa-check-circle"></i> ' + data.mensagem,
+                'success'
+            );
+            btn.innerHTML = '<i class="fas fa-check"></i> Pago!';
+            if (data.desconto_aplicado) {
+                showToast(`Pago com desconto! Economia de R$ ${data.desconto_aplicado.valor_desconto.toFixed(2)}`, 'success');
+            } else {
+                showToast('Pagamento aprovado! Você receberá o produto por e-mail.', 'success');
+            }
+            setTimeout(() => closeCheckoutModal(), 5000);
+
+        } else if (data.status === 'in_process') {
+            setCardResultado('<i class="fas fa-clock"></i> ' + data.mensagem, 'processing');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-lock"></i> Pagar com Cartão';
+
+        } else {
+            setCardResultado('<i class="fas fa-times-circle"></i> ' + (data.mensagem || 'Pagamento recusado. Verifique os dados.'), 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-lock"></i> Pagar com Cartão';
+        }
+
+    } catch(err) {
+        console.error('[CARTAO]', err);
+        setCardResultado('<i class="fas fa-exclamation-circle"></i> ' + (err.message || 'Erro ao processar cartão.'), 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-lock"></i> Pagar com Cartão';
+    }
+}
+
+function setCardResultado(html, tipo) {
+    const el = document.getElementById('card-resultado');
+    if (!el) return;
+    el.innerHTML = html;
+    el.className = 'card-resultado' + (tipo ? ' ' + tipo : '');
+}
+
+// ── Reset campos de cartão ao abrir/fechar modal ──
+function resetCardForm() {
+    ['card-number','card-expiry','card-cvv','card-name','card-cpf'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const instGroup = document.getElementById('installments-group');
+    if (instGroup) instGroup.style.display = 'none';
+    const brandImg = document.getElementById('card-brand-img');
+    if (brandImg) brandImg.style.display = 'none';
+    setCardResultado('', '');
+    switchPaymentTab('pix');
 }
