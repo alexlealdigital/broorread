@@ -1146,7 +1146,7 @@
     async function carregarCupons() {
         const { data: cupons, error } = await sb
             .from('cupons')
-            .select('id, codigo, produto_id, tipo, valor, valido_ate, ativo, products(title)')
+            .select('id, codigo, produto_id, tipo, valor, valido_ate, ativo')
             .eq('author_id', usuarioAtual.id)
             .order('id', { ascending: false });
 
@@ -1154,6 +1154,15 @@
             document.getElementById('tabela-cupons').innerHTML =
                 '<tr><td colspan="6" class="empty"><i class="fas fa-tag"></i> Nenhum cupom criado ainda.</td></tr>';
             return;
+        }
+
+        // Busca títulos dos produtos separadamente (evita FK inválida)
+        const prodIds = [...new Set(cupons.map(c => c.produto_id).filter(Boolean))];
+        let prodMap = {};
+        if (prodIds.length > 0) {
+            const { data: prods } = await sb
+                .from('products').select('id, title').in('id', prodIds);
+            (prods || []).forEach(p => prodMap[p.id] = p.title);
         }
 
         const hoje = new Date(); hoje.setHours(0,0,0,0);
@@ -1173,7 +1182,7 @@
                 : '';
             return `<tr style="${expirado ? 'opacity:.5;' : ''}">
                 <td><code style="font-family:monospace;color:var(--orange-web);letter-spacing:1px;">${c.codigo}</code></td>
-                <td>${c.products?.title || `#${c.produto_id}`}</td>
+                <td>${prodMap[c.produto_id] || `#${c.produto_id}`}</td>
                 <td>${desconto}</td>
                 <td>${validade}</td>
                 <td>${badge}</td>
