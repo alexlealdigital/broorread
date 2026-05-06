@@ -1060,9 +1060,17 @@
  
         const { data: profile } = await sb.from('profiles').select('full_name').eq('id', usuarioAtual.id).single();
  
+        // Busca token de sessão para autenticar a Edge Function
+        const { data: { session: sessaoAtual } } = await sb.auth.getSession();
+        const accessToken = sessaoAtual?.access_token || '';
+
         const resp = await fetch('https://gyepvrzkwesohbagpgfa.supabase.co/functions/v1/solicitar-pagamento-simples', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type':  'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+                'apikey':        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA',
+            },
             body: JSON.stringify({
                 autor_id: usuarioAtual.id,
                 nome:     profile?.full_name || '',
