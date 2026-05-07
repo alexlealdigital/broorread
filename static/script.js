@@ -225,6 +225,9 @@ function openCheckoutModal(productId, nome, preco) {
     resetCheckoutModal(); 
     resetarCupom();
     if (typeof resetCardForm === 'function') resetCardForm();
+    // Armazena preço no campo hidden para parcelamento
+    const priceInput = document.getElementById('checkout_product_price');
+    if (priceInput) priceInput.value = preco;
  
     valorOriginal = parseFloat(preco);
     valorFinal = valorOriginal;
@@ -645,7 +648,9 @@ async function detectarBandeira(numero) {
 
 // ── Buscar parcelamento ──
 async function buscarParcelamento(bin) {
-    const valor = valorFinal || valorOriginal;
+    // Pega o valor do produto direto do campo hidden como fallback
+    const valorCampo = parseFloat(document.getElementById('checkout_product_price')?.value || 0);
+    const valor = valorFinal || valorOriginal || valorCampo;
     if (!mpInstance || !valor || bin.length < 6) return;
     try {
         const inst = await mpInstance.getInstallments({ bin, amount: valor });
@@ -721,9 +726,9 @@ async function pagarCartao() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 token:             tokenData.id,
-                payment_method_id: pmId || tokenData.payment_method_id,
-                issuer_id:         issuerId,
-                installments,
+                payment_method_id: pmId || tokenData.payment_method_id || 'master',
+                issuer_id:         issuerId || null,
+                installments:      installments || 1,
                 email,
                 nome:              nomeCliente,
                 cpf,
