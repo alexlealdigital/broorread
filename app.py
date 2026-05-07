@@ -48,8 +48,14 @@ db = SQLAlchemy(app)
  
 # Configuração do Redis e RQ
 redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
-redis_conn = redis.from_url(redis_url)
-q = Queue(connection=redis_conn)
+try:
+    redis_conn = redis.from_url(redis_url, socket_connect_timeout=3)
+    redis_conn.ping()
+    q = Queue(connection=redis_conn)
+except Exception as _redis_err:
+    print(f"[REDIS] Indisponível na inicialização: {_redis_err}")
+    redis_conn = None
+    q = None
  
 # ---------- MODELOS DE DADOS ----------
  
@@ -883,9 +889,12 @@ def create_cobranca_cartao():
         db.session.commit()
 
         if status_mp == "approved":
-            from rq import Queue as RQueue
-            rq = RQueue(connection=redis_conn)
-            rq.enqueue("worker.process_mercado_pago_webhook", payment["id"])
+            try:
+                from rq import Queue as RQueue
+                rq = RQueue(connection=redis_conn)
+                rq.enqueue("worker.process_mercado_pago_webhook", payment["id"])
+            except Exception as _rq_err:
+                print(f"[CARTAO] Redis indisponível, webhook não enfileirado: {_rq_err}")
             mensagem = "Pagamento aprovado! Você receberá o produto por e-mail em instantes."
         elif status_mp == "in_process":
             mensagem = "Pagamento em análise. Você receberá o produto assim que aprovado."
@@ -905,7 +914,12 @@ def create_cobranca_cartao():
                 "valor_final":    round(valor_final, 2)
             }
 
-        return jsonify(resposta), 201
+        if status_mp == "approved":
+            return jsonify(resposta), 201
+        elif status_mp == "in_process":
+            return jsonify(resposta), 202
+        else:
+            return jsonify(resposta), 402
 
     except Exception as e:
         db.session.rollback()
