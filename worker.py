@@ -87,13 +87,13 @@ class Sale(db.Model):
 # FUNÇÃO: REGISTRAR VENDA NO SUPABASE
 # ============================================
 def registrar_venda_no_supabase(product_id, customer_email, amount, payment_id):
-    """Insere a venda na tabela mensagens do Supabase para o dashboard atualizar."""
+    """Insere a venda na tabela sales do Supabase para o dashboard atualizar."""
     if not SUPABASE_SERVICE_ROLE_KEY:
         print("[WORKER] ❌ ERRO: SUPABASE_SERVICE_ROLE_KEY não configurada!")
         return False
     
     try:
-        url = f"{SUPABASE_URL}/rest/v1/mensagens"
+        url = f"{SUPABASE_URL}/rest/v1/sales"
         headers = {
             "apikey": SUPABASE_SERVICE_ROLE_KEY,
             "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
@@ -108,6 +108,19 @@ def registrar_venda_no_supabase(product_id, customer_email, amount, payment_id):
             "payment_id": str(payment_id),
             "status": "paid"
         }
+        
+        # Busca author_id do produto no Supabase para preencher corretamente
+        try:
+            prod_url = f"{SUPABASE_URL}/rest/v1/products?id=eq.{product_id}&select=author_id"
+            prod_resp = requests.get(prod_url, headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}"
+            }, timeout=5)
+            prod_rows = prod_resp.json()
+            if prod_rows and prod_rows[0].get("author_id"):
+                payload["author_id"] = prod_rows[0]["author_id"]
+        except Exception as e:
+            print(f"[WORKER] Aviso: não conseguiu buscar author_id: {e}")
         
         print(f"[WORKER] Inserindo no Supabase: Produto {product_id}, Valor {amount}")
         response = requests.post(url, json=payload, headers=headers, timeout=10)
