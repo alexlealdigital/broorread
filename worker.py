@@ -87,13 +87,13 @@ class Sale(db.Model):
 # FUNÇÃO: REGISTRAR VENDA NO SUPABASE
 # ============================================
 def registrar_venda_no_supabase(product_id, customer_email, amount, payment_id):
-    """Insere a venda na tabela sales do Supabase para o dashboard atualizar."""
+    """Insere a venda na tabela mensagens do Supabase para o dashboard atualizar."""
     if not SUPABASE_SERVICE_ROLE_KEY:
         print("[WORKER] ❌ ERRO: SUPABASE_SERVICE_ROLE_KEY não configurada!")
         return False
     
     try:
-        url = f"{SUPABASE_URL}/rest/v1/sales"
+        url = f"{SUPABASE_URL}/rest/v1/mensagens"
         headers = {
             "apikey": SUPABASE_SERVICE_ROLE_KEY,
             "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
