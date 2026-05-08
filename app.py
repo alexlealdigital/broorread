@@ -682,6 +682,131 @@ def create_cobranca():
         db.session.rollback()
         print(f"ERRO CRÍTICO GERAL (CREATE): {str(e)}")
         return jsonify({"status": "error", "message": f"Falha ao criar cobrança: {str(e)}"}), 500
+
+
+# ROTA DE CRIAÇÃO DE COBRANÇA COM CARTÃO DE CRÉDITO
+@app.route("/api/cobrancas-cartao", methods=["POST"])
+def create_cobranca_cartao():
+    try:
+        dados = request.get_json()
+
+        if not dados:
+            return jsonify({"status": "error", "message": "Nenhum dado foi enviado."}), 400
+
+        # Dados do frontend
+        token = dados.get("token")
+        payment_method_id = dados.get("payment_method_id")
+        issuer_id = dados.get("issuer_id")
+        installments = dados.get("installments", 1)
+        email_cliente = dados.get("email")
+        nome_cliente = dados.get("nome", "Cliente")
+        cpf_cliente = dados.get("cpf")
+        product_id_recebido = dados.get("product_id")
+        cupom_id_recebido = dados.get("cupom_id")
+
+        if not all([token, payment_method_id, email_cliente, cpf_cliente, product_id_recebido]):
+            return jsonify({"status": "error", "message": "Dados incompletos para pagamento com cartão."}), 400
+
+        produto = db.session.get(Produto, int(product_id_recebido))
+        if not produto:
+            return jsonify({"status": "error", "message": "Produto não encontrado."}), 404
+
+        valor_original = produto.preco
+        valor_final = valor_original
+        cupom_obj = None
+
+        if cupom_id_recebido:
+            cupom_obj = Cupom.query.get(int(cupom_id_recebido))
+            if cupom_obj:
+                valido, _ = cupom_obj.esta_valido()
+                if valido and (cupom_obj.produto_id is None or cupom_obj.produto_id == int(product_id_recebido)):
+                    resultado = cupom_obj.calcular_desconto(valor_original)
+                    valor_final = resultado["valor_final"]
+                    cupom_obj.usos_atuais += 1
+                    db.session.add(cupom_obj)
+
+        descricao_correta = produto.nome
+        if cupom_obj:
+            descricao_correta += f" (Cupom: {cupom_obj.codigo})"
+
+        # Geração do external_reference
+        import uuid
+        external_reference = str(uuid.uuid4())
+
+        # Configuração do Mercado Pago SDK
+        access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
+        if not access_token:
+            return jsonify({"status": "error", "message": "Token do Mercado Pago não configurado."}), 500
+
+        sdk = mercadopago.SDK(access_token)
+
+        # Preparar dados do pagamento
+        payment_data = {
+            "transaction_amount": round(valor_final, 2),
+            "description": descricao_correta,
+            "payment_method_id": payment_method_id,
+            "installments": int(installments),
+            "token": token,
+            "external_reference": external_reference,
+            "payer": {
+                "email": email_cliente,
+                "first_name": nome_cliente.split(" ")[0] if nome_cliente else "Cliente",
+                "last_name": " ".join(nome_cliente.split(" ")[1:]) if " " in nome_cliente else "Sobrenome",
+                "identification": {
+                    "type": "CPF",
+                    "number": cpf_cliente
+                }
+            }
+        }
+        if issuer_id: # Issuer ID é opcional
+            payment_data["issuer_id"] = int(issuer_id)
+
+        payment_response = sdk.payment().create(payment_data)
+
+        if payment_response["status"] != 201:
+            error_msg = payment_response.get("response", {}).get("message", "Erro desconhecido do Mercado Pago")
+            return jsonify({"status": "error", "message": f"Erro do Mercado Pago: {error_msg}"}), 500
+
+        payment = payment_response["response"]
+
+        # Salvar cobrança no banco de dados local
+        nova_cobranca = Cobranca(
+            external_reference=external_reference,
+            cliente_nome=nome_cliente,
+            cliente_email=email_cliente,
+            cliente_telefone=None, # Telefone não é obrigatório para cartão
+            valor=round(valor_final, 2),
+            valor_original=round(valor_original, 2),
+            status=payment["status"],
+            product_id=produto.id,
+            vendedor_codigo=None, # Vendedor não é obrigatório para cartão
+            cupom_id=cupom_obj.id if cupom_obj else None
+        )
+        db.session.add(nova_cobranca)
+        db.session.commit()
+
+        resposta = {
+            "status": payment["status"],
+            "message": "Pagamento com cartão processado com sucesso!",
+            "payment_id": payment["id"],
+            "cobranca": nova_cobranca.to_dict()
+        }
+
+        if cupom_obj:
+            resposta["desconto_aplicado"] = {
+                "cupom_codigo": cupom_obj.codigo,
+                "tipo": cupom_obj.tipo,
+                "valor_desconto": round(valor_original - valor_final, 2),
+                "valor_original": round(valor_original, 2),
+                "valor_final": round(valor_final, 2)
+            }
+
+        return jsonify(resposta), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERRO CRÍTICO GERAL (CARTÃO): {str(e)}")
+        return jsonify({"status": "error", "message": f"Falha ao criar cobrança com cartão: {str(e)}"}), 500
 # ROTA DE CONTATO
 @app.route("/api/contato", methods=["POST"])
 def handle_contact_form():
