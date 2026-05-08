@@ -63,6 +63,8 @@ services:
         fromService:
           name: mercadopago-redis
           property: connectionString
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
 
   - type: redis
     name: mercadopago-redis
