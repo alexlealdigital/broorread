@@ -274,237 +274,45 @@ def validar_cupom():
         if not codigo:
             return jsonify({"status": "error", "message": "Código do cupom é obrigatório"}), 400
         
-        if not produto_id or not valor_original:
-            return jsonify({"status": "error", "message": "Dados do produto incompletos"}), 400
- 
-        # Busca o cupom
         cupom = Cupom.query.filter_by(codigo=codigo).first()
-        
         if not cupom:
             return jsonify({"status": "error", "message": "Cupom não encontrado"}), 404
- 
-        # Verifica validade
-        valido, mensagem = cupom.esta_valido()
+        
+        valido, motivo = cupom.esta_valido()
         if not valido:
-            return jsonify({"status": "error", "message": mensagem}), 400
- 
-        # Verifica se é válido para este produto (se tiver restrição)
-        if cupom.produto_id is not None and cupom.produto_id != int(produto_id):
-            return jsonify({
-                "status": "error", 
-                "message": f"Este cupom não é válido para este produto"
-            }), 400
- 
-        # Calcula o desconto
-        resultado = cupom.calcular_desconto(float(valor_original))
+            return jsonify({"status": "error", "message": motivo}), 400
+        
+        if cupom.produto_id and cupom.produto_id != int(produto_id):
+            return jsonify({"status": "error", "message": "Este cupom não é válido para este produto"}), 400
+        
+        calculo = cupom.calcular_desconto(float(valor_original))
         
         return jsonify({
             "status": "success",
-            "cupom": {
-                "id": cupom.id,
-                "codigo": cupom.codigo,
-                "tipo": cupom.tipo,
-                "valor": cupom.valor,
-                "descricao": f"{cupom.valor}{'%' if cupom.tipo == 'percentual' else ' R$ OFF'}"
-            },
-            "calculo": resultado
+            "cupom": cupom.to_dict(),
+            "calculo": calculo
         }), 200
- 
-    except Exception as e:
-        print(f"ERRO (VALIDAR CUPOM): {str(e)}")
-        return jsonify({"status": "error", "message": f"Erro ao validar cupom: {str(e)}"}), 500
- 
- 
-# ─────────────────────────────────────────────
-# ROTAS ADMIN – CUPONS
-# Requer header:  X-Admin-Key: <valor de ADMIN_SECRET_KEY no Render>
-# ─────────────────────────────────────────────
- 
-def _check_admin_key():
-    """Retorna True se o header X-Admin-Key bater com a env var."""
-    secret = os.environ.get("ADMIN_SECRET_KEY", "")
-    if not secret:
-        return False, "ADMIN_SECRET_KEY não configurada no servidor"
-    if request.headers.get("X-Admin-Key", "") != secret:
-        return False, "Chave de admin inválida"
-    return True, ""
- 
- 
-@app.route("/api/admin/criar-cupom", methods=["POST"])
-def admin_criar_cupom():
-    """
-    Cria um novo cupom de desconto.
- 
-    Body JSON:
-    {
-        "codigo":       "PROMO50",          # obrigatório – será salvo em maiúsculas
-        "tipo":         "percentual",        # "percentual" ou "valor_fixo"
-        "valor":        20,                  # 20 = 20 % ou R$ 20,00
-        "usos_maximos": 50,                  # null = ilimitado
-        "produto_id":   6,                   # null = vale para todos
-        "valido_de":    "2025-01-01",        # null = sem restrição de início
-        "valido_ate":   "2025-12-31"         # null = sem expiração
-    }
-    """
-    ok, msg = _check_admin_key()
-    if not ok:
-        return jsonify({"status": "error", "message": msg}), 401
- 
-    try:
-        dados = request.get_json() or {}
- 
-        codigo = dados.get("codigo", "").strip().upper()
-        tipo   = dados.get("tipo", "percentual")
-        valor  = dados.get("valor")
- 
-        if not codigo:
-            return jsonify({"status": "error", "message": "Campo 'codigo' é obrigatório"}), 400
-        if tipo not in ("percentual", "valor_fixo"):
-            return jsonify({"status": "error", "message": "Campo 'tipo' deve ser 'percentual' ou 'valor_fixo'"}), 400
-        if valor is None:
-            return jsonify({"status": "error", "message": "Campo 'valor' é obrigatório"}), 400
- 
-        # Código duplicado?
-        if Cupom.query.filter_by(codigo=codigo).first():
-            return jsonify({"status": "error", "message": f"Cupom '{codigo}' já existe"}), 409
- 
-        # Datas opcionais
-        from datetime import date
-        def parse_date(s):
-            return date.fromisoformat(s) if s else None
- 
-        novo = Cupom(
-            codigo       = codigo,
-            tipo         = tipo,
-            valor        = float(valor),
-            usos_maximos = dados.get("usos_maximos"),   # None = ilimitado
-            usos_atuais  = 0,
-            ativo        = True,
-            produto_id   = dados.get("produto_id"),     # None = todos os produtos
-            valido_de    = parse_date(dados.get("valido_de")),
-            valido_ate   = parse_date(dados.get("valido_ate")),
-        )
-        db.session.add(novo)
-        db.session.commit()
- 
-        return jsonify({
-            "status":  "success",
-            "message": f"Cupom '{codigo}' criado com sucesso",
-            "cupom":   novo.to_dict()
-        }), 201
- 
-    except Exception as e:
-        db.session.rollback()
-        print(f"ERRO (ADMIN CRIAR CUPOM): {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
- 
- 
-@app.route("/api/admin/cupons", methods=["GET"])
-def admin_listar_cupons():
-    """Lista todos os cupons com status de uso."""
-    ok, msg = _check_admin_key()
-    if not ok:
-        return jsonify({"status": "error", "message": msg}), 401
- 
-    try:
-        cupons = Cupom.query.order_by(Cupom.id.desc()).all()
-        return jsonify({
-            "status": "success",
-            "total":  len(cupons),
-            "cupons": [c.to_dict() for c in cupons]
-        }), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
- 
- 
-@app.route("/api/admin/cupons/<codigo>/desativar", methods=["POST"])
-def admin_desativar_cupom(codigo):
-    """Desativa um cupom pelo código."""
-    ok, msg = _check_admin_key()
-    if not ok:
-        return jsonify({"status": "error", "message": msg}), 401
- 
-    try:
-        cupom = Cupom.query.filter_by(codigo=codigo.upper()).first()
-        if not cupom:
-            return jsonify({"status": "error", "message": "Cupom não encontrado"}), 404
- 
-        cupom.ativo = False
-        db.session.commit()
-        return jsonify({"status": "success", "message": f"Cupom '{cupom.codigo}' desativado"}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
- 
- 
-# ─────────────────────────────────────────────
-# ROTA DE VALIDAÇÃO DE CHAVE
-@app.route("/api/validar_chave", methods=["POST"])
-def validar_chave():
-    dados = request.get_json()
-    chave_serial = dados.get("chave_serial", "").strip().upper()
-    product_id_app = dados.get("product_id") 
-    
-    if not chave_serial or not product_id_app:
-        return jsonify({"status": "error", "message": "Chave serial e ID do produto incompletos."}), 400
- 
-    try:
-        chave = ChaveLicenca.query.filter_by(chave_serial=chave_serial).with_for_update().first()
         
-        if not chave:
-            return jsonify({"status": "invalid", "message": "Chave não encontrada."}), 404
- 
-        if chave.produto_id != int(product_id_app):
-            return jsonify({"status": "invalid", "message": "Chave válida, mas para um produto diferente."}), 403
- 
-        if not chave.vendida:
-            return jsonify({"status": "invalid", "message": "Pagamento pendente ou chave não ativada."}), 403
- 
-        if chave.ativa_no_app:
-             return jsonify({"status": "invalid", "message": "Chave já ativa em outro dispositivo."}), 403
-        
-        chave.ativa_no_app = True
-        db.session.add(chave)
-        db.session.commit()
-        
-        data_venda = chave.vendida_em or datetime.utcnow()
- 
-        return jsonify({
-            "status": "valid",
-            "message": "Chave de licença ativada com sucesso!",
-            "licenca": {
-                "chave": chave_serial,
-                "cliente": chave.cliente_email,
-                "data_ativacao": data_venda.isoformat(),
-                "status_uso": "Ativa"
-            }
-        }), 200
- 
     except Exception as e:
-        db.session.rollback()
-        print(f"ERRO CRÍTICO (VALIDAR CHAVE): {str(e)}")
-        return jsonify({"status": "error", "message": f"Erro interno na validação: {str(e)}"}), 500
+        print(f"ERRO (CUPOM): {str(e)}")
+        return jsonify({"status": "error", "message": "Erro ao validar cupom"}), 500
  
  
-# ROTA DE WEBHOOK
+# WEBHOOK DO MERCADO PAGO
 @app.route("/api/webhook", methods=["POST"])
-def webhook_mercado_pago():
-    
+def webhook():
     try:
+        # Pega o ID do pagamento da notificação (data.id ou id)
         dados = request.get_json()
-        
-        if not validar_assinatura_webhook(request):
-            return jsonify({"status": "error", "message": "Assinatura inválida"}), 401
-        
-        if dados.get("type") != "payment":
-            return jsonify({"status": "success", "message": "Notificação ignorada"}), 200
-        
-        payment_id = dados.get("data", {}).get("id")
+        payment_id = dados.get("data", {}).get("id") or dados.get("id")
         
         if payment_id:
-            q.enqueue('worker.process_mercado_pago_webhook', payment_id)
+            if q:
+                q.enqueue('worker.process_mercado_pago_webhook', payment_id)
+            else:
+                print("[WEBHOOK] Fila RQ indisponível. Processamento não enfileirado.")
  
-        return jsonify({"status": "success", "message": "Webhook recebido e processamento enfileirado"}), 200
+        return jsonify({"status": "success", "message": "Webhook recebido"}), 200
         
     except Exception as e:
         print(f"Erro ao processar webhook: {str(e)}")
@@ -605,7 +413,9 @@ def create_cobranca():
         unique_id = str(uuid.uuid4())  # Identificador único para esta cobrança
  
         # Define o external_reference conforme o produto
-        if usuario_id and int(product_id_recebido) == 7:  # produto de moedas
+        if int(product_id_recebido) == 7:  # produto de moedas
+            if not usuario_id:
+                return jsonify({"status": "error", "message": "ID de usuário obrigatório para compra de moedas."}), 400
             external_reference = f"{usuario_id}:{unique_id}"
         else:
             external_reference = unique_id
@@ -703,6 +513,7 @@ def create_cobranca_cartao():
         cpf_cliente = dados.get("cpf")
         product_id_recebido = dados.get("product_id")
         cupom_id_recebido = dados.get("cupom_id")
+        usuario_id = dados.get("usuario_id")
 
         if not all([token, payment_method_id, email_cliente, cpf_cliente, product_id_recebido]):
             return jsonify({"status": "error", "message": "Dados incompletos para pagamento com cartão."}), 400
@@ -731,7 +542,14 @@ def create_cobranca_cartao():
 
         # Geração do external_reference
         import uuid
-        external_reference = str(uuid.uuid4())
+        unique_id = str(uuid.uuid4())
+        
+        if int(product_id_recebido) == 7:  # produto de moedas
+            if not usuario_id:
+                return jsonify({"status": "error", "message": "ID de usuário obrigatório para compra de moedas."}), 400
+            external_reference = f"{usuario_id}:{unique_id}"
+        else:
+            external_reference = unique_id
 
         # Configuração do Mercado Pago SDK
         access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
@@ -745,8 +563,8 @@ def create_cobranca_cartao():
             "transaction_amount": round(valor_final, 2),
             "description": descricao_correta,
             "payment_method_id": payment_method_id,
-            "installments": int(installments),
             "token": token,
+            "installments": int(installments),
             "external_reference": external_reference,
             "payer": {
                 "email": email_cliente,
@@ -891,11 +709,7 @@ def sync_produto():
         print(f"[sync-produto] Erro: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
  
-
-# ─────────────────────────────────────────────
-# PAGAMENTO COM CARTÃO DE CRÉDITO
-# ─────────────────────────────────────────────
-
+ 
 @app.route("/health", methods=["GET"])
 def health_check():
    
