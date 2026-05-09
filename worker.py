@@ -63,6 +63,7 @@ class Produto(db.Model):
     preco = db.Column(db.Float, nullable=False)
     link_download = db.Column(db.String(500), nullable=False)
     tipo = db.Column(db.String(50), default="ebook", nullable=False)
+    moedas_equivalentes = db.Column(db.Integer, nullable=True)
 
 class ChaveLicenca(db.Model):
     __tablename__ = "chaves_licenca"
@@ -75,7 +76,6 @@ class ChaveLicenca(db.Model):
     cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), unique=True, nullable=True)
     cliente_email = db.Column(db.String(200), nullable=True)
 
-# REMOVIDO: supabase_synced - essa coluna não existe no banco local
 class Sale(db.Model):
     __tablename__ = "sales"
     id = db.Column(db.Integer, primary_key=True)
@@ -222,6 +222,70 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
         print(f"[WORKER] Falha no envio SMTP: {exc}")
         return False
 
+def enviar_email_recibo_moedas(destinatario, nome_cliente, valor, quantidade, link_jogo, cobranca):
+    """Envia email de recibo para compra de moedas."""
+    try:
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
+        email_user = os.environ["EMAIL_USER"]
+        email_pass = os.environ["EMAIL_PASSWORD"]
+    except KeyError:
+        print("[WORKER] ERRO: Credenciais de email não configuradas.")
+        return False
+
+    assunto = f"🪙 Suas {quantidade} moedas já estão na sua conta - Broo Store"
+    instrucoes_entrega = f"""
+        <p>Agradecemos por escolher a <strong>Broo Store</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> referente à compra de <strong>{quantidade} moedas</strong> foi confirmado.</p>
+        <div style="text-align: center; margin: 25px 0;">
+            <a href="{link_jogo}" style="background-color: #fca311; color: #14213d; padding: 14px 28px; text-decoration: none; border-radius: 25px; font-weight: bold;">🎮 Jogar Agora</a>
+        </div>
+    """
+
+    corpo_html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }}
+    .container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+    .header {{ background-color: #14213d; padding: 30px; text-align: center; color: white; }}
+    .header h1 {{ margin: 0; font-size: 1.8em; }}
+    .content {{ padding: 30px; }}
+    .footer {{ background-color: #f9fafb; padding: 20px; text-align: center; font-size: 0.9em; color: #6b7280; border-top: 1px solid #e5e7eb; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>✅ Compra confirmada!</h1></div>
+    <div class="content">
+      <p>Olá, {nome_cliente},</p>
+      {instrucoes_entrega}
+    </div>
+    <div class="footer">
+      <strong>Broo Store</strong><br>
+      Pedido ID: {cobranca.id}
+    </div>
+  </div>
+</body>
+</html>"""
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = assunto
+    msg["From"] = email_user
+    msg["To"] = destinatario
+    msg.attach(MIMEText(corpo_html, "html"))
+
+    try:
+        smtp_port = int(os.environ.get("SMTP_PORT", 587))
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
+            server.starttls()
+            server.login(email_user, email_pass)
+            server.send_message(msg)
+        print(f"[WORKER] Email de moedas enviado para {destinatario}")
+        return True
+    except Exception as exc:
+        print(f"[WORKER] Falha no envio SMTP (moedas): {exc}")
+        return False
+
 # ============================================
 # JOB PRINCIPAL: PROCESSAR WEBHOOK
 # ============================================
@@ -258,8 +322,6 @@ def process_mercado_pago_webhook(payment_id):
             print(f"[WORKER] ERRO: Pagamento {payment_id} sem external_reference.")
             return
         
-        print(f"[WORKER] Processando pagamento {payment_id} | ExtRef: {external_ref}")
-        
         # Retry com delay
         cobranca = None
         for tentativa in range(5):
@@ -285,43 +347,83 @@ def process_mercado_pago_webhook(payment_id):
             print(f"[WORKER] ERRO: Produto não encontrado.")
             return
         
-        # 5. Gerenciar estoque
+        # 5. Lógica de Entrega
         link_entrega = produto.link_download
         chave_entregue = None
+        sucesso_entrega = False
         
-        if produto.tipo in ["game", "app"]:
-            print(f"[WORKER] Reservando chave para {produto.nome}...")
-            chave_obj = ChaveLicenca.query.filter(
-                ChaveLicenca.produto_id == produto.id,
-                ChaveLicenca.vendida == False
-            ).order_by(ChaveLicenca.id.asc()).with_for_update().first()
+        if produto.tipo == 'moedas':
+            # Extrair usuario_id do external_reference (formato "usuario_id:unique_id")
+            usuario_id = None
+            if ':' in str(external_ref):
+                usuario_id = str(external_ref).split(':')[0]
             
-            if chave_obj:
-                chave_obj.vendida = True
-                chave_obj.vendida_em = datetime.utcnow()
-                chave_obj.cobranca_id = cobranca.id
-                chave_obj.cliente_email = cobranca.cliente_email
-                chave_entregue = chave_obj.chave_serial
-                db.session.add(chave_obj)
-                print(f"[WORKER] Chave reservada: {chave_entregue[:10]}...")
+            if usuario_id:
+                # Chamar Edge Function do Supabase para creditar moedas
+                edge_function_url = f"{SUPABASE_URL}/functions/v1/creditar-moedas"
+                payload = {
+                    "usuario_id": usuario_id,
+                    "quantidade": produto.moedas_equivalentes or 0,
+                    "valor_pago": cobranca.valor,
+                    "mp_id": str(payment_id)
+                }
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}"
+                }
+                
+                try:
+                    resp_edge = requests.post(edge_function_url, json=payload, headers=headers, timeout=15)
+                    if resp_edge.status_code == 200:
+                        print(f"[WORKER] ✅ Moedas creditadas para {usuario_id}")
+                        sucesso_entrega = enviar_email_recibo_moedas(
+                            destinatario=cobranca.cliente_email,
+                            nome_cliente=cobranca.cliente_nome,
+                            valor=cobranca.valor,
+                            quantidade=produto.moedas_equivalentes or 0,
+                            link_jogo="https://broo.games",
+                            cobranca=cobranca
+                        )
+                    else:
+                        print(f"[WORKER] ❌ Erro ao creditar moedas: {resp_edge.status_code} - {resp_edge.text}")
+                except Exception as e:
+                    print(f"[WORKER] ❌ Exceção ao chamar Edge Function: {e}")
             else:
-                print(f"[WORKER] ERRO: Estoque esgotado!")
-                db.session.rollback()
-                raise Exception(f"Estoque esgotado: {produto.id}")
+                print("[WORKER] ⚠️ Compra de moedas sem usuario_id.")
+        else:
+            # Entrega normal (Ebook ou Game)
+            if produto.tipo in ["game", "app"]:
+                print(f"[WORKER] Reservando chave para {produto.nome}...")
+                chave_obj = ChaveLicenca.query.filter(
+                    ChaveLicenca.produto_id == produto.id,
+                    ChaveLicenca.vendida == False
+                ).order_by(ChaveLicenca.id.asc()).with_for_update().first()
+                
+                if chave_obj:
+                    chave_obj.vendida = True
+                    chave_obj.vendida_em = datetime.utcnow()
+                    chave_obj.cobranca_id = cobranca.id
+                    chave_obj.cliente_email = cobranca.cliente_email
+                    chave_entregue = chave_obj.chave_serial
+                    db.session.add(chave_obj)
+                    print(f"[WORKER] Chave reservada: {chave_entregue[:10]}...")
+                else:
+                    print(f"[WORKER] ERRO: Estoque esgotado!")
+                    db.session.rollback()
+                    raise Exception(f"Estoque esgotado: {produto.id}")
+            
+            sucesso_entrega = enviar_email_confirmacao(
+                destinatario=cobranca.cliente_email,
+                nome_cliente=cobranca.cliente_nome,
+                valor=cobranca.valor,
+                link_produto=link_entrega,
+                cobranca=cobranca,
+                nome_produto=produto.nome,
+                chave_acesso=chave_entregue
+            )
         
-        # 6. Enviar email
-        sucesso = enviar_email_confirmacao(
-            destinatario=cobranca.cliente_email,
-            nome_cliente=cobranca.cliente_nome,
-            valor=cobranca.valor,
-            link_produto=link_entrega,
-            cobranca=cobranca,
-            nome_produto=produto.nome,
-            chave_acesso=chave_entregue
-        )
-        
-        # 7. Finalizar transação e registrar no Supabase
-        if sucesso:
+        # 6. Finalizar transação e registrar no Supabase
+        if sucesso_entrega:
             try:
                 # Salva localmente
                 cobranca.status = "delivered"
@@ -346,15 +448,15 @@ def process_mercado_pago_webhook(payment_id):
                 )
                 
                 if supabase_ok:
-                    print(f"[WORKER] ✅ SUCESSO TOTAL: Email + Dashboard atualizado!")
+                    print(f"[WORKER] ✅ SUCESSO TOTAL: Entrega + Dashboard atualizado!")
                 else:
-                    print(f"[WORKER] ⚠️ Email enviado, mas dashboard NÃO atualizado.")
+                    print(f"[WORKER] ⚠️ Entrega feita, mas dashboard NÃO atualizado.")
                 
             except Exception as e:
                 print(f"[WORKER] ERRO ao salvar: {e}")
                 db.session.rollback()
         else:
-            print(f"[WORKER] ERRO: Falha no envio de email.")
+            print(f"[WORKER] ERRO: Falha na entrega (email não enviado ou erro em moedas).")
             db.session.rollback()
 
 # ============================================
