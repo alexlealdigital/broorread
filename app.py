@@ -274,17 +274,23 @@ def validar_cupom():
         if not codigo:
             return jsonify({"status": "error", "message": "Código do cupom é obrigatório"}), 400
         
+        if not produto_id or not valor_original:
+            return jsonify({"status": "error", "message": "ID do produto e valor original são obrigatórios"}), 400
+        
         cupom = Cupom.query.filter_by(codigo=codigo).first()
+        
         if not cupom:
             return jsonify({"status": "error", "message": "Cupom não encontrado"}), 404
-        
+            
         valido, motivo = cupom.esta_valido()
         if not valido:
             return jsonify({"status": "error", "message": motivo}), 400
-        
-        if cupom.produto_id and cupom.produto_id != int(produto_id):
+            
+        # Verifica se o cupom é específico para um produto
+        if cupom.produto_id is not None and cupom.produto_id != int(produto_id):
             return jsonify({"status": "error", "message": "Este cupom não é válido para este produto"}), 400
-        
+            
+        # Calcula o desconto
         calculo = cupom.calcular_desconto(float(valor_original))
         
         return jsonify({
@@ -294,25 +300,24 @@ def validar_cupom():
         }), 200
         
     except Exception as e:
-        print(f"ERRO (CUPOM): {str(e)}")
-        return jsonify({"status": "error", "message": "Erro ao validar cupom"}), 500
+        print(f"Erro ao validar cupom: {str(e)}")
+        return jsonify({"status": "error", "message": f"Erro interno: {str(e)}"}), 500
  
  
 # WEBHOOK DO MERCADO PAGO
 @app.route("/api/webhook", methods=["POST"])
 def webhook():
     try:
-        # Pega o ID do pagamento da notificação (data.id ou id)
+        # if not validar_assinatura_webhook(request):
+        #    return jsonify({"status": "error", "message": "Assinatura inválida"}), 401
+ 
         dados = request.get_json()
-        payment_id = dados.get("data", {}).get("id") or dados.get("id")
+        payment_id = dados.get("data", {}).get("id")
         
         if payment_id:
-            if q:
-                q.enqueue('worker.process_mercado_pago_webhook', payment_id)
-            else:
-                print("[WEBHOOK] Fila RQ indisponível. Processamento não enfileirado.")
+            q.enqueue('worker.process_mercado_pago_webhook', payment_id)
  
-        return jsonify({"status": "success", "message": "Webhook recebido"}), 200
+        return jsonify({"status": "success", "message": "Webhook recebido e processamento enfileirado"}), 200
         
     except Exception as e:
         print(f"Erro ao processar webhook: {str(e)}")
@@ -413,9 +418,7 @@ def create_cobranca():
         unique_id = str(uuid.uuid4())  # Identificador único para esta cobrança
  
         # Define o external_reference conforme o produto
-        if int(product_id_recebido) == 7:  # produto de moedas
-            if not usuario_id:
-                return jsonify({"status": "error", "message": "ID de usuário obrigatório para compra de moedas."}), 400
+        if usuario_id and int(product_id_recebido) == 7:  # produto de moedas
             external_reference = f"{usuario_id}:{unique_id}"
         else:
             external_reference = unique_id
@@ -494,137 +497,6 @@ def create_cobranca():
         return jsonify({"status": "error", "message": f"Falha ao criar cobrança: {str(e)}"}), 500
 
 
-# ROTA DE CRIAÇÃO DE COBRANÇA COM CARTÃO DE CRÉDITO
-@app.route("/api/cobrancas-cartao", methods=["POST"])
-def create_cobranca_cartao():
-    try:
-        dados = request.get_json()
-
-        if not dados:
-            return jsonify({"status": "error", "message": "Nenhum dado foi enviado."}), 400
-
-        # Dados do frontend
-        token = dados.get("token")
-        payment_method_id = dados.get("payment_method_id")
-        issuer_id = dados.get("issuer_id")
-        installments = dados.get("installments", 1)
-        email_cliente = dados.get("email")
-        nome_cliente = dados.get("nome", "Cliente")
-        cpf_cliente = dados.get("cpf")
-        product_id_recebido = dados.get("product_id")
-        cupom_id_recebido = dados.get("cupom_id")
-        usuario_id = dados.get("usuario_id")
-
-        if not all([token, payment_method_id, email_cliente, cpf_cliente, product_id_recebido]):
-            return jsonify({"status": "error", "message": "Dados incompletos para pagamento com cartão."}), 400
-
-        produto = db.session.get(Produto, int(product_id_recebido))
-        if not produto:
-            return jsonify({"status": "error", "message": "Produto não encontrado."}), 404
-
-        valor_original = produto.preco
-        valor_final = valor_original
-        cupom_obj = None
-
-        if cupom_id_recebido:
-            cupom_obj = Cupom.query.get(int(cupom_id_recebido))
-            if cupom_obj:
-                valido, _ = cupom_obj.esta_valido()
-                if valido and (cupom_obj.produto_id is None or cupom_obj.produto_id == int(product_id_recebido)):
-                    resultado = cupom_obj.calcular_desconto(valor_original)
-                    valor_final = resultado["valor_final"]
-                    cupom_obj.usos_atuais += 1
-                    db.session.add(cupom_obj)
-
-        descricao_correta = produto.nome
-        if cupom_obj:
-            descricao_correta += f" (Cupom: {cupom_obj.codigo})"
-
-        # Geração do external_reference
-        import uuid
-        unique_id = str(uuid.uuid4())
-        
-        if int(product_id_recebido) == 7:  # produto de moedas
-            if not usuario_id:
-                return jsonify({"status": "error", "message": "ID de usuário obrigatório para compra de moedas."}), 400
-            external_reference = f"{usuario_id}:{unique_id}"
-        else:
-            external_reference = unique_id
-
-        # Configuração do Mercado Pago SDK
-        access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
-        if not access_token:
-            return jsonify({"status": "error", "message": "Token do Mercado Pago não configurado."}), 500
-
-        sdk = mercadopago.SDK(access_token)
-
-        # Preparar dados do pagamento
-        payment_data = {
-            "transaction_amount": round(valor_final, 2),
-            "description": descricao_correta,
-            "payment_method_id": payment_method_id,
-            "token": token,
-            "installments": int(installments),
-            "external_reference": external_reference,
-            "payer": {
-                "email": email_cliente,
-                "first_name": nome_cliente.split(" ")[0] if nome_cliente else "Cliente",
-                "last_name": " ".join(nome_cliente.split(" ")[1:]) if " " in nome_cliente else "Sobrenome",
-                "identification": {
-                    "type": "CPF",
-                    "number": cpf_cliente
-                }
-            }
-        }
-        if issuer_id: # Issuer ID é opcional
-            payment_data["issuer_id"] = int(issuer_id)
-
-        payment_response = sdk.payment().create(payment_data)
-
-        if payment_response["status"] != 201:
-            error_msg = payment_response.get("response", {}).get("message", "Erro desconhecido do Mercado Pago")
-            return jsonify({"status": "error", "message": f"Erro do Mercado Pago: {error_msg}"}), 500
-
-        payment = payment_response["response"]
-
-        # Salvar cobrança no banco de dados local
-        nova_cobranca = Cobranca(
-            external_reference=external_reference,
-            cliente_nome=nome_cliente,
-            cliente_email=email_cliente,
-            cliente_telefone=None, # Telefone não é obrigatório para cartão
-            valor=round(valor_final, 2),
-            valor_original=round(valor_original, 2),
-            status=payment["status"],
-            product_id=produto.id,
-            vendedor_codigo=None, # Vendedor não é obrigatório para cartão
-            cupom_id=cupom_obj.id if cupom_obj else None
-        )
-        db.session.add(nova_cobranca)
-        db.session.commit()
-
-        resposta = {
-            "status": payment["status"],
-            "message": "Pagamento com cartão processado com sucesso!",
-            "payment_id": payment["id"],
-            "cobranca": nova_cobranca.to_dict()
-        }
-
-        if cupom_obj:
-            resposta["desconto_aplicado"] = {
-                "cupom_codigo": cupom_obj.codigo,
-                "tipo": cupom_obj.tipo,
-                "valor_desconto": round(valor_original - valor_final, 2),
-                "valor_original": round(valor_original, 2),
-                "valor_final": round(valor_final, 2)
-            }
-
-        return jsonify(resposta), 201
-
-    except Exception as e:
-        db.session.rollback()
-        print(f"ERRO CRÍTICO GERAL (CARTÃO): {str(e)}")
-        return jsonify({"status": "error", "message": f"Falha ao criar cobrança com cartão: {str(e)}"}), 500
 # ROTA DE CONTATO
 @app.route("/api/contato", methods=["POST"])
 def handle_contact_form():
@@ -709,50 +581,174 @@ def sync_produto():
         print(f"[sync-produto] Erro: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
  
- 
-@app.route("/health", methods=["GET"])
-def health_check():
-   
+
+# ─────────────────────────────────────────────
+# PAGAMENTO COM CARTÃO DE CRÉDITO
+# ─────────────────────────────────────────────
+@app.route("/api/cobrancas-cartao", methods=["POST"])
+def create_cobranca_cartao():
     try:
-        redis_conn.ping()
-        redis_status = "ok"
-    except Exception:
-        redis_status = "error"
- 
-    try:
-        with app.app_context():
-            Produto.query.limit(1).all()
-        db_status = "ok"
-    except Exception:
-        db_status = "error"
-        
-    status_code = 200 if redis_status == "ok" and db_status == "ok" else 503
- 
-    return jsonify({
-        "status": "healthy" if status_code == 200 else "unhealthy", 
-        "service": "mercadopago-api",
-        "dependencies": {
-            "redis": redis_status,
-            "database": db_status
+        dados = request.get_json()
+        if not dados:
+            return jsonify({"status": "error", "message": "Nenhum dado enviado."}), 400
+
+        token           = dados.get("token")
+        payment_method  = dados.get("payment_method_id")
+        installments    = dados.get("installments", 1)
+        email_cliente   = dados.get("email")
+        nome_cliente    = dados.get("nome", "Cliente")
+        cpf_cliente     = dados.get("cpf", "")
+        product_id_rec  = dados.get("product_id")
+        cupom_id_rec    = dados.get("cupom_id")
+        issuer_id       = dados.get("issuer_id")
+
+        if not token:
+            return jsonify({"status": "error", "message": "Token do cartão é obrigatório."}), 400
+        if not email_cliente or "@" not in email_cliente:
+            return jsonify({"status": "error", "message": "E-mail inválido."}), 400
+        if not product_id_rec:
+            return jsonify({"status": "error", "message": "ID do produto é obrigatório."}), 400
+
+        # Busca/sincroniza produto
+        produto = db.session.get(Produto, int(product_id_rec))
+        try:
+            sb_url = os.environ.get("SUPABASE_URL", "https://gyepvrzkwesohbagpgfa.supabase.co")
+            sb_key = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA")
+            resp = http_requests.get(
+                f"{sb_url}/rest/v1/products?id=eq.{product_id_rec}&select=id,title,price,link_pdf",
+                headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}"}
+            )
+            rows = resp.json()
+            if rows:
+                p = rows[0]
+                if not produto:
+                    produto = Produto(id=p["id"], nome=p["title"], preco=float(p["price"]),
+                                      link_download=p.get("link_pdf") or "", tipo="ebook")
+                    db.session.add(produto)
+                else:
+                    produto.preco         = float(p["price"])
+                    produto.nome          = p["title"]
+                    produto.link_download = p.get("link_pdf") or produto.link_download
+                db.session.commit()
+        except Exception as e:
+            print(f"[CARTAO] Erro ao sincronizar produto: {e}")
+
+        if not produto:
+            return jsonify({"status": "error", "message": "Produto não encontrado."}), 404
+
+        valor_original = produto.preco
+        valor_final    = valor_original
+        cupom_obj      = None
+
+        if cupom_id_rec:
+            cupom_obj = Cupom.query.get(int(cupom_id_rec))
+            if cupom_obj:
+                valido, _ = cupom_obj.esta_valido()
+                if valido and (cupom_obj.produto_id is None or cupom_obj.produto_id == int(product_id_rec)):
+                    resultado   = cupom_obj.calcular_desconto(valor_original)
+                    valor_final = resultado["valor_final"]
+                    cupom_obj.usos_atuais += 1
+                    db.session.add(cupom_obj)
+
+        import uuid
+        external_reference = str(uuid.uuid4())
+
+        access_token = os.environ.get("MERCADOPAGO_ACCESS_TOKEN")
+        if not access_token:
+            return jsonify({"status": "error", "message": "Token do Mercado Pago não configurado."}), 500
+
+        sdk = mercadopago.SDK(access_token)
+
+        payment_data = {
+            "transaction_amount": round(valor_final, 2),
+            "token":              token,
+            "description":        produto.nome,
+            "installments":       int(installments),
+            "payment_method_id":  payment_method,
+            "external_reference": external_reference,
+            "payer": {
+                "email": email_cliente,
+                "first_name": nome_cliente.split()[0] if nome_cliente else "Cliente",
+                "last_name":  " ".join(nome_cliente.split()[1:]) if len(nome_cliente.split()) > 1 else ".",
+                "identification": {
+                    "type":   "CPF",
+                    "number": cpf_cliente.replace(".", "").replace("-", "")
+                }
+            }
         }
-    }), status_code
- 
- 
-# ROTA DA API DE RANKING
+        if issuer_id:
+            payment_data["issuer_id"] = int(issuer_id)
+
+        payment_response = sdk.payment().create(payment_data)
+
+        if payment_response["status"] not in [200, 201]:
+            error_msg = payment_response.get("response", {}).get("message", "Erro desconhecido do Mercado Pago")
+            return jsonify({"status": "error", "message": f"Erro MP: {error_msg}"}), 500
+
+        payment    = payment_response["response"]
+        status_mp  = payment.get("status")
+        status_detail = payment.get("status_detail", "")
+
+        nova_cobranca = Cobranca(
+            external_reference=external_reference,
+            cliente_nome=nome_cliente,
+            cliente_email=email_cliente,
+            cliente_telefone=None,
+            valor=round(valor_final, 2),
+            valor_original=round(valor_original, 2),
+            status=status_mp,
+            product_id=produto.id,
+            cupom_id=cupom_obj.id if cupom_obj else None
+        )
+        db.session.add(nova_cobranca)
+        db.session.commit()
+
+        if status_mp == "approved":
+            try:
+                from rq import Queue as RQueue
+                rq = RQueue(connection=redis_conn)
+                rq.enqueue("worker.process_mercado_pago_webhook", payment["id"])
+            except Exception as _rq_err:
+                print(f"[CARTAO] Redis indisponível, webhook não enfileirado: {_rq_err}")
+            mensagem = "Pagamento aprovado! Você receberá o produto por e-mail em instantes."
+        elif status_mp == "in_process":
+            mensagem = "Pagamento em análise. Você receberá o produto assim que aprovado."
+        else:
+            mensagem = f"Pagamento não aprovado ({status_detail}). Verifique os dados do cartão."
+
+        resposta = {
+            "status":        status_mp,
+            "status_detail": status_detail,
+            "payment_id":    payment["id"],
+            "mensagem":      mensagem,
+        }
+        if cupom_obj:
+            resposta["desconto_aplicado"] = {
+                "cupom_codigo": cupom_obj.codigo,
+                "tipo": cupom_obj.tipo,
+                "valor_desconto": round(valor_original - valor_final, 2),
+                "valor_original": round(valor_original, 2),
+                "valor_final": round(valor_final, 2)
+            }
+
+        return jsonify(resposta), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERRO CRÍTICO GERAL (CARTÃO): {str(e)}")
+        return jsonify({"status": "error", "message": f"Falha ao criar cobrança com cartão: {str(e)}"}), 500
+
+
+# ROTA DE RANKING / DASHBOARD
 @app.route("/api/ranking", methods=["GET"])
 def get_ranking():
     try:
+        # Configurações de metas e comissões
+        META_VENDAS_DIA = 100
         PRECO_BASE_EBOOK = 15.90
-        META_VENDAS_DIA = 1000
-        
-        COMISSOES = {
-            0: 0.25,
-            1: 0.10,
-            2: 0.05
-        }
- 
+        COMISSOES = {0: 0.15, 1: 0.10, 2: 0.05} 
+
         with app.app_context():
-            
             vendas_entregues_query = db.session.query(
                 Cobranca.vendedor_codigo,
                 func.count(Cobranca.id).label('pontos')
