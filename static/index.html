@@ -581,7 +581,7 @@
         </div>
     </div>
 
-      <!-- MODAL DE CHECKOUT COM CUPOM -->
+     <!-- MODAL DE CHECKOUT COM CUPOM -->
     <div id="checkout-modal" class="modal">
         <div class="modal-content">
             <span class="modal-close" id="checkout-modal-close">&times;</span>
@@ -644,10 +644,10 @@
                 
                 <!-- Abas -->
                 <div class="payment-tabs">
-                    <button class="payment-tab active" id="tab-pix" onclick="switchPaymentTab('pix')">
+                    <button type="button" class="payment-tab active" id="tab-pix" onclick="switchPaymentTab('pix')">
                         <i class="fas fa-qrcode"></i> PIX
                     </button>
-                    <button class="payment-tab" id="tab-cartao" onclick="switchPaymentTab('cartao')">
+                    <button type="button" class="payment-tab" id="tab-cartao" onclick="switchPaymentTab('cartao')">
                         <i class="fas fa-credit-card"></i> Cartão
                     </button>
                 </div>
@@ -711,6 +711,10 @@
 
     <script src="https://sdk.mercadopago.com/js/v2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Substitua pela Public Key de produção da sua aplicação no Mercado Pago.
+        window.MERCADOPAGO_PUBLIC_KEY = "APP_USR-cc363414-8a58-4bf6-8a2f-fd1efda8176e";
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
