@@ -566,3 +566,229 @@ function initStoreButtons() {
         });
     });
 }
+
+// =========================================================
+// 6. PAGAMENTO COM CARTÃO DE CRÉDITO — CORREÇÃO BROOSTORE
+// =========================================================
+const API_CARTAO_URL = "https://mercadopago-final.onrender.com/api/cobrancas-cartao";
+const MP_PUBLIC_KEY = window.MERCADOPAGO_PUBLIC_KEY || "COLE_SUA_PUBLIC_KEY_AQUI";
+let mpInstance = null;
+let ultimoPaymentMethodId = null;
+let ultimoIssuerId = null;
+
+function getMpInstance() {
+    if (mpInstance) return mpInstance;
+    if (!window.MercadoPago) {
+        throw new Error('SDK do Mercado Pago não carregado. Verifique a tag https://sdk.mercadopago.com/js/v2.');
+    }
+    if (!MP_PUBLIC_KEY || MP_PUBLIC_KEY === 'COLE_SUA_PUBLIC_KEY_AQUI') {
+        throw new Error('Public Key do Mercado Pago não configurada no frontend.');
+    }
+    mpInstance = new MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
+    return mpInstance;
+}
+
+function switchPaymentTab(tab) {
+    const pixSection = document.getElementById('pix-section');
+    const cartaoSection = document.getElementById('cartao-section');
+    const tabPix = document.getElementById('tab-pix');
+    const tabCartao = document.getElementById('tab-cartao');
+    const cardResultado = document.getElementById('card-resultado');
+
+    if (!pixSection || !cartaoSection || !tabPix || !tabCartao) return;
+
+    if (tab === 'cartao') {
+        pixSection.style.display = 'none';
+        cartaoSection.style.display = 'block';
+        tabPix.classList.remove('active');
+        tabCartao.classList.add('active');
+        if (cardResultado) {
+            cardResultado.className = 'card-resultado';
+            cardResultado.style.display = 'none';
+            cardResultado.textContent = '';
+        }
+    } else {
+        pixSection.style.display = 'block';
+        cartaoSection.style.display = 'none';
+        tabCartao.classList.remove('active');
+        tabPix.classList.add('active');
+    }
+}
+
+function formatCardNumber(input) {
+    let value = input.value.replace(/\D/g, '').slice(0, 19);
+    input.value = value.replace(/(.{4})/g, '$1 ').trim();
+    if (value.length >= 6) atualizarDadosCartao(value.slice(0, 6));
+}
+
+function formatExpiry(input) {
+    let value = input.value.replace(/\D/g, '').slice(0, 4);
+    if (value.length >= 3) value = `${value.slice(0, 2)}/${value.slice(2)}`;
+    input.value = value;
+}
+
+function formatCPF(input) {
+    let value = input.value.replace(/\D/g, '').slice(0, 11);
+    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+    value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    input.value = value;
+}
+
+function mostrarResultadoCartao(message, type = 'processing') {
+    const box = document.getElementById('card-resultado');
+    if (!box) return;
+    box.textContent = message;
+    box.className = `card-resultado ${type}`;
+    box.style.display = 'block';
+}
+
+function validarFormularioCartao() {
+    const numero = document.getElementById('card-number')?.value.replace(/\D/g, '') || '';
+    const validade = document.getElementById('card-expiry')?.value || '';
+    const cvv = document.getElementById('card-cvv')?.value.replace(/\D/g, '') || '';
+    const nome = document.getElementById('card-name')?.value.trim() || '';
+    const cpf = document.getElementById('card-cpf')?.value.replace(/\D/g, '') || '';
+
+    if (numero.length < 13) throw new Error('Número do cartão inválido.');
+    if (!/^\d{2}\/\d{2}$/.test(validade)) throw new Error('Validade inválida. Use MM/AA.');
+    if (cvv.length < 3) throw new Error('CVV inválido.');
+    if (nome.length < 3) throw new Error('Nome do titular inválido.');
+    if (cpf.length !== 11) throw new Error('CPF do titular inválido.');
+
+    const [mes, anoCurto] = validade.split('/');
+    const mesNum = parseInt(mes, 10);
+    if (mesNum < 1 || mesNum > 12) throw new Error('Mês de validade inválido.');
+
+    return {
+        numero,
+        mes,
+        ano: `20${anoCurto}`,
+        cvv,
+        nome,
+        cpf
+    };
+}
+
+async function atualizarDadosCartao(bin) {
+    try {
+        const mp = getMpInstance();
+        const methods = await mp.getPaymentMethods({ bin });
+        const paymentMethod = methods?.results?.[0];
+        if (!paymentMethod) return;
+
+        ultimoPaymentMethodId = paymentMethod.id;
+
+        const brandImg = document.getElementById('card-brand-img');
+        if (brandImg && paymentMethod.thumbnail) {
+            brandImg.src = paymentMethod.thumbnail;
+            brandImg.style.display = 'block';
+        }
+
+        const issuers = await mp.getIssuers({ paymentMethodId: ultimoPaymentMethodId, bin });
+        ultimoIssuerId = issuers?.[0]?.id || null;
+
+        const amount = String((valorFinal || valorOriginal || 0).toFixed(2));
+        const installments = await mp.getInstallments({ amount, bin, paymentMethodId: ultimoPaymentMethodId });
+        const payerCosts = installments?.[0]?.payer_costs || [];
+        const select = document.getElementById('card-installments');
+        const group = document.getElementById('installments-group');
+
+        if (select && group && payerCosts.length) {
+            select.innerHTML = payerCosts.map(cost => {
+                const texto = cost.recommended_message || `${cost.installments}x de R$ ${Number(cost.installment_amount).toFixed(2).replace('.', ',')}`;
+                return `<option value="${cost.installments}">${texto}</option>`;
+            }).join('');
+            group.style.display = 'block';
+        }
+    } catch (error) {
+        console.warn('[Cartão] Não foi possível atualizar bandeira/parcelas:', error);
+    }
+}
+
+async function pagarCartao() {
+    const btn = document.getElementById('btn-pagar-cartao');
+    try {
+        if (!validateCheckoutForm()) return;
+        const dadosCartao = validarFormularioCartao();
+        const mp = getMpInstance();
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+        mostrarResultadoCartao('Validando cartão com o Mercado Pago...', 'processing');
+
+        if (!ultimoPaymentMethodId) {
+            await atualizarDadosCartao(dadosCartao.numero.slice(0, 6));
+        }
+        if (!ultimoPaymentMethodId) {
+            throw new Error('Não foi possível identificar a bandeira do cartão. Confira o número informado.');
+        }
+
+        const tokenResponse = await mp.createCardToken({
+            cardNumber: dadosCartao.numero,
+            cardholderName: dadosCartao.nome,
+            cardExpirationMonth: dadosCartao.mes,
+            cardExpirationYear: dadosCartao.ano,
+            securityCode: dadosCartao.cvv,
+            identificationType: 'CPF',
+            identificationNumber: dadosCartao.cpf
+        });
+
+        const token = tokenResponse?.id;
+        if (!token) throw new Error('Não foi possível gerar o token do cartão.');
+
+        const parcelas = document.getElementById('card-installments')?.value || 1;
+        const payload = {
+            token,
+            payment_method_id: ultimoPaymentMethodId,
+            issuer_id: ultimoIssuerId,
+            installments: parseInt(parcelas, 10) || 1,
+            email: checkoutEmailInput.value.trim(),
+            nome: checkoutNomeInput.value.trim(),
+            cpf: dadosCartao.cpf,
+            product_id: parseInt(checkoutProductIdInput.value, 10),
+            cupom_id: checkoutCupomIdInput.value ? parseInt(checkoutCupomIdInput.value, 10) : null
+        };
+
+        mostrarResultadoCartao('Enviando pagamento...', 'processing');
+        const response = await fetch(API_CARTAO_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || result.mensagem || 'Pagamento recusado.');
+        }
+
+        if (result.status === 'approved') {
+            checkoutForm.style.display = 'none';
+            checkoutResultado.innerHTML = `<h2 style="color:#27ae60;"><i class="fas fa-check-circle"></i> Pagamento aprovado!</h2><p>${result.mensagem || 'Você receberá o produto por e-mail em instantes.'}</p>`;
+            showToast('Pagamento aprovado!', 'success');
+        } else if (result.status === 'in_process') {
+            mostrarResultadoCartao(result.mensagem || 'Pagamento em análise.', 'processing');
+            showToast('Pagamento em análise.', 'info');
+        } else {
+            mostrarResultadoCartao(result.mensagem || 'Pagamento não aprovado. Verifique os dados.', 'error');
+            showToast('Pagamento não aprovado.', 'error');
+        }
+    } catch (error) {
+        console.error('[Cartão] Erro:', error);
+        mostrarResultadoCartao(error.message, 'error');
+        showToast(error.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-lock"></i> Pagar com Cartão';
+        }
+    }
+}
+
+// Expõe as funções usadas por atributos inline do HTML.
+window.switchPaymentTab = switchPaymentTab;
+window.formatCardNumber = formatCardNumber;
+window.formatExpiry = formatExpiry;
+window.formatCPF = formatCPF;
+window.pagarCartao = pagarCartao;
+
