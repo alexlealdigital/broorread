@@ -680,9 +680,8 @@ def create_cobranca_cartao():
             payment_data["issuer_id"] = int(issuer_id)
 
         import uuid as _uuid
-        payment_data["idempotency_key"] = str(_uuid.uuid4())
 
-        payment_response = sdk.payment().create(payment_data)
+        payment_response = sdk.payment().create(payment_data, {"X-Idempotency-Key": str(_uuid.uuid4())})
 
         print(f"[CARTAO] Resposta MP status={payment_response.get('status')} response={payment_response.get('response')}")
 
