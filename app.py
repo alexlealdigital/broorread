@@ -679,10 +679,22 @@ def create_cobranca_cartao():
         if issuer_id:
             payment_data["issuer_id"] = int(issuer_id)
 
+        import uuid as _uuid
+        payment_data["idempotency_key"] = str(_uuid.uuid4())
+
         payment_response = sdk.payment().create(payment_data)
 
+        print(f"[CARTAO] Resposta MP status={payment_response.get('status')} response={payment_response.get('response')}")
+
         if payment_response["status"] not in [200, 201]:
-            error_msg = payment_response.get("response", {}).get("message", "Erro desconhecido do Mercado Pago")
+            resp_body = payment_response.get("response") or {}
+            error_msg = (
+                resp_body.get("message")
+                or resp_body.get("error")
+                or str(resp_body)
+                or "Erro desconhecido do Mercado Pago"
+            )
+            print(f"[CARTAO] ERRO MP completo: {payment_response}")
             return jsonify({"status": "error", "message": f"Erro MP: {error_msg}"}), 500
 
         payment    = payment_response["response"]
