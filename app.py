@@ -680,8 +680,10 @@ def create_cobranca_cartao():
             payment_data["issuer_id"] = int(issuer_id)
 
         import uuid as _uuid
+        from mercadopago.config import RequestOptions
+        request_options = RequestOptions(custom_headers={"X-Idempotency-Key": str(_uuid.uuid4())})
 
-        payment_response = sdk.payment().create(payment_data, {"X-Idempotency-Key": str(_uuid.uuid4())})
+        payment_response = sdk.payment().create(payment_data, request_options)
 
         print(f"[CARTAO] Resposta MP status={payment_response.get('status')} response={payment_response.get('response')}")
 
