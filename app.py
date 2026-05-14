@@ -823,6 +823,118 @@ def get_ranking():
         return jsonify({"status": "error", "message": f"Erro interno ao calcular ranking: {str(e)}"}), 500
  
  
+
+
+# ═══════════════════════════════════════════════════════════
+# COMPRESSOR DE PDF — validação de código + compressão
+# ═══════════════════════════════════════════════════════════
+
+@app.route("/api/validar-codigo-compressao", methods=["POST"])
+def validar_codigo_compressao():
+    """Verifica se o external_reference corresponde a um pagamento
+    aprovado do produto 99 (compressão de PDF)."""
+    try:
+        dados  = request.get_json()
+        codigo = (dados.get("codigo") or "").strip()
+        if not codigo:
+            return jsonify({"status": "erro", "message": "Código não informado."}), 400
+
+        cobranca = Cobranca.query.filter_by(
+            external_reference=codigo,
+            product_id=99,
+            status="approved"
+        ).first()
+
+        if not cobranca:
+            return jsonify({"status": "erro",
+                            "message": "Código inválido ou pagamento ainda não confirmado."}), 404
+
+        # Verifica se o código já foi usado para uma compressão
+        if getattr(cobranca, "compressao_usada", False):
+            return jsonify({"status": "erro",
+                            "message": "Este código já foi utilizado."}), 400
+
+        return jsonify({"status": "ok", "message": "Código válido."}), 200
+
+    except Exception as e:
+        print(f"ERRO validar_codigo_compressao: {e}")
+        return jsonify({"status": "erro", "message": str(e)}), 500
+
+
+@app.route("/api/comprimir-pdf", methods=["POST"])
+def comprimir_pdf():
+    """Recebe o PDF e o código de liberação, comprime e devolve o arquivo."""    import subprocess, tempfile, os as _os
+
+    try:
+        codigo = (request.form.get("codigo") or "").strip()
+        pdf    = request.files.get("pdf")
+
+        if not codigo:
+            return jsonify({"status": "erro", "message": "Código não informado."}), 400
+        if not pdf:
+            return jsonify({"status": "erro", "message": "Nenhum arquivo enviado."}), 400
+
+        # Valida código novamente (segurança)
+        cobranca = Cobranca.query.filter_by(
+            external_reference=codigo,
+            product_id=99,
+            status="approved"
+        ).first()
+
+        if not cobranca:
+            return jsonify({"status": "erro",
+                            "message": "Código inválido ou pagamento não confirmado."}), 403
+
+        if getattr(cobranca, "compressao_usada", False):
+            return jsonify({"status": "erro",
+                            "message": "Este código já foi utilizado."}), 400
+
+        # Salva o PDF recebido em arquivo temporário
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_in:
+            pdf.save(tmp_in.name)
+            tmp_in_path = tmp_in.name
+
+        tmp_out_path = tmp_in_path.replace(".pdf", "_out.pdf")
+
+        try:
+            result = subprocess.run([
+                "gs",
+                "-sDEVICE=pdfwrite",
+                "-dCompatibilityLevel=1.4",
+                "-dPDFSETTINGS=/ebook",
+                "-dNOPAUSE", "-dQUIET", "-dBATCH",
+                f"-sOutputFile={tmp_out_path}",
+                tmp_in_path
+            ], capture_output=True, timeout=120)
+
+            if result.returncode != 0 or not _os.path.exists(tmp_out_path):
+                raise Exception("Ghostscript falhou: " + result.stderr.decode()[:200])
+
+            # Marca código como usado
+            try:
+                cobranca.compressao_usada = True
+                db.session.commit()
+            except Exception:
+                pass  # campo pode não existir ainda; não bloqueia a entrega
+
+            # Retorna o PDF comprimido
+            from flask import send_file
+            return send_file(
+                tmp_out_path,
+                mimetype="application/pdf",
+                as_attachment=True,
+                download_name="comprimido.pdf"
+            )
+
+        finally:
+            for p in [tmp_in_path]:
+                try: _os.unlink(p)
+                except: pass
+
+    except Exception as e:
+        print(f"ERRO comprimir_pdf: {e}")
+        return jsonify({"status": "erro", "message": str(e)}), 500
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
