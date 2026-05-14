@@ -101,6 +101,13 @@ def registrar_venda_no_supabase(product_id, customer_email, amount, payment_id):
             "Prefer": "return=minimal"
         }
         
+        # Verifica se payment_id já existe antes de inserir (proteção anti-duplicata)
+        check_url = f"{SUPABASE_URL}/rest/v1/sales?payment_id=eq.{payment_id}&select=id"
+        check_resp = requests.get(check_url, headers=headers, timeout=10)
+        if check_resp.status_code == 200 and check_resp.json():
+            print(f"[WORKER] ⚠️ Venda {payment_id} já registrada no Supabase. Ignorando duplicata.")
+            return True
+
         payload = {
             "product_id": int(product_id),
             "customer_email": str(customer_email),
