@@ -700,6 +700,9 @@
         const classifEl  = document.querySelector('input[name="classificacao"]:checked');
         const btn        = document.getElementById('btn-salvar');
 
+        // Limpa mensagem anterior a cada nova tentativa de publicação
+        limparMsg();
+
         if (!titulo)    return mostrarMsg('Informe o título do produto.','error');
         if (!descricao) return mostrarMsg('Informe uma descrição.','error');
         if (!preco || preco <= 0) return mostrarMsg('Informe um preço válido.','error');
