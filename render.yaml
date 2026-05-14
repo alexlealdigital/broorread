@@ -2,7 +2,7 @@ services:
   - type: web
     name: mercadopago-api
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: apt-get install -y ghostscript && pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
@@ -34,7 +34,6 @@ services:
           name: mercadopago-redis
           property: connectionString
     healthCheckPath: /health
-
   - type: worker
     name: mercadopago-worker
     env: python
@@ -65,11 +64,9 @@ services:
           property: connectionString
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-
   - type: redis
     name: mercadopago-redis
     plan: free
-
   - type: pserv
     name: mercadopago-db
     env: postgresql
