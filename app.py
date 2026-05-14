@@ -863,7 +863,8 @@ def validar_codigo_compressao():
 
 @app.route("/api/comprimir-pdf", methods=["POST"])
 def comprimir_pdf():
-    """Recebe o PDF e o código de liberação, comprime e devolve o arquivo."""    import subprocess, tempfile, os as _os
+    """Recebe o PDF e o código de liberação, comprime e devolve o arquivo."""
+    import subprocess, tempfile, os as _os
 
     try:
         codigo = (request.form.get("codigo") or "").strip()
