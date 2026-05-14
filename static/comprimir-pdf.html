@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprimir PDF — BrooStore</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --orange: #fca311;
+            --bg:     #0a0a0a;
+            --card:   #141414;
+            --inp:    #1e1e1e;
+            --border: #2a2a2a;
+            --white:  #ffffff;
+            --muted:  #888;
+            --green:  #4caf50;
+            --red:    #f44336;
+            --fh: 'Poppins', sans-serif;
+            --fb: 'Lato', sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--fb); background: var(--bg); color: var(--white); min-height: 100vh; }
+
+        .header { background: #111; border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: .8rem; }
+        .brand  { font-family: var(--fh); color: var(--orange); font-size: 1.15rem; font-weight: 700; text-decoration: none; }
+        .sep    { color: var(--border); }
+        .hsub   { color: var(--muted); font-size: .9rem; }
+
+        .main { max-width: 600px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+        .page-title { font-family: var(--fh); font-size: 1.7rem; margin-bottom: .35rem; }
+        .page-title span { color: var(--orange); }
+        .page-sub { color: var(--muted); font-size: .9rem; line-height: 1.6; margin-bottom: 2rem; }
+
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.8rem; margin-bottom: 1.2rem; }
+
+        .step-label { display: flex; align-items: center; gap: .5rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; margin-bottom: .9rem; }
+        .step-badge { background: var(--orange); color: #000; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 700; flex-shrink: 0; }
+
+        /* UPLOAD */
+        .upload-area { border: 2px dashed var(--border); border-radius: 10px; padding: 2.2rem 1.5rem; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; position: relative; }
+        .upload-area:hover, .upload-area.drag { border-color: var(--orange); background: rgba(252,163,17,.04); }
+        .upload-area.ready { border-color: var(--green); border-style: solid; }
+        .upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+        .up-icon { font-size: 2.4rem; margin-bottom: .6rem; color: #444; display: block; transition: color .2s; }
+        .upload-area.ready .up-icon { color: var(--green); }
+        .up-txt { color: var(--muted); font-size: .9rem; line-height: 1.6; }
+        .up-txt strong { color: var(--orange); }
+        .upload-area.ready .up-txt { color: var(--white); font-weight: 700; }
+        .up-size { font-size: .8rem; color: var(--muted); margin-top: .2rem; }
+
+        /* FORM */
+        .frow { margin-bottom: 1rem; }
+        .frow label { display: block; font-size: .78rem; color: var(--muted); font-weight: 700; margin-bottom: .4rem; letter-spacing: .04em; }
+        .frow input { width: 100%; background: var(--inp); border: 1px solid var(--border); border-radius: 8px; color: var(--white); padding: .75rem 1rem; font-size: .95rem; font-family: var(--fb); outline: none; transition: border-color .2s; }
+        .frow input:focus { border-color: var(--orange); }
+        .frow input::placeholder { color: #3a3a3a; }
+
+        /* PRICE */
+        .price-tag { display: flex; align-items: center; justify-content: space-between; background: rgba(252,163,17,.07); border: 1px solid rgba(252,163,17,.25); border-radius: 10px; padding: .9rem 1.2rem; margin-bottom: 1rem; }
+        .price-tag .pl { font-size: .85rem; color: var(--muted); }
+        .price-tag .pv { font-family: var(--fh); font-size: 1.4rem; color: var(--orange); font-weight: 700; }
+
+        /* QR */
+        .qr-wrap { display: none; text-align: center; padding: .5rem 0 1rem; }
+        .qr-wrap img { max-width: 190px; border-radius: 8px; background: #fff; padding: 6px; }
+        .qr-lbl { font-size: .82rem; color: var(--muted); margin: .6rem 0 .4rem; }
+        .pix-code { width: 100%; background: var(--inp); border: 1px solid var(--border); border-radius: 8px; color: #bbb; padding: .6rem; font-size: .75rem; resize: none; height: 60px; cursor: pointer; font-family: monospace; }
+        .copy-hint { font-size: .75rem; color: var(--muted); margin-top: .3rem; }
+
+        /* CÓDIGO */
+        .code-row { display: flex; gap: .6rem; }
+        .code-row input { flex: 1; font-family: monospace; font-size: .82rem; letter-spacing: .04em; }
+        .btn-val { padding: .75rem 1.1rem; background: transparent; border: 1px solid var(--orange); color: var(--orange); border-radius: 8px; font-family: var(--fh); font-size: .85rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .2s, color .2s; }
+        .btn-val:hover { background: var(--orange); color: #000; }
+        .btn-val:disabled { opacity: .4; cursor: not-allowed; }
+
+        /* STATUS */
+        .smsg { font-size: .82rem; margin-top: .45rem; padding: .4rem .7rem; border-radius: 6px; display: none; }
+        .smsg.ok   { color: var(--green);  background: rgba(76,175,80,.1);   display: block; }
+        .smsg.erro { color: var(--red);    background: rgba(244,67,54,.1);   display: block; }
+        .smsg.info { color: var(--orange); background: rgba(252,163,17,.1);  display: block; }
+
+        /* PROGRESS */
+        .prog-wrap  { display: none; margin-bottom: 1rem; }
+        .prog-track { background: var(--border); border-radius: 99px; height: 8px; overflow: hidden; }
+        .prog-bar   { height: 100%; background: var(--orange); border-radius: 99px; width: 0%; transition: width .4s ease; }
+        .prog-lbl   { font-size: .8rem; color: var(--muted); margin-top: .5rem; text-align: center; }
+
+        /* RESULTADO */
+        .res-box { display: none; border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
+        .res-box.ok   { background: rgba(76,175,80,.08);  border: 1px solid var(--green); }
+        .res-box.erro { background: rgba(244,67,54,.08);  border: 1px solid var(--red); }
+        .res-head { display: flex; align-items: center; gap: .5rem; font-weight: 700; margin-bottom: .6rem; }
+        .res-box.ok   .res-head { color: var(--green); }
+        .res-box.erro .res-head { color: var(--red); }
+        .res-stats { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+        .rstat { font-size: .85rem; color: var(--muted); }
+        .rstat strong { color: var(--white); }
+        .rstat.hi strong { color: var(--green); font-size: 1rem; }
+
+        /* BUTTONS */
+        .btn { width: 100%; padding: .95rem 1rem; border: none; border-radius: 10px; font-family: var(--fh); font-size: 1rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .5rem; transition: opacity .2s, transform .1s; margin-bottom: .75rem; }
+        .btn:last-child { margin-bottom: 0; }
+        .btn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+        .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+        .btn-pix       { background: var(--orange); color: #000; }
+        .btn-comprimir { background: #2979ff; color: #fff; display: none; }
+        .btn-dl        { background: var(--green); color: #fff; display: none; text-decoration: none; }
+        .btn-novo      { width: 100%; padding: .65rem; background: transparent; border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: .88rem; cursor: pointer; display: none; margin-top: .5rem; transition: border-color .2s, color .2s; }
+        .btn-novo:hover { border-color: var(--orange); color: var(--orange); }
+
+        .chips { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.2rem; }
+        .chip  { display: flex; align-items: center; gap: .35rem; font-size: .78rem; color: var(--muted); }
+        .chip i { color: var(--green); }
+
+        @media(max-width:480px) {
+            .res-stats { flex-direction: column; gap: .4rem; }
+            .code-row  { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <a href="/static/index.html" class="brand">BrooStore</a>
+    <span class="sep">/</span>
+    <span class="hsub">Compressor de PDF</span>
+</header>
+
+<main class="main">
+    <h1 class="page-title">Comprimir <span>PDF</span></h1>
+    <p class="page-sub">Reduza seu PDF para publicar na loja. Faça o upload, pague R$ 4,90 via PIX, receba o código no e-mail e baixe o arquivo comprimido.</p>
+
+    <!-- STEP 1: UPLOAD -->
+    <div class="card">
+        <div class="step-label"><span class="step-badge">1</span> Selecione o arquivo PDF</div>
+        <div class="upload-area" id="upload-area">
+            <input type="file" id="pdf-input" accept=".pdf">
+            <i class="fas fa-file-pdf up-icon" id="up-icon"></i>
+            <div class="up-txt" id="up-txt">
+                Arraste o PDF aqui ou <strong>clique para selecionar</strong><br>
+                <span style="font-size:.82rem">Limite: 50 MB</span>
+            </div>
+            <div class="up-size" id="up-size"></div>
+        </div>
+    </div>
+
+    <!-- STEP 2: PIX -->
+    <div class="card">
+        <div class="step-label"><span class="step-badge">2</span> Pagamento via PIX</div>
+
+        <div class="frow">
+            <label>SEU E-MAIL <span style="color:var(--red)">*</span></label>
+            <input type="email" id="pix-email" placeholder="voce@email.com">
+        </div>
+        <div class="frow">
+            <label>SEU NOME</label>
+            <input type="text" id="pix-nome" placeholder="Nome completo">
+        </div>
+
+        <div class="price-tag">
+            <span class="pl"><i class="fas fa-compress-alt"></i> &nbsp;Compressão de PDF</span>
+            <span class="pv">R$ 4,90</span>
+        </div>
+
+        <div class="qr-wrap" id="qr-wrap">
+            <img id="qr-img" src="" alt="QR Code PIX">
+            <div class="qr-lbl">Ou copie o código abaixo:</div>
+            <textarea class="pix-code" id="pix-code" readonly
+                onclick="this.select();document.execCommand('copy');setSmsg('pix-msg','Código copiado!','ok')"></textarea>
+            <div class="copy-hint"><i class="fas fa-hand-pointer"></i> Clique no código para copiar</div>
+        </div>
+
+        <div class="smsg" id="pix-msg"></div>
+
+        <button class="btn btn-pix" id="btn-pix" onclick="gerarPix()">
+            <i class="fas fa-qrcode"></i> Gerar PIX — R$ 4,90
+        </button>
+    </div>
+
+    <!-- STEP 3: CÓDIGO + COMPRIMIR -->
+    <div class="card">
+        <div class="step-label"><span class="step-badge">3</span> Cole o código recebido no e-mail</div>
+
+        <div class="frow">
+            <div class="code-row">
+                <input type="text" id="cod-input" placeholder="Cole aqui o código de liberação">
+                <button class="btn-val" id="btn-val" onclick="validarCodigo()">Validar</button>
+            </div>
+            <div class="smsg" id="cod-msg"></div>
+        </div>
+
+        <div class="prog-wrap" id="prog-wrap">
+            <div class="prog-track"><div class="prog-bar" id="prog-bar"></div></div>
+            <div class="prog-lbl" id="prog-lbl">Processando...</div>
+        </div>
+
+        <div class="res-box" id="res-box">
+            <div class="res-head"><i id="res-icon"></i><span id="res-txt"></span></div>
+            <div class="res-stats" id="res-stats"></div>
+        </div>
+
+        <button class="btn btn-comprimir" id="btn-comprimir" onclick="comprimirPdf()">
+            <i class="fas fa-compress-alt"></i> Comprimir PDF
+        </button>
+
+        <a class="btn btn-dl" id="btn-dl" download>
+            <i class="fas fa-download"></i> Baixar PDF Comprimido
+        </a>
+
+        <button class="btn-novo" id="btn-novo" onclick="resetar()">
+            <i class="fas fa-redo"></i> Comprimir outro arquivo
+        </button>
+    </div>
+
+    <div class="chips">
+        <div class="chip"><i class="fas fa-shield-alt"></i> Arquivo não armazenado</div>
+        <div class="chip"><i class="fas fa-bolt"></i> Download imediato</div>
+        <div class="chip"><i class="fas fa-lock"></i> Pagamento PIX seguro</div>
+    </div>
+</main>
+
+<script>
+const API = 'https://mercadopago-final.onrender.com';
+let pdfFile = null, codigoValido = null;
+
+// ── Upload ──────────────────────────────────────────────
+const ua = document.getElementById('upload-area');
+const pi = document.getElementById('pdf-input');
+ua.addEventListener('dragover',  e => { e.preventDefault(); ua.classList.add('drag'); });
+ua.addEventListener('dragleave', () => ua.classList.remove('drag'));
+ua.addEventListener('drop', e => { e.preventDefault(); ua.classList.remove('drag'); if(e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+pi.addEventListener('change', () => { if(pi.files[0]) setFile(pi.files[0]); });
+
+function fb(b) { return b>=1048576?(b/1048576).toFixed(2)+' MB':(b/1024).toFixed(0)+' KB'; }
+
+function setFile(f) {
+    if (!f.name.toLowerCase().endsWith('.pdf')) { alert('Selecione um arquivo .pdf'); return; }
+    if (f.size > 50*1024*1024) { alert('Arquivo maior que 50 MB.'); return; }
+    pdfFile = f;
+    ua.classList.add('ready');
+    document.getElementById('up-icon').className = 'fas fa-check-circle up-icon';
+    document.getElementById('up-txt').innerHTML  = `<strong>${f.name}</strong>`;
+    document.getElementById('up-size').textContent = fb(f.size);
+}
+
+// ── Gerar PIX ───────────────────────────────────────────
+async function gerarPix() {
+    if (!pdfFile) { alert('Primeiro selecione o PDF (Passo 1).'); return; }
+    const email = document.getElementById('pix-email').value.trim();
+    const nome  = document.getElementById('pix-nome').value.trim() || 'Cliente';
+    if (!email || !email.includes('@')) { setSmsg('pix-msg','Informe um e-mail válido.','erro'); return; }
+
+    const btn = document.getElementById('btn-pix');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando PIX...';
+    setSmsg('pix-msg','','');
+
+    try {
+        const r = await fetch(`${API}/api/cobrancas`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ email, nome, product_id: 99, telefone: '' })
+        });
+        const d = await r.json();
+        if (!r.ok || d.status === 'error') throw new Error(d.message || 'Erro ao gerar PIX.');
+
+        document.getElementById('qr-img').src     = `data:image/jpeg;base64,${d.qr_code_base64}`;
+        document.getElementById('pix-code').value = d.qr_code_text;
+        document.getElementById('qr-wrap').style.display = 'block';
+
+        btn.innerHTML = '<i class="fas fa-check"></i> PIX gerado — aguardando pagamento';
+        btn.style.cssText = 'background:#1a1a1a;color:var(--muted);cursor:default';
+        setSmsg('pix-msg','Após o pagamento você receberá o código no e-mail em instantes.','info');
+    } catch(err) {
+        setSmsg('pix-msg', err.message, 'erro');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-qrcode"></i> Gerar PIX — R$ 4,90';
+    }
+}
+
+// ── Validar código ──────────────────────────────────────
+async function validarCodigo() {
+    const codigo = document.getElementById('cod-input').value.trim();
+    if (!codigo) { setSmsg('cod-msg','Cole o código recebido no e-mail.','erro'); return; }
+    if (!pdfFile) { setSmsg('cod-msg','Selecione o PDF primeiro (Passo 1).','erro'); return; }
+
+    const btn = document.getElementById('btn-val');
+    btn.disabled = true; btn.textContent = '...';
+    setSmsg('cod-msg','','');
+
+    try {
+        const r = await fetch(`${API}/api/validar-codigo-compressao`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ codigo })
+        });
+        const d = await r.json();
+        if (!r.ok || d.status !== 'ok') throw new Error(d.message || 'Código inválido ou pagamento não confirmado.');
+
+        codigoValido = codigo;
+        setSmsg('cod-msg','✓ Código válido! Clique em Comprimir PDF.','ok');
+        document.getElementById('btn-comprimir').style.display = 'flex';
+    } catch(err) {
+        setSmsg('cod-msg', err.message, 'erro');
+        codigoValido = null;
+    } finally {
+        btn.disabled = false; btn.textContent = 'Validar';
+    }
+}
+
+// ── Comprimir ───────────────────────────────────────────
+async function comprimirPdf() {
+    if (!pdfFile || !codigoValido) return;
+    const btn = document.getElementById('btn-comprimir');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Comprimindo...';
+    document.getElementById('prog-wrap').style.display = 'block';
+    document.getElementById('res-box').style.display   = 'none';
+    animarProg();
+
+    try {
+        const fd = new FormData();
+        fd.append('pdf',    pdfFile);
+        fd.append('codigo', codigoValido);
+
+        const r = await fetch(`${API}/api/comprimir-pdf`, { method:'POST', body: fd });
+        if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.message||`Erro ${r.status}`); }
+
+        const blob  = await r.blob();
+        const novo  = blob.size, orig = pdfFile.size;
+        const red   = Math.max(0, Math.round((1-novo/orig)*100));
+        const url   = URL.createObjectURL(blob);
+        const nome  = pdfFile.name.replace(/\.pdf$/i,'')+'_comprimido.pdf';
+        const btnDl = document.getElementById('btn-dl');
+        btnDl.href = url; btnDl.download = nome;
+
+        document.getElementById('prog-bar').style.width = '100%';
+        document.getElementById('prog-lbl').textContent = 'Concluído!';
+        setTimeout(() => {
+            document.getElementById('prog-wrap').style.display = 'none';
+            mostrarRes(true, orig, novo, red);
+            btn.style.display = 'none';
+            btnDl.style.display = 'flex';
+            document.getElementById('btn-novo').style.display = 'block';
+        }, 500);
+    } catch(err) {
+        clearInterval(window._piv);
+        document.getElementById('prog-wrap').style.display = 'none';
+        mostrarRes(false, 0, 0, 0, err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-compress-alt"></i> Tentar novamente';
+        document.getElementById('btn-novo').style.display = 'block';
+    }
+}
+
+// ── Helpers ─────────────────────────────────────────────
+function setSmsg(id, msg, tipo) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = 'smsg' + (tipo ? ' '+tipo : '');
+}
+
+function mostrarRes(ok, orig, novo, red, errMsg='') {
+    const box = document.getElementById('res-box');
+    document.getElementById('res-icon').className = ok ? 'fas fa-check-circle' : 'fas fa-times-circle';
+    document.getElementById('res-txt').textContent  = ok ? 'PDF comprimido com sucesso!' : 'Erro na compressão';
+    document.getElementById('res-stats').innerHTML  = ok
+        ? `<div class="rstat">Antes: <strong>${fb(orig)}</strong></div>
+           <div class="rstat">Depois: <strong>${fb(novo)}</strong></div>
+           <div class="rstat hi">Redução: <strong>-${red}%</strong></div>`
+        : `<div class="rstat" style="color:var(--red)">${errMsg}</div>`;
+    box.className = 'res-box '+(ok?'ok':'erro');
+    box.style.display = 'block';
+}
+
+function animarProg() {
+    let pct=0, idx=0;
+    const msgs=['Enviando arquivo...','Analisando PDF...','Comprimindo imagens...','Otimizando streams...','Finalizando...'];
+    clearInterval(window._piv);
+    window._piv = setInterval(()=>{
+        if(pct>=90){clearInterval(window._piv);return;}
+        pct += pct<40?7:pct<70?3:1;
+        document.getElementById('prog-bar').style.width = Math.min(pct,90)+'%';
+        if(pct>(idx+1)*18 && idx<msgs.length-1) document.getElementById('prog-lbl').textContent=msgs[++idx];
+    },400);
+}
+
+function resetar() {
+    pdfFile=null; codigoValido=null;
+    pi.value='';
+    ua.className='upload-area';
+    document.getElementById('up-icon').className='fas fa-file-pdf up-icon';
+    document.getElementById('up-txt').innerHTML='Arraste o PDF aqui ou <strong>clique para selecionar</strong><br><span style="font-size:.82rem">Limite: 50 MB</span>';
+    document.getElementById('up-size').textContent='';
+    ['pix-email','pix-nome','cod-input'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('qr-wrap').style.display='none';
+    document.getElementById('res-box').style.display='none';
+    document.getElementById('prog-wrap').style.display='none';
+    document.getElementById('prog-bar').style.width='0%';
+    document.getElementById('btn-comprimir').style.display='none';
+    document.getElementById('btn-dl').style.display='none';
+    document.getElementById('btn-novo').style.display='none';
+    const bp=document.getElementById('btn-pix');
+    bp.disabled=false; bp.innerHTML='<i class="fas fa-qrcode"></i> Gerar PIX — R$ 4,90'; bp.style.cssText='';
+    ['pix-msg','cod-msg'].forEach(id=>setSmsg(id,'',''));
+}
+</script>
+</body>
+</html>
