@@ -903,18 +903,44 @@ def comprimir_pdf():
         tmp_out_path = tmp_in_path.replace(".pdf", "_out.pdf")
 
         try:
-            result = subprocess.run([
-                "gs",
-                "-sDEVICE=pdfwrite",
-                "-dCompatibilityLevel=1.4",
-                "-dPDFSETTINGS=/ebook",
-                "-dNOPAUSE", "-dQUIET", "-dBATCH",
-                f"-sOutputFile={tmp_out_path}",
-                tmp_in_path
-            ], capture_output=True, timeout=120)
+            # Tenta ghostscript primeiro
+            gs_path = None
+            for candidate in ["gs", "/usr/bin/gs", "/usr/local/bin/gs"]:
+                try:
+                    check = subprocess.run([candidate, "--version"], capture_output=True, timeout=5)
+                    if check.returncode == 0:
+                        gs_path = candidate
+                        break
+                except Exception:
+                    continue
 
-            if result.returncode != 0 or not _os.path.exists(tmp_out_path):
-                raise Exception("Ghostscript falhou: " + result.stderr.decode()[:200])
+            if gs_path:
+                print(f"[COMPRIMIR] Usando ghostscript: {gs_path}")
+                result = subprocess.run([
+                    gs_path,
+                    "-sDEVICE=pdfwrite",
+                    "-dCompatibilityLevel=1.4",
+                    "-dPDFSETTINGS=/ebook",
+                    "-dNOPAUSE", "-dQUIET", "-dBATCH",
+                    f"-sOutputFile={tmp_out_path}",
+                    tmp_in_path
+                ], capture_output=True, timeout=120)
+
+                if result.returncode != 0 or not _os.path.exists(tmp_out_path):
+                    raise Exception("Ghostscript falhou: " + result.stderr.decode()[:200])
+            else:
+                # Fallback: pikepdf (sem ghostscript)
+                print("[COMPRIMIR] Ghostscript não encontrado, usando pikepdf.")
+                import pikepdf
+                with pikepdf.open(tmp_in_path) as pdf:
+                    pdf.save(
+                        tmp_out_path,
+                        compress_streams=True,
+                        object_stream_mode=pikepdf.ObjectStreamMode.generate,
+                        linearize=True
+                    )
+                if not _os.path.exists(tmp_out_path):
+                    raise Exception("pikepdf falhou ao gerar o arquivo.")
 
             # Marca código como usado
             try:
