@@ -145,7 +145,21 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
         print("[WORKER] ERRO: Credenciais de email não configuradas.")
         return False
     
-    if chave_acesso:
+    if chave_acesso and nome_produto == "Compressão de PDF":
+        assunto = f"BrooStore: Seu código de compressão de PDF chegou! 🗜️"
+        instrucoes_entrega = f"""
+            <p>Agradecemos por escolher a <strong>BrooStore</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> foi confirmado.</p>
+            <h2 style="color: #fca311;">Seu código de liberação está aqui! 🔑</h2>
+            <p>Cole este código na página de compressão para baixar seu PDF reduzido:</p>
+            <div style="background-color: #1a1400; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px dashed #fca311;">
+                <code style="font-size: 1.1em; font-weight: bold; color: #fca311; display: block; word-break: break-all;">{chave_acesso}</code>
+            </div>
+            <div style="text-align: center; margin: 25px 0;">
+                <a href="https://mercadopago-final.onrender.com/comprimir-pdf.html" style="background-color: #fca311; color: #000; padding: 14px 28px; text-decoration: none; border-radius: 25px; font-weight: bold;">[·] Ir para o Compressor</a>
+            </div>
+            <p style="font-size:0.85em; color:#888;">Este código é de uso único e válido por 24 horas.</p>
+        """
+    elif chave_acesso:
         assunto = f"BrooStore: Sua chave de acesso para \"{nome_produto}\" chegou! 🚀"
         instrucoes_entrega = f"""
             <p>Agradecemos por escolher a <strong>BrooStore</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> foi confirmado.</p>
@@ -282,8 +296,13 @@ def process_mercado_pago_webhook(payment_id):
         # 5. Gerenciar estoque
         link_entrega = produto.link_download
         chave_entregue = None
-        
-        if produto.tipo in ["game", "app"]:
+
+        # Produto 99 = Compressão de PDF: envia o external_reference como código de liberação
+        if produto.id == 99:
+            chave_entregue = cobranca.external_reference
+            print(f"[WORKER] Produto PDF Compressão — enviando código: {chave_entregue}")
+
+        elif produto.tipo in ["game", "app"]:
             print(f"[WORKER] Reservando chave para {produto.nome}...")
             chave_obj = ChaveLicenca.query.filter(
                 ChaveLicenca.produto_id == produto.id,
