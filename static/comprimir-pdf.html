@@ -326,10 +326,21 @@ async function comprimirPdf() {
         fd.append('pdf',    pdfFile);
         fd.append('codigo', codigoValido);
 
-        const r = await fetch(`${API}/api/comprimir-pdf`, { method:'POST', body: fd });
-        if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.message||`Erro ${r.status}`); }
+        const r = await fetch(`${API}/api/comprimir-pdf`, {
+            method: 'POST',
+            body: fd,
+            mode: 'cors'
+        });
 
-        const blob  = await r.blob();
+        if (!r.ok) {
+            let errMsg = `Erro ${r.status}`;
+            try { const e = await r.json(); errMsg = e.message || errMsg; } catch(x) {}
+            throw new Error(errMsg);
+        }
+
+        // ArrayBuffer garante que o PDF binário chegue inteiro sem corrupção
+        const arrayBuffer = await r.arrayBuffer();
+        const blob  = new Blob([arrayBuffer], { type: 'application/pdf' });
         const novo  = blob.size, orig = pdfFile.size;
         const red   = Math.max(0, Math.round((1-novo/orig)*100));
         const url   = URL.createObjectURL(blob);
