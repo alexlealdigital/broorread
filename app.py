@@ -914,24 +914,46 @@ def comprimir_pdf():
                 except Exception:
                     continue
 
-            if gs_path:
-                print(f"[COMPRIMIR] Usando ghostscript: {gs_path}")
-                result = subprocess.run([
-                    gs_path,
-                    "-sDEVICE=pdfwrite",
-                    "-dCompatibilityLevel=1.4",
-                    "-dPDFSETTINGS=/ebook",
-                    "-dNOPAUSE", "-dQUIET", "-dBATCH",
-                    f"-sOutputFile={tmp_out_path}",
-                    tmp_in_path
-                ], capture_output=True, timeout=120)
+            import pikepdf
 
-                if result.returncode != 0 or not _os.path.exists(tmp_out_path):
-                    raise Exception("Ghostscript falhou: " + result.stderr.decode()[:200])
+            if gs_path:
+                print(f"[COMPRIMIR] Usando ghostscript em thread: {gs_path}")
+                result_holder = {}
+                def run_gs():
+                    try:
+                        r = subprocess.run([
+                            gs_path,
+                            "-sDEVICE=pdfwrite",
+                            "-dCompatibilityLevel=1.4",
+                            "-dPDFSETTINGS=/ebook",
+                            "-dNOPAUSE", "-dQUIET", "-dBATCH",
+                            f"-sOutputFile={tmp_out_path}",
+                            tmp_in_path
+                        ], capture_output=True, timeout=180)
+                        result_holder["returncode"] = r.returncode
+                        result_holder["stderr"] = r.stderr.decode()[:300]
+                    except Exception as e:
+                        result_holder["error"] = str(e)
+
+                import threading
+                t = threading.Thread(target=run_gs)
+                t.start()
+                t.join(timeout=180)
+
+                if t.is_alive():
+                    raise Exception("Ghostscript excedeu o tempo limite.")
+                if result_holder.get("error"):
+                    raise Exception(result_holder["error"])
+                if result_holder.get("returncode", 1) != 0 or not _os.path.exists(tmp_out_path):
+                    # Fallback para pikepdf se gs falhar
+                    print("[COMPRIMIR] GS falhou, tentando pikepdf...")
+                    with pikepdf.open(tmp_in_path) as pdf:
+                        pdf.save(tmp_out_path, compress_streams=True,
+                                 object_stream_mode=pikepdf.ObjectStreamMode.generate,
+                                 linearize=True)
             else:
                 # Fallback: pikepdf (sem ghostscript)
                 print("[COMPRIMIR] Ghostscript não encontrado, usando pikepdf.")
-                import pikepdf
                 with pikepdf.open(tmp_in_path) as pdf:
                     pdf.save(
                         tmp_out_path,
