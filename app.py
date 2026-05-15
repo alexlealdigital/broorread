@@ -841,13 +841,17 @@ def validar_codigo_compressao():
 
         cobranca = Cobranca.query.filter_by(
             external_reference=codigo,
-            product_id=99,
             status="approved"
         ).first()
 
         if not cobranca:
             return jsonify({"status": "erro",
                             "message": "Código inválido ou pagamento ainda não confirmado."}), 404
+
+        # Garante que é realmente uma cobrança de compressão de PDF
+        if cobranca.product_id not in [99, None]:
+            return jsonify({"status": "erro",
+                            "message": "Código inválido para este serviço."}), 400
 
         # Verifica se o código já foi usado para uma compressão
         if getattr(cobranca, "compressao_usada", False):
@@ -878,11 +882,10 @@ def comprimir_pdf():
         # Valida código novamente (segurança)
         cobranca = Cobranca.query.filter_by(
             external_reference=codigo,
-            product_id=99,
             status="approved"
         ).first()
 
-        if not cobranca:
+        if not cobranca or cobranca.product_id not in [99, None]:
             return jsonify({"status": "erro",
                             "message": "Código inválido ou pagamento não confirmado."}), 403
 
