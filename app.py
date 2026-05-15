@@ -839,9 +839,10 @@ def validar_codigo_compressao():
         if not codigo:
             return jsonify({"status": "erro", "message": "Código não informado."}), 400
 
-        cobranca = Cobranca.query.filter_by(
-            external_reference=codigo,
-            status="approved"
+        from sqlalchemy import or_
+        cobranca = Cobranca.query.filter(
+            Cobranca.external_reference == codigo,
+            or_(Cobranca.status == "approved", Cobranca.status == "delivered")
         ).first()
 
         if not cobranca:
@@ -880,9 +881,10 @@ def comprimir_pdf():
             return jsonify({"status": "erro", "message": "Nenhum arquivo enviado."}), 400
 
         # Valida código novamente (segurança)
-        cobranca = Cobranca.query.filter_by(
-            external_reference=codigo,
-            status="approved"
+        from sqlalchemy import or_ as _or
+        cobranca = Cobranca.query.filter(
+            Cobranca.external_reference == codigo,
+            _or(Cobranca.status == "approved", Cobranca.status == "delivered")
         ).first()
 
         if not cobranca or cobranca.product_id not in [99, None]:
