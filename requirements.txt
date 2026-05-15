@@ -6,6 +6,8 @@ gunicorn==21.2.0
 python-dotenv==1.0.0
 psycopg[binary]==3.2.3
 resend
-
+ 
 redis
 rq
+pikepdf
+ 
