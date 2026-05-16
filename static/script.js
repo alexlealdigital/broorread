@@ -542,6 +542,16 @@ async function activateSpotlightMode(id) {
         document.getElementById('spot-btn').onclick = () => {
             openCheckoutModalSmart(id, produto.name, produto.price, produto.tipo || 'digital', produto.frete || 0);
         };
+
+        // Carrossel para produto físico
+        if (produto.tipo === 'fisico') {
+            await carregarCarrossel(id, produto.img);
+        } else {
+            const spotImg  = document.getElementById('spot-img');
+            const carrWrap = document.getElementById('carrossel-wrap');
+            if (spotImg)  spotImg.style.display  = 'block';
+            if (carrWrap) carrWrap.style.display  = 'none';
+        }
  
     } else {
         console.warn("Produto não encontrado para o ID:", id);
