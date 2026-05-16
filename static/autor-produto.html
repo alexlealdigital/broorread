@@ -252,6 +252,46 @@
         .msg.error   { background: rgba(231,76,60,.15); border: 1px solid var(--error-red); color: #ff6b6b; display: block; }
         .msg.success { background: rgba(39,174,96,.15); border: 1px solid var(--success-green); color: #2ecc71; display: block; }
 
+        /* Abas Digital / Físico */
+        .tipo-tabs {
+            display: flex;
+            gap: .6rem;
+            margin-bottom: 2rem;
+            background: rgba(255,255,255,.04);
+            padding: .4rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-grey);
+        }
+        .tipo-tab {
+            flex: 1;
+            padding: .75rem;
+            border: none;
+            border-radius: 9px;
+            background: transparent;
+            color: #888;
+            font-family: var(--font-body);
+            font-size: .92rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .25s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+        }
+        .tipo-tab.active {
+            background: var(--orange-web);
+            color: #000;
+        }
+        .tipo-tab:not(.active):hover {
+            background: rgba(252,163,17,.12);
+            color: var(--orange-web);
+        }
+
+        /* Seção exclusiva do físico */
+        #secao-fisico { display: none; }
+        #secao-digital { display: block; }
+
         .divider { border: none; border-top: 1px solid var(--border-grey); margin: 1.5rem 0; }
         .section-label {
             font-family: var(--font-heading); font-size: .9rem; color: #888;
@@ -275,6 +315,16 @@
 
     <div class="form-card">
         <div id="msg" class="msg"></div>
+
+        <!-- Abas Digital / Físico -->
+        <div class="tipo-tabs">
+            <button class="tipo-tab active" id="tab-digital" onclick="switchTipo('digital')">
+                <i class="fas fa-bolt"></i> Produto Digital
+            </button>
+            <button class="tipo-tab" id="tab-fisico" onclick="switchTipo('fisico')">
+                <i class="fas fa-box"></i> Produto Físico
+            </button>
+        </div>
 
         <!-- Upload da capa -->
         <div class="section-label"><i class="fas fa-image"></i> Capa do Produto</div>
@@ -383,6 +433,8 @@
             </div>
 
             <hr class="divider" style="grid-column:1/-1;">
+            <!-- INÍCIO SEÇÃO DIGITAL -->
+            <div id="secao-digital" style="grid-column:1/-1;display:contents;">
             <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-book-open"></i> Informações da Página de Venda (opcional)</div>
 
             <div class="form-group">
@@ -427,6 +479,42 @@
                 <div class="hint"><i class="fas fa-lock" style="color:var(--orange-web);"></i> O arquivo fica protegido — só quem comprar recebe o link de acesso.</div>
             </div>
         </div>
+
+            </div><!-- FIM SEÇÃO DIGITAL -->
+
+        <!-- SEÇÃO FÍSICA -->
+        <div id="secao-fisico" style="grid-column:1/-1;">
+            <hr class="divider">
+            <div class="section-label"><i class="fas fa-info-circle"></i> Detalhes do Produto Físico</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Peso (ex: 300g)</label>
+                    <input type="text" id="peso" placeholder="Ex: 300g ou 1.2kg">
+                </div>
+                <div class="form-group">
+                    <label>Dimensões (ex: 20x15x5cm)</label>
+                    <input type="text" id="dimensoes" placeholder="Ex: 20x15x5cm">
+                </div>
+                <div class="form-group">
+                    <label>Frete fixo (R$) *</label>
+                    <input type="number" id="frete" placeholder="Ex: 15.90" step="0.01" min="0">
+                    <div class="hint"><i class="fas fa-info-circle" style="color:var(--orange-web);"></i> Valor cobrado do comprador além do preço do produto.</div>
+                </div>
+                <div class="form-group">
+                    <label>Estoque disponível *</label>
+                    <input type="number" id="estoque" placeholder="Ex: 10" min="0" step="1">
+                </div>
+                <div class="form-group full">
+                    <label>Prazo de produção / envio</label>
+                    <input type="text" id="prazo-prod" placeholder="Ex: 3 a 5 dias úteis após confirmação">
+                </div>
+                <div class="form-group full">
+                    <label>Materiais / Especificações <span class="char-counter" id="cnt-specs">0/400</span></label>
+                    <textarea id="specs" maxlength="400" placeholder="Descreva materiais, cores disponíveis, acabamento..."
+                              oninput="contarChars('specs','cnt-specs',400)" style="min-height:100px;"></textarea>
+                </div>
+            </div>
+        </div><!-- FIM SEÇÃO FÍSICA -->
 
         <button class="btn-submit" id="btn-salvar" onclick="verificarTermosAntesDeSalvar()">
             <i class="fas fa-rocket" id="btn-icon"></i> <span id="btn-label">Publicar Produto</span>
@@ -496,6 +584,23 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    // ── Tipo: Digital / Físico ───────────────────────────────
+    let tipoAtual = 'digital';
+
+    function switchTipo(tipo) {
+        tipoAtual = tipo;
+        document.getElementById('tab-digital').classList.toggle('active', tipo === 'digital');
+        document.getElementById('tab-fisico').classList.toggle('active',  tipo === 'fisico');
+
+        // Mostra/oculta seções
+        document.getElementById('secao-digital').style.display = tipo === 'digital' ? 'contents' : 'none';
+        document.getElementById('secao-fisico').style.display  = tipo === 'fisico'  ? 'block'    : 'none';
+
+        // PDF obrigatório apenas para digital
+        const pdfArea = document.getElementById('upload-pdf-area');
+        if (pdfArea) pdfArea.closest('.form-group').style.display = tipo === 'digital' ? 'block' : 'none';
+    }
+
     function contarChars(fieldId, counterId, max) {
         const len = document.getElementById(fieldId).value.length;
         const el  = document.getElementById(counterId);
@@ -596,6 +701,17 @@
         const cl = p.classificacao || 'L';
         const radio = document.querySelector(`input[name="classificacao"][value="${cl}"]`);
         if (radio) radio.checked = true;
+
+        // Tipo do produto
+        if (p.tipo === 'fisico') {
+            switchTipo('fisico');
+            if (p.frete)      document.getElementById('frete').value      = p.frete;
+            if (p.estoque !== null) document.getElementById('estoque').value = p.estoque;
+            if (p.peso)       document.getElementById('peso').value       = p.peso;
+            if (p.dimensoes)  document.getElementById('dimensoes').value  = p.dimensoes;
+            if (p.prazo_prod) document.getElementById('prazo-prod').value = p.prazo_prod;
+            if (p.specs)      document.getElementById('specs').value      = p.specs;
+        }
 
         contarChars('titulo','cnt-titulo',80);
         contarChars('descricao','cnt-descricao',160);
@@ -708,7 +824,8 @@
         if (!preco || preco <= 0) return mostrarMsg('Informe um preço válido.','error');
         if (!categoria) return mostrarMsg('Selecione uma categoria.','error');
         if (!classifEl) return mostrarMsg('Selecione a classificação indicativa da obra.','error');
-        if (!modoEdicao && !arquivoPdf) return mostrarMsg('Selecione o arquivo PDF do produto.','error');
+        if (!modoEdicao && tipoAtual === 'digital' && !arquivoPdf) return mostrarMsg('Selecione o arquivo PDF do produto.','error');
+        if (tipoAtual === 'fisico' && (!document.getElementById('frete').value || !document.getElementById('estoque').value)) return mostrarMsg('Informe o frete e o estoque para produto físico.','error');
 
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando arquivos...';
@@ -732,16 +849,33 @@
 
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
+        // Campos físico
+        const frete      = tipoAtual === 'fisico' ? parseFloat(document.getElementById('frete').value || 0) : 0;
+        const estoque    = tipoAtual === 'fisico' ? parseInt(document.getElementById('estoque').value || 0) : null;
+        const peso       = tipoAtual === 'fisico' ? document.getElementById('peso').value.trim()       : null;
+        const dimensoes  = tipoAtual === 'fisico' ? document.getElementById('dimensoes').value.trim()  : null;
+        const prazoProd  = tipoAtual === 'fisico' ? document.getElementById('prazo-prod').value.trim() : null;
+        const specs      = tipoAtual === 'fisico' ? document.getElementById('specs').value.trim()      : null;
+
         const payload = {
             title:          titulo,
-            author:         autor       || null,
+            author:         autor        || null,
             category:       categoria,
             image_url:      novaImageUrl || null,
             descricao:      descricao    || null,
-            paginas:        paginas ? parseInt(paginas) : null,
-            intro:          intro        || null,
-            sobre_autor:    sobreAutor   || null,
             classificacao:  classifEl.value,
+            tipo:           tipoAtual,
+            // Digital
+            paginas:        tipoAtual === 'digital' && paginas ? parseInt(paginas) : null,
+            intro:          tipoAtual === 'digital' ? intro        || null : null,
+            sobre_autor:    tipoAtual === 'digital' ? sobreAutor   || null : null,
+            // Físico
+            frete:          frete,
+            estoque:        estoque,
+            peso:           peso,
+            dimensoes:      dimensoes,
+            prazo_prod:     prazoProd,
+            specs:          specs,
         };
 
         // Só inclui preço se não estiver bloqueado
