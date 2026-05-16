@@ -540,7 +540,7 @@ async function activateSpotlightMode(id) {
         }
  
         document.getElementById('spot-btn').onclick = () => {
-            openCheckoutModal(id, produto.name, produto.price);
+            openCheckoutModalSmart(id, produto.name, produto.price, produto.tipo || 'digital', produto.frete || 0);
         };
  
     } else {
@@ -559,9 +559,11 @@ function initStoreButtons() {
             const card = e.target.closest('.book-card');
             if(card) {
                 const id = card.dataset.id;
-                const name = card.dataset.name;
+                const name  = card.dataset.name;
                 const price = card.dataset.price;
-                openCheckoutModal(id, name, price);
+                const tipo  = card.dataset.tipo  || 'digital';
+                const frete = card.dataset.frete || 0;
+                openCheckoutModalSmart(id, name, price, tipo, frete);
             }
         });
     });
@@ -792,3 +794,340 @@ window.formatExpiry = formatExpiry;
 window.formatCPF = formatCPF;
 window.pagarCartao = pagarCartao;
 
+// =========================================================
+// CHECKOUT FÍSICO — Modal, CEP, PIX e Cartão
+// =========================================================
+
+let fisicoValorOriginal = 0;
+let fisicoValorFrete    = 0;
+let fisicoValorFinal    = 0;
+let fisicoCupomAplicado = null;
+
+// ── Abre o modal físico ───────────────────────────────────
+function openCheckoutFisicoModal(productId, nome, preco, frete) {
+    fisicoValorOriginal = parseFloat(preco)  || 0;
+    fisicoValorFrete    = parseFloat(frete)  || 0;
+    fisicoValorFinal    = fisicoValorOriginal + fisicoValorFrete;
+    fisicoCupomAplicado = null;
+
+    const precoFmt = fisicoValorOriginal.toFixed(2).replace('.', ',');
+
+    document.getElementById('fisico-produto-detalhes').innerHTML = `
+        <h3 style="margin:.5rem 0;color:#fff;">📦 ${nome}</h3>
+        <p style="font-size:1.3rem;font-weight:bold;color:var(--orange-web,#fca311);">R$ ${precoFmt}</p>
+        <p style="font-size:.82rem;color:#888;margin-top:.3rem;">
+            <i class="fas fa-truck"></i> Frete: R$ ${fisicoValorFrete.toFixed(2).replace('.', ',')}
+        </p>
+    `;
+
+    document.getElementById('fisico_product_id').value = productId;
+    atualizarResumoFisico();
+    switchFisicoTab('pix');
+
+    const modal = document.getElementById('checkout-fisico-modal');
+    modal.style.display = 'block';
+}
+
+function closeCheckoutFisicoModal() {
+    document.getElementById('checkout-fisico-modal').style.display = 'none';
+    resetCheckoutFisicoModal();
+}
+
+function resetCheckoutFisicoModal() {
+    const form = document.getElementById('checkout-fisico-form');
+    if (form) form.reset();
+    document.getElementById('fisico-resultado').innerHTML = '';
+    document.getElementById('fisico-cupom-status').textContent = '';
+    const btnCupom = document.getElementById('fisico-btn-cupom');
+    if (btnCupom) { btnCupom.disabled = false; btnCupom.textContent = 'Aplicar'; btnCupom.style.cssText = ''; }
+    fisicoValorOriginal = 0; fisicoValorFrete = 0; fisicoValorFinal = 0; fisicoCupomAplicado = null;
+}
+
+// ── Abas PIX / Cartão (mesmo padrão do modal digital) ────
+function switchFisicoTab(tab) {
+    const pixSec    = document.getElementById('fisico-pix-section');
+    const cartSec   = document.getElementById('fisico-cartao-section');
+    const tabPix    = document.getElementById('fisico-tab-pix');
+    const tabCart   = document.getElementById('fisico-tab-cartao');
+    if (tab === 'cartao') {
+        pixSec.style.display  = 'none';
+        cartSec.style.display = 'block';
+        tabPix.classList.remove('active');
+        tabCart.classList.add('active');
+    } else {
+        pixSec.style.display  = 'block';
+        cartSec.style.display = 'none';
+        tabPix.classList.add('active');
+        tabCart.classList.remove('active');
+    }
+}
+
+// ── Busca CEP automaticamente via ViaCEP ─────────────────
+async function buscarCEP(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 8);
+    input.value = v.length > 5 ? v.slice(0,5) + '-' + v.slice(5) : v;
+    if (v.length !== 8) return;
+    try {
+        const r = await fetch(`https://viacep.com.br/ws/${v}/json/`);
+        const d = await r.json();
+        if (!d.erro) {
+            document.getElementById('fisico_rua').value    = d.logradouro || '';
+            document.getElementById('fisico_bairro').value = d.bairro     || '';
+            document.getElementById('fisico_cidade').value = d.localidade || '';
+            document.getElementById('fisico_estado').value = d.uf         || '';
+            document.getElementById('fisico_numero').focus();
+        }
+    } catch(e) { console.warn('CEP não encontrado', e); }
+}
+
+// ── Resumo de preços ──────────────────────────────────────
+function atualizarResumoFisico() {
+    const sub   = fisicoCupomAplicado
+        ? (fisicoValorOriginal - fisicoCupomAplicado.desconto)
+        : fisicoValorOriginal;
+    fisicoValorFinal = sub + fisicoValorFrete;
+
+    document.getElementById('fisico-subtotal').textContent =
+        `R$ ${sub.toFixed(2).replace('.', ',')}`;
+    document.getElementById('fisico-frete-valor').textContent =
+        `R$ ${fisicoValorFrete.toFixed(2).replace('.', ',')}`;
+    document.getElementById('fisico-total').textContent =
+        `R$ ${fisicoValorFinal.toFixed(2).replace('.', ',')}`;
+}
+
+// ── Cupom no modal físico ─────────────────────────────────
+async function aplicarCupomFisico() {
+    const codigo    = document.getElementById('fisico_cupom').value.trim().toUpperCase();
+    const productId = document.getElementById('fisico_product_id').value;
+    const statusEl  = document.getElementById('fisico-cupom-status');
+    const btn       = document.getElementById('fisico-btn-cupom');
+    if (!codigo) { statusEl.textContent = 'Digite um código'; statusEl.className = 'cupom-status erro'; return; }
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const r = await fetch(VALIDAR_CUPOM_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo, produto_id: parseInt(productId), valor_original: fisicoValorOriginal })
+        });
+        const d = await r.json();
+        if (r.ok && d.status === 'success') {
+            fisicoCupomAplicado = { id: d.cupom.id, desconto: fisicoValorOriginal - d.calculo.valor_final };
+            document.getElementById('fisico_cupom_id').value = d.cupom.id;
+            statusEl.innerHTML = `<i class="fas fa-check-circle"></i> ${d.cupom.descricao}`;
+            statusEl.className = 'cupom-status sucesso';
+            btn.innerHTML = '<i class="fas fa-check"></i> Aplicado';
+            btn.style.cssText = 'background:#27ae60;color:#fff;border-color:#27ae60;';
+            document.getElementById('fisico_cupom').disabled = true;
+            atualizarResumoFisico();
+        } else {
+            statusEl.textContent = d.message || 'Cupom inválido';
+            statusEl.className = 'cupom-status erro';
+            btn.disabled = false; btn.textContent = 'Aplicar';
+        }
+    } catch(e) {
+        statusEl.textContent = 'Erro ao verificar cupom';
+        statusEl.className = 'cupom-status erro';
+        btn.disabled = false; btn.textContent = 'Aplicar';
+    }
+}
+
+// ── Valida formulário físico ──────────────────────────────
+function validarFormFisico() {
+    const campos = [
+        { id: 'fisico_nome',    msg: 'Nome obrigatório' },
+        { id: 'fisico_email',   msg: 'Email inválido' },
+        { id: 'fisico_telefone',msg: 'Telefone obrigatório' },
+        { id: 'fisico_cep',     msg: 'CEP obrigatório' },
+        { id: 'fisico_rua',     msg: 'Rua obrigatória' },
+        { id: 'fisico_numero',  msg: 'Número obrigatório' },
+        { id: 'fisico_bairro',  msg: 'Bairro obrigatório' },
+        { id: 'fisico_cidade',  msg: 'Cidade obrigatória' },
+        { id: 'fisico_estado',  msg: 'Estado obrigatório' },
+    ];
+    let ok = true;
+    campos.forEach(c => {
+        const el = document.getElementById(c.id);
+        const err = el && el.nextElementSibling;
+        if (el && !el.value.trim()) {
+            if (err) { err.textContent = c.msg; err.style.display = 'block'; }
+            el.style.borderColor = '#e74c3c';
+            ok = false;
+        } else if (el) {
+            if (err) { err.textContent = ''; err.style.display = 'none'; }
+            el.style.borderColor = '';
+        }
+    });
+    return ok;
+}
+
+// ── Submit PIX (produto físico) ───────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const formFisico = document.getElementById('checkout-fisico-form');
+    if (formFisico) {
+        formFisico.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!validarFormFisico()) return;
+
+            const endereco = {
+                cep:         document.getElementById('fisico_cep').value,
+                rua:         document.getElementById('fisico_rua').value,
+                numero:      document.getElementById('fisico_numero').value,
+                complemento: document.getElementById('fisico_complemento').value,
+                bairro:      document.getElementById('fisico_bairro').value,
+                cidade:      document.getElementById('fisico_cidade').value,
+                estado:      document.getElementById('fisico_estado').value,
+            };
+
+            const payload = {
+                email:      document.getElementById('fisico_email').value,
+                nome:       document.getElementById('fisico_nome').value,
+                telefone:   document.getElementById('fisico_telefone').value,
+                product_id: parseInt(document.getElementById('fisico_product_id').value),
+                cupom_id:   document.getElementById('fisico_cupom_id').value
+                            ? parseInt(document.getElementById('fisico_cupom_id').value) : null,
+                endereco,
+                frete:      fisicoValorFrete,
+            };
+
+            const btn = formFisico.querySelector('button[type=submit]');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando PIX...';
+
+            const resultEl = document.getElementById('fisico-resultado');
+
+            try {
+                const r = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await r.json();
+
+                if (r.ok) {
+                    formFisico.style.display = 'none';
+                    resultEl.innerHTML = `
+                        <div style="text-align:center;">
+                            <h2 style="color:#27ae60;margin-bottom:1rem;">
+                                <i class="fas fa-check-circle"></i> Pague com PIX!
+                            </h2>
+                            <p style="color:#aaa;font-size:.85rem;margin-bottom:1rem;">
+                                Após o pagamento, entraremos em contato para confirmar o envio.
+                            </p>
+                            <div style="background:#fff;padding:10px;border-radius:8px;display:inline-block;margin:10px 0;">
+                                <img src="data:image/jpeg;base64,${data.qr_code_base64}"
+                                     alt="QR Code" style="max-width:100%;display:block;">
+                            </div>
+                            <p style="margin:10px 0;font-weight:bold;color:#fff;">Copia e Cola:</p>
+                            <textarea readonly onclick="this.select();document.execCommand('copy');showToast('Copiado!','success');"
+                                style="width:100%;height:80px;font-size:.8rem;padding:5px;border-radius:5px;color:#000;"
+                            >${data.qr_code_text}</textarea>
+                        </div>`;
+                } else {
+                    throw new Error(data.message || 'Erro ao gerar PIX.');
+                }
+            } catch(err) {
+                resultEl.innerHTML = `<p style="color:#e74c3c;text-align:center;">${err.message}</p>`;
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-lock"></i> Gerar QR Code PIX';
+            }
+        });
+    }
+
+    // Fecha modal físico
+    const closeBtn = document.getElementById('checkout-fisico-close');
+    if (closeBtn) closeBtn.addEventListener('click', closeCheckoutFisicoModal);
+    window.addEventListener('click', (e) => {
+        const m = document.getElementById('checkout-fisico-modal');
+        if (e.target === m) closeCheckoutFisicoModal();
+    });
+});
+
+// ── Detecta tipo do produto e abre o modal correto ────────
+function openCheckoutModalSmart(productId, nome, preco, tipo, frete) {
+    if (tipo === 'fisico') {
+        openCheckoutFisicoModal(productId, nome, preco, frete);
+    } else {
+        openCheckoutModal(productId, nome, preco);
+    }
+}
+
+// ── Pagar com cartão (produto físico) ─────────────────────
+async function pagarCartaoFisico() {
+    if (!validarFormFisico()) return;
+    const btn = document.getElementById('checkout-fisico-modal').querySelector('.btn-pagar-cartao');
+    const cardResultado = document.getElementById('fisico-card-resultado');
+    cardResultado.className = 'card-resultado processing';
+    cardResultado.textContent = 'Validando cartão...';
+    cardResultado.style.display = 'block';
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+    const cardNumber = document.getElementById('fisico-card-number').value.replace(/\s/g,'');
+    const cardExpiry = document.getElementById('fisico-card-expiry').value;
+    const cardCvv    = document.getElementById('fisico-card-cvv').value;
+    const cardName   = document.getElementById('fisico-card-name').value;
+    const cardCpf    = document.getElementById('fisico-card-cpf').value.replace(/\D/g,'');
+    const installments = document.getElementById('fisico-card-installments').value || '1';
+
+    try {
+        if (!mp) throw new Error('SDK do Mercado Pago não carregado.');
+        const [expMonth, expYear] = cardExpiry.split('/');
+        const tokenData = await mp.createCardToken({
+            cardNumber, cardholderName: cardName,
+            cardExpirationMonth: expMonth,
+            cardExpirationYear: expYear.length === 2 ? '20'+expYear : expYear,
+            securityCode: cardCvv,
+            identificationType: 'CPF', identificationNumber: cardCpf,
+        });
+        if (!tokenData || !tokenData.id) throw new Error('Não foi possível validar o cartão.');
+
+        let paymentMethodId = '', issuerId = '';
+        try {
+            const pm = await mp.getPaymentMethods({ bin: cardNumber.slice(0,6) });
+            if (pm && pm.results && pm.results[0]) {
+                paymentMethodId = pm.results[0].id;
+                issuerId = pm.results[0].issuer?.id ? String(pm.results[0].issuer.id) : '';
+            }
+        } catch(e) {}
+
+        const endereco = {
+            cep:         document.getElementById('fisico_cep').value,
+            rua:         document.getElementById('fisico_rua').value,
+            numero:      document.getElementById('fisico_numero').value,
+            complemento: document.getElementById('fisico_complemento').value,
+            bairro:      document.getElementById('fisico_bairro').value,
+            cidade:      document.getElementById('fisico_cidade').value,
+            estado:      document.getElementById('fisico_estado').value,
+        };
+
+        const r = await fetch(API_URL_CARTAO, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: tokenData.id, payment_method_id: paymentMethodId,
+                issuer_id: issuerId || undefined,
+                installments: parseInt(installments),
+                email:    document.getElementById('fisico_email').value,
+                nome:     document.getElementById('fisico_nome').value,
+                cpf:      cardCpf,
+                product_id: parseInt(document.getElementById('fisico_product_id').value),
+                cupom_id: document.getElementById('fisico_cupom_id').value
+                          ? parseInt(document.getElementById('fisico_cupom_id').value) : null,
+                endereco, frete: fisicoValorFrete,
+            })
+        });
+        const result = await r.json();
+
+        if (result.status === 'approved') {
+            cardResultado.className = 'card-resultado success';
+            cardResultado.innerHTML = '<i class="fas fa-check-circle"></i> Pagamento aprovado! Entraremos em contato para confirmar o envio.';
+            showToast('Pagamento aprovado!', 'success');
+        } else {
+            throw new Error(result.mensagem || result.message || 'Pagamento não aprovado.');
+        }
+    } catch(err) {
+        cardResultado.className = 'card-resultado error';
+        cardResultado.innerHTML = `<i class="fas fa-times-circle"></i> ${err.message}`;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-lock"></i> Pagar com Cartão';
+    }
+}
