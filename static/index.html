@@ -138,6 +138,64 @@
         }
         .spotlight-image img:hover { transform: scale(1.05) rotate(2deg); }
 
+        /* Carrossel de fotos físico */
+        .carrossel-wrap {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: .75rem;
+        }
+        .carrossel-main {
+            position: relative;
+            width: 100%;
+            max-height: 420px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .carrossel-main img {
+            max-width: 100%;
+            max-height: 420px;
+            object-fit: contain;
+            border-radius: 10px;
+            filter: drop-shadow(0 10px 25px rgba(0,0,0,.5));
+            transition: opacity .3s;
+        }
+        .carr-arrow {
+            position: absolute;
+            top: 50%; transform: translateY(-50%);
+            background: rgba(0,0,0,.55);
+            border: none; border-radius: 50%;
+            width: 36px; height: 36px;
+            color: #fff; font-size: 1rem;
+            cursor: pointer; display: flex;
+            align-items: center; justify-content: center;
+            transition: background .2s; z-index: 2;
+        }
+        .carr-arrow:hover { background: var(--orange-web); color: #000; }
+        .carr-prev { left: 6px; }
+        .carr-next { right: 6px; }
+        .carrossel-thumbs {
+            display: flex;
+            gap: .4rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .carr-thumb {
+            width: 52px; height: 52px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            opacity: .6;
+            transition: all .2s;
+        }
+        .carr-thumb.active, .carr-thumb:hover {
+            border-color: var(--orange-web);
+            opacity: 1;
+        }
+
         .spotlight-details { flex: 1; padding: 3rem; display: flex; flex-direction: column; justify-content: center; }
         
         .spotlight-tag {
@@ -533,8 +591,23 @@
 
     <div id="spotlight-container">
         <div class="spotlight-wrapper">
-            <div class="spotlight-image">
-                <img id="spot-img" src="" alt="Produto">
+            <div class="spotlight-image" id="spotlight-image-wrap">
+                <!-- Imagem simples (digital) -->
+                <img id="spot-img" src="" alt="Produto" style="display:block;">
+
+                <!-- Carrossel (físico - injetado via JS) -->
+                <div class="carrossel-wrap" id="carrossel-wrap" style="display:none;">
+                    <div class="carrossel-main">
+                        <button class="carr-arrow carr-prev" onclick="carrMove(-1)">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <img id="carr-main-img" src="" alt="Foto principal">
+                        <button class="carr-arrow carr-next" onclick="carrMove(1)">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div class="carrossel-thumbs" id="carr-thumbs"></div>
+                </div>
             </div>
             <div class="spotlight-details">
                 <span class="spotlight-tag">Oferta Especial</span>
@@ -716,5 +789,60 @@
        window.MERCADOPAGO_PUBLIC_KEY = "APP_USR-6361a062-ffe7-4bc6-9970-01767001aecb";
     </script>
     <script src="script.js"></script>
+
+    <script>
+    // ── Carrossel de fotos físico ─────────────────────────────
+    let carrFotos = [];
+    let carrIdx   = 0;
+
+    async function carregarCarrossel(productId, capaUrl) {
+        try {
+            const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
+            const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
+            const sbC = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
+            let fotos = [];
+            if (sbC) {
+                const { data } = await sbC.from('product_photos')
+                    .select('url, ordem').eq('product_id', productId).order('ordem');
+                if (data) fotos = data.map(f => f.url);
+            }
+            if (capaUrl && !fotos.includes(capaUrl)) fotos = [capaUrl, ...fotos];
+            if (fotos.length === 0) fotos = [capaUrl];
+
+            if (fotos.length <= 1) {
+                document.getElementById('spot-img').src = fotos[0] || capaUrl;
+                document.getElementById('spot-img').style.display = 'block';
+                document.getElementById('carrossel-wrap').style.display = 'none';
+                return;
+            }
+            carrFotos = fotos; carrIdx = 0;
+            document.getElementById('spot-img').style.display = 'none';
+            document.getElementById('carrossel-wrap').style.display = 'flex';
+            renderCarrossel();
+        } catch(e) {
+            console.warn('Carrossel erro:', e);
+            document.getElementById('spot-img').style.display = 'block';
+            document.getElementById('carrossel-wrap').style.display = 'none';
+        }
+    }
+
+    function renderCarrossel() {
+        const mainImg = document.getElementById('carr-main-img');
+        const thumbs  = document.getElementById('carr-thumbs');
+        if (mainImg) mainImg.src = carrFotos[carrIdx];
+        if (thumbs) {
+            thumbs.innerHTML = carrFotos.map((url, i) =>
+                `<img src="${url}" class="carr-thumb ${i === carrIdx ? 'active' : ''}"
+                      onclick="carrGoTo(${i})" alt="Foto ${i+1}">`
+            ).join('');
+        }
+    }
+
+    function carrMove(dir) {
+        carrIdx = (carrIdx + dir + carrFotos.length) % carrFotos.length;
+        renderCarrossel();
+    }
+    function carrGoTo(idx) { carrIdx = idx; renderCarrossel(); }
+    </script>
 </body>
 </html>
