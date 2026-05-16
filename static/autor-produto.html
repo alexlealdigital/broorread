@@ -728,6 +728,9 @@
         // PDF obrigatório apenas para digital
         const pdfArea = document.getElementById('upload-pdf-area');
         if (pdfArea) pdfArea.closest('.form-group').style.display = tipo === 'digital' ? 'block' : 'none';
+
+        // Inicializa grid de fotos ao abrir aba física
+        if (tipo === 'fisico') renderFotosGrid();
     }
 
     function contarChars(fieldId, counterId, max) {
@@ -1193,14 +1196,7 @@
         }
     }
 
-    // Inicializa grid quando aba físico é aberta
-    const _origSwitchTipo = switchTipo;
-    function switchTipo(tipo) {
-        _origSwitchTipo(tipo);
-        if (tipo === 'fisico') {
-            setTimeout(renderFotosGrid, 50);
-        }
-    }
+
 
     function mostrarMsg(texto, tipo) {
         const el = document.getElementById('msg');
