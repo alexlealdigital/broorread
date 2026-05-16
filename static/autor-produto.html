@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrooStore</title>
+    <title>BrooStore – Produto</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Poppins:wght@700&display=swap" rel="stylesheet">
@@ -251,6 +251,95 @@
         .msg { padding: .75rem 1rem; border-radius: 8px; font-size: .88rem; margin-bottom: 1.2rem; display: none; }
         .msg.error   { background: rgba(231,76,60,.15); border: 1px solid var(--error-red); color: #ff6b6b; display: block; }
         .msg.success { background: rgba(39,174,96,.15); border: 1px solid var(--success-green); color: #2ecc71; display: block; }
+
+        /* Fotos extras do produto físico */
+        .fotos-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: .6rem;
+            margin-top: .8rem;
+        }
+        @media(max-width:600px) { .fotos-grid { grid-template-columns: repeat(3, 1fr); } }
+
+        .foto-slot {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px dashed var(--border-grey);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,.04);
+            transition: border-color .2s;
+        }
+        .foto-slot.filled { border-style: solid; border-color: var(--orange-web); }
+        .foto-slot img { width:100%; height:100%; object-fit:cover; display:block; }
+        .foto-slot .remove-foto {
+            position: absolute; top: 4px; right: 4px;
+            background: rgba(231,76,60,.85); color: #fff;
+            border: none; border-radius: 50%; width: 22px; height: 22px;
+            cursor: pointer; font-size: .75rem; display: flex;
+            align-items: center; justify-content: center;
+            transition: background .2s;
+        }
+        .foto-slot .remove-foto:hover { background: #c0392b; }
+        .foto-slot.empty { cursor: pointer; }
+        .foto-slot.empty:hover { border-color: var(--orange-web); }
+        .foto-slot.empty i { font-size: 1.4rem; color: #444; }
+        .foto-slot.empty span { font-size: .65rem; color: #555; margin-top: .2rem; }
+        .foto-add-content { display:flex;flex-direction:column;align-items:center;gap:.2rem; }
+
+        .foto-metodos {
+            display: flex;
+            gap: .5rem;
+            margin-bottom: .6rem;
+        }
+        .foto-metodo-btn {
+            flex: 1;
+            padding: .45rem .6rem;
+            background: transparent;
+            border: 1px solid var(--border-grey);
+            border-radius: 7px;
+            color: #888;
+            font-size: .78rem;
+            cursor: pointer;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .35rem;
+        }
+        .foto-metodo-btn:hover, .foto-metodo-btn.active {
+            border-color: var(--orange-web);
+            color: var(--orange-web);
+            background: rgba(252,163,17,.08);
+        }
+
+        .foto-url-input-wrap {
+            display: none;
+            gap: .4rem;
+            margin-top: .4rem;
+        }
+        .foto-url-input-wrap.show { display: flex; }
+        .foto-url-input-wrap input {
+            flex: 1;
+            padding: .5rem .75rem;
+            background: rgba(255,255,255,.06);
+            border: 1px solid var(--border-grey);
+            border-radius: 7px;
+            color: var(--white);
+            font-size: .82rem;
+            outline: none;
+        }
+        .foto-url-input-wrap input:focus { border-color: var(--orange-web); }
+        .foto-url-btn {
+            padding: .5rem .9rem;
+            background: var(--orange-web);
+            border: none; border-radius: 7px;
+            color: #000; font-size: .82rem;
+            font-weight: bold; cursor: pointer;
+        }
 
         /* Abas Digital / Físico */
         .tipo-tabs {
@@ -514,6 +603,46 @@
                               oninput="contarChars('specs','cnt-specs',400)" style="min-height:100px;"></textarea>
                 </div>
             </div>
+
+            <!-- FOTOS EXTRAS DO PRODUTO FÍSICO -->
+            <hr class="divider" style="margin-top:1.5rem;">
+            <div class="section-label"><i class="fas fa-images"></i> Fotos do Produto (até 5)</div>
+            <p class="hint" style="margin-bottom:.8rem;">
+                <i class="fas fa-info-circle" style="color:var(--orange-web);"></i>
+                A capa do card usa a imagem principal acima. Estas fotos aparecem no carrossel da página de venda.
+            </p>
+
+            <!-- Método de adição -->
+            <div class="foto-metodos">
+                <button type="button" class="foto-metodo-btn active" id="btn-metodo-upload"
+                        onclick="setFotoMetodo('upload')">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload
+                </button>
+                <button type="button" class="foto-metodo-btn" id="btn-metodo-url"
+                        onclick="setFotoMetodo('url')">
+                    <i class="fas fa-link"></i> URL externa
+                </button>
+            </div>
+
+            <!-- Upload direto -->
+            <div id="foto-upload-wrap">
+                <input type="file" id="input-foto-extra" accept="image/jpeg,image/png,image/webp"
+                       style="display:none;" onchange="onFotoUploadSelect(event)">
+            </div>
+
+            <!-- URL externa -->
+            <div class="foto-url-input-wrap" id="foto-url-wrap">
+                <input type="url" id="foto-url-input" placeholder="https://exemplo.com/foto.jpg">
+                <button type="button" class="foto-url-btn" onclick="adicionarFotoURL()">
+                    <i class="fas fa-plus"></i> Adicionar
+                </button>
+            </div>
+
+            <!-- Grid de fotos -->
+            <div class="fotos-grid" id="fotos-grid">
+                <!-- Slots gerados pelo JS -->
+            </div>
+
         </div><!-- FIM SEÇÃO FÍSICA -->
 
         <button class="btn-submit" id="btn-salvar" onclick="verificarTermosAntesDeSalvar()">
@@ -705,6 +834,7 @@
         // Tipo do produto
         if (p.tipo === 'fisico') {
             switchTipo('fisico');
+            await carregarFotosExtras(parseInt(editId));
             if (p.frete)      document.getElementById('frete').value      = p.frete;
             if (p.estoque !== null) document.getElementById('estoque').value = p.estoque;
             if (p.peso)       document.getElementById('peso').value       = p.peso;
@@ -904,6 +1034,19 @@
             return;
         }
 
+        // Upload das fotos extras (produto físico)
+        if (tipoAtual === 'fisico' && fotosExtras.length > 0) {
+            let pid = modoEdicao ? parseInt(editId) : null;
+            if (!pid) {
+                // Busca o ID do produto recém-inserido
+                const { data: novo } = await sb.from('products')
+                    .select('id').eq('author_id', usuarioAtual.id)
+                    .order('created_at', { ascending: false }).limit(1).single();
+                pid = novo?.id;
+            }
+            if (pid) await uploadFotosExtras(pid);
+        }
+
         try {
             await fetch('https://mercadopago-final.onrender.com/api/sync-produto', {
                 method: 'POST',
@@ -915,6 +1058,148 @@
         mostrarMsg(modoEdicao ? 'Produto atualizado com sucesso!' : 'Produto publicado com sucesso!', 'success');
         btn.innerHTML = '<i class="fas fa-check"></i> ' + (modoEdicao ? 'Salvo!' : 'Publicado!');
         setTimeout(() => window.location.href = '/static/autor-login.html', 2000);
+    }
+
+    // =========================================================
+    // FOTOS EXTRAS (produto físico)
+    // =========================================================
+    let fotosExtras   = [];   // [{url, file?, origem:'upload'|'url'}]
+    let fotoMetodo    = 'upload';
+    const MAX_FOTOS   = 5;
+
+    function setFotoMetodo(metodo) {
+        fotoMetodo = metodo;
+        document.getElementById('btn-metodo-upload').classList.toggle('active', metodo === 'upload');
+        document.getElementById('btn-metodo-url').classList.toggle('active',    metodo === 'url');
+        const urlWrap = document.getElementById('foto-url-wrap');
+        urlWrap.classList.toggle('show', metodo === 'url');
+    }
+
+    function renderFotosGrid() {
+        const grid = document.getElementById('fotos-grid');
+        if (!grid) return;
+        let html = '';
+
+        fotosExtras.forEach((foto, idx) => {
+            html += `
+                <div class="foto-slot filled">
+                    <img src="${foto.url}" alt="Foto ${idx+1}">
+                    <button type="button" class="remove-foto"
+                            onclick="removerFoto(${idx})" title="Remover">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>`;
+        });
+
+        if (fotosExtras.length < MAX_FOTOS) {
+            html += `
+                <div class="foto-slot empty" onclick="solicitarFoto()" title="Adicionar foto">
+                    <div class="foto-add-content">
+                        <i class="fas fa-plus"></i>
+                        <span>${fotosExtras.length + 1}/${MAX_FOTOS}</span>
+                    </div>
+                </div>`;
+        }
+
+        grid.innerHTML = html;
+    }
+
+    function solicitarFoto() {
+        if (fotoMetodo === 'upload') {
+            document.getElementById('input-foto-extra').click();
+        } else {
+            document.getElementById('foto-url-input').focus();
+        }
+    }
+
+    function onFotoUploadSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (fotosExtras.length >= MAX_FOTOS) { mostrarMsg('Máximo de 5 fotos atingido.', 'error'); return; }
+        if (file.size > 3 * 1024 * 1024) { mostrarMsg('Foto muito grande. Máximo 3 MB.', 'error'); return; }
+        if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
+            mostrarMsg('Formato inválido. Use JPG, PNG ou WEBP.', 'error'); return;
+        }
+        const reader = new FileReader();
+        reader.onload = ev => {
+            fotosExtras.push({ url: ev.target.result, file, origem: 'upload' });
+            renderFotosGrid();
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
+    }
+
+    function adicionarFotoURL() {
+        const input = document.getElementById('foto-url-input');
+        const url   = input.value.trim();
+        if (!url) return;
+        if (fotosExtras.length >= MAX_FOTOS) { mostrarMsg('Máximo de 5 fotos atingido.', 'error'); return; }
+        if (!url.startsWith('http')) { mostrarMsg('URL inválida. Deve começar com http.', 'error'); return; }
+        fotosExtras.push({ url, origem: 'url' });
+        input.value = '';
+        renderFotosGrid();
+    }
+
+    function removerFoto(idx) {
+        fotosExtras.splice(idx, 1);
+        renderFotosGrid();
+    }
+
+    async function uploadFotosExtras(productId) {
+        const urls = [];
+        for (let i = 0; i < fotosExtras.length; i++) {
+            const foto = fotosExtras[i];
+            if (foto.origem === 'url') {
+                urls.push({ url: foto.url, ordem: i });
+            } else {
+                // Upload para Supabase Storage
+                const ext  = foto.file.name.split('.').pop();
+                const path = `${usuarioAtual.id}/${productId}/${Date.now()}_${i}.${ext}`;
+                const { error } = await sb.storage
+                    .from('fotos-produto')
+                    .upload(path, foto.file, { contentType: foto.file.type, upsert: false });
+                if (error) {
+                    console.error('Erro upload foto:', error);
+                    continue;
+                }
+                const { data } = sb.storage.from('fotos-produto').getPublicUrl(path);
+                urls.push({ url: data.publicUrl, ordem: i });
+            }
+        }
+
+        if (urls.length === 0) return;
+
+        // Salva na tabela product_photos
+        // Remove fotos antigas do produto primeiro
+        await sb.from('product_photos').delete().eq('product_id', productId);
+
+        const inserts = urls.map(u => ({
+            product_id: productId,
+            url:        u.url,
+            ordem:      u.ordem,
+        }));
+        const { error } = await sb.from('product_photos').insert(inserts);
+        if (error) console.error('Erro ao salvar fotos:', error);
+    }
+
+    async function carregarFotosExtras(productId) {
+        const { data } = await sb.from('product_photos')
+            .select('url, ordem')
+            .eq('product_id', productId)
+            .order('ordem');
+        if (data && data.length > 0) {
+            fotosExtras = data.map(f => ({ url: f.url, origem: 'url' }));
+            renderFotosGrid();
+        }
+    }
+
+    // Inicializa grid quando aba físico é aberta
+    const _origSwitchTipo = switchTipo;
+    function switchTipo(tipo) {
+        _origSwitchTipo(tipo);
+        if (tipo === 'fisico') {
+            setTimeout(renderFotosGrid, 50);
+        }
     }
 
     function mostrarMsg(texto, tipo) {
