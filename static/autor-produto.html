@@ -521,15 +521,16 @@
                 <div class="hint" style="margin-top:.6rem;"><i class="fas fa-info-circle" style="color:var(--orange-web);"></i> Selecione a classificação correta. Você é responsável pela classificação da sua obra conforme a legislação brasileira.</div>
             </div>
 
+            <!-- Campo autor — comum a digital e físico -->
+            <div class="form-group" style="grid-column:1/-1;">
+                <label>Autor / Criador</label>
+                <input type="text" id="autor" placeholder="Nome do autor ou criador">
+            </div>
+
             <hr class="divider" style="grid-column:1/-1;">
             <!-- INÍCIO SEÇÃO DIGITAL -->
             <div id="secao-digital" style="grid-column:1/-1;display:contents;">
             <div class="section-label" style="grid-column:1/-1;"><i class="fas fa-book-open"></i> Informações da Página de Venda (opcional)</div>
-
-            <div class="form-group">
-                <label>Autor</label>
-                <input type="text" id="autor" placeholder="Nome do autor">
-            </div>
             <div class="form-group">
                 <label>Número de páginas</label>
                 <input type="number" id="paginas" placeholder="Ex: 312" min="1">
