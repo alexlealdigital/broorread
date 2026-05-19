@@ -489,7 +489,40 @@
         .card-resultado.success{background:rgba(39,174,96,.15);border:1px solid #27ae60;color:#2ecc71;display:block;}
         .card-resultado.error{background:rgba(231,76,60,.15);border:1px solid #e74c3c;color:#ff6b6b;display:block;}
         .card-resultado.processing{background:rgba(243,156,18,.15);border:1px solid #f39c12;color:#f39c12;display:block;}
-    </style>
+
+        /* ── Modal Checkout Físico ── */
+        .fisico-section-title { font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:.8rem;display:flex;align-items:center;gap:.4rem; }
+        .fisico-section-title i { color:var(--orange-web); }
+        #fisico-preco-resumo { display:block;margin:1rem 0; }
+        .preco-resumo { background:rgba(252,163,17,.07);border:1px solid rgba(252,163,17,.2);border-radius:8px;padding:.8rem 1rem;margin:.8rem 0; }
+        .preco-linha { display:flex;justify-content:space-between;font-size:.88rem;color:#bbb;padding:.2rem 0; }
+        .preco-linha.final { font-weight:bold;color:#fff;border-top:1px solid rgba(255,255,255,.1);margin-top:.3rem;padding-top:.5rem;font-size:1rem; }
+        .payment-tabs { display:flex;gap:.5rem;margin:1rem 0; }
+        .payment-tab { flex:1;padding:.65rem;border:1px solid #333;background:transparent;color:#888;border-radius:8px;cursor:pointer;font-size:.88rem;font-weight:700;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.4rem; }
+        .payment-tab.active { background:var(--orange-web);color:#000;border-color:var(--orange-web); }
+        .card-row { display:flex;gap:.75rem; }
+        .card-row .form-group { flex:1; }
+        .card-input-wrap { position:relative;display:flex;align-items:center; }
+        .card-input-wrap input { width:100%; }
+        .card-brand-icon { position:absolute;right:.75rem;height:24px;width:auto; }
+        .installments-select { width:100%;padding:.75rem 1rem;background:rgba(255,255,255,.06);border:1px solid #333;border-radius:8px;color:#fff;font-size:.9rem; }
+        .btn-confirmar-pagamento { width:100%;padding:1rem;background:#27ae60;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1rem;transition:opacity .2s;font-size:1rem; }
+        .btn-confirmar-pagamento:hover { opacity:.9; }
+        .btn-pagar-cartao { width:100%;padding:1rem;background:#2979ff;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1rem;font-size:1rem; }
+        .card-resultado { display:none;padding:.75rem 1rem;border-radius:8px;margin:.75rem 0;font-size:.88rem; }
+        .card-resultado.success { background:rgba(39,174,96,.15);color:#27ae60;border:1px solid #27ae60;display:block; }
+        .card-resultado.error   { background:rgba(231,76,60,.15);color:#e74c3c;border:1px solid #e74c3c;display:block; }
+        .card-resultado.processing { background:rgba(252,163,17,.1);color:var(--orange-web);border:1px solid var(--orange-web);display:block; }
+        .field-error { color:#e74c3c;font-size:.75rem;margin-top:.2rem;display:none; }
+        .cupom-section { margin:1rem 0; }
+        .cupom-section label { font-size:.78rem;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem;display:block; }
+        .cupom-input-group { display:flex;gap:.5rem; }
+        .cupom-input-group input { flex:1;padding:.65rem .9rem;background:rgba(255,255,255,.06);border:1px solid #333;border-radius:8px;color:#fff;font-size:.88rem;outline:none; }
+        .btn-aplicar-cupom { padding:.65rem 1rem;background:transparent;border:1px solid var(--orange-web);color:var(--orange-web);border-radius:8px;font-weight:700;font-size:.82rem;cursor:pointer;white-space:nowrap;transition:all .2s; }
+        .btn-aplicar-cupom:hover { background:var(--orange-web);color:#000; }
+        .cupom-status.sucesso { color:#27ae60; }
+        .cupom-status.erro    { color:#e74c3c; }
+        </style>
 </head>
 <body>
 
@@ -807,6 +840,194 @@
             </div>
         </div>
     </div>
+
+    <!-- ========== MODAL CHECKOUT FÍSICO ========== -->
+    <div id="checkout-fisico-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="modal-close" id="checkout-fisico-close">&times;</span>
+            <h2>
+                <img src="https://i.imgur.com/ELacEEt.png" alt="Mercado Pago"
+                     style="height:60px;width:auto;padding:5px;border-radius:8px;background:white;">
+                <span style="margin-left:10px;">Pagamento Seguro</span>
+            </h2>
+
+            <!-- Detalhes do produto -->
+            <div id="fisico-produto-detalhes"
+                 style="margin-bottom:1.5rem;text-align:center;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:1rem;"></div>
+
+            <form id="checkout-fisico-form">
+                <input type="hidden" id="fisico_product_id">
+                <input type="hidden" id="fisico_cupom_id">
+
+                <!-- DADOS PESSOAIS -->
+                <div class="fisico-section-title">
+                    <i class="fas fa-user"></i> Dados Pessoais
+                </div>
+
+                <div class="form-group">
+                    <label>Nome Completo *</label>
+                    <input type="text" id="fisico_nome" required minlength="2" placeholder="Digite seu nome completo">
+                    <div class="field-error"></div>
+                </div>
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="fisico_email" required placeholder="seu@email.com">
+                    <div class="field-error"></div>
+                </div>
+                <div class="form-group">
+                    <label>Telefone *</label>
+                    <input type="tel" id="fisico_telefone" required placeholder="(11) 99999-9999" maxlength="15">
+                    <div class="field-error"></div>
+                </div>
+
+                <!-- ENDEREÇO DE ENTREGA -->
+                <div class="fisico-section-title" style="margin-top:1.2rem;">
+                    <i class="fas fa-map-marker-alt"></i> Endereço de Entrega
+                </div>
+
+                <div class="card-row">
+                    <div class="form-group" style="flex:1;">
+                        <label>CEP *</label>
+                        <input type="text" id="fisico_cep" required placeholder="00000-000"
+                               maxlength="9" oninput="buscarCEP(this)">
+                        <div class="field-error"></div>
+                    </div>
+                    <div class="form-group" style="flex:2;">
+                        <label>Rua / Logradouro *</label>
+                        <input type="text" id="fisico_rua" required placeholder="Nome da rua">
+                        <div class="field-error"></div>
+                    </div>
+                </div>
+
+                <div class="card-row">
+                    <div class="form-group" style="flex:1;">
+                        <label>Número *</label>
+                        <input type="text" id="fisico_numero" required placeholder="123">
+                        <div class="field-error"></div>
+                    </div>
+                    <div class="form-group" style="flex:2;">
+                        <label>Complemento</label>
+                        <input type="text" id="fisico_complemento" placeholder="Apto, Bloco...">
+                    </div>
+                </div>
+
+                <div class="card-row">
+                    <div class="form-group" style="flex:2;">
+                        <label>Bairro *</label>
+                        <input type="text" id="fisico_bairro" required placeholder="Bairro">
+                        <div class="field-error"></div>
+                    </div>
+                    <div class="form-group" style="flex:2;">
+                        <label>Cidade *</label>
+                        <input type="text" id="fisico_cidade" required placeholder="Cidade">
+                        <div class="field-error"></div>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Estado *</label>
+                        <select id="fisico_estado" required>
+                            <option value="">UF</option>
+                            <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+                            <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+                            <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+                            <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+                            <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+                            <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+                            <option>SP</option><option>SE</option><option>TO</option>
+                        </select>
+                        <div class="field-error"></div>
+                    </div>
+                </div>
+
+                <!-- CUPOM -->
+                <div class="cupom-section">
+                    <label><i class="fas fa-ticket-alt"></i> CUPOM DE DESCONTO (Opcional)</label>
+                    <div class="cupom-input-group">
+                        <input type="text" id="fisico_cupom" placeholder="Digite seu cupom" maxlength="20">
+                        <button type="button" class="btn-aplicar-cupom" id="fisico-btn-cupom"
+                                onclick="aplicarCupomFisico()">Aplicar</button>
+                    </div>
+                    <div class="cupom-status" id="fisico-cupom-status"></div>
+                </div>
+
+                <!-- RESUMO COM FRETE -->
+                <div class="preco-resumo" id="fisico-preco-resumo">
+                    <div class="preco-linha">
+                        <span>Subtotal:</span>
+                        <span id="fisico-subtotal">R$ 0,00</span>
+                    </div>
+                    <div class="preco-linha">
+                        <span>Frete:</span>
+                        <span id="fisico-frete-valor">R$ 0,00</span>
+                    </div>
+                    <div class="preco-linha final">
+                        <span>Total:</span>
+                        <span id="fisico-total">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <!-- ABAS PIX / CARTÃO (mesmo padrão do modal digital) -->
+                <div class="payment-tabs">
+                    <button type="button" class="payment-tab active" id="fisico-tab-pix"
+                            onclick="switchFisicoTab('pix')">
+                        <i class="fas fa-qrcode"></i> PIX
+                    </button>
+                    <button type="button" class="payment-tab" id="fisico-tab-cartao"
+                            onclick="switchFisicoTab('cartao')">
+                        <i class="fas fa-credit-card"></i> Cartão
+                    </button>
+                </div>
+
+                <div id="fisico-pix-section">
+                    <button type="submit" class="btn-confirmar-pagamento">
+                        <i class="fas fa-lock"></i> Gerar QR Code PIX
+                    </button>
+                </div>
+
+                <div id="fisico-cartao-section" style="display:none;">
+                    <div class="form-group">
+                        <label>Número do Cartão</label>
+                        <div class="card-input-wrap">
+                            <input type="text" id="fisico-card-number" placeholder="0000 0000 0000 0000"
+                                   maxlength="19" oninput="formatCardNumber(this)" autocomplete="cc-number">
+                            <img id="fisico-card-brand" class="card-brand-icon" src="" style="display:none;" alt="bandeira">
+                        </div>
+                    </div>
+                    <div class="card-row">
+                        <div class="form-group">
+                            <label>Validade</label>
+                            <input type="text" id="fisico-card-expiry" placeholder="MM/AA"
+                                   maxlength="5" oninput="formatExpiry(this)" autocomplete="cc-exp">
+                        </div>
+                        <div class="form-group">
+                            <label>CVV</label>
+                            <input type="text" id="fisico-card-cvv" placeholder="123" maxlength="4">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Nome no Cartão</label>
+                        <input type="text" id="fisico-card-name" placeholder="NOME COMO ESTÁ NO CARTÃO"
+                               oninput="this.value=this.value.toUpperCase()" autocomplete="cc-name">
+                    </div>
+                    <div class="form-group">
+                        <label>CPF do Titular</label>
+                        <input type="text" id="fisico-card-cpf" placeholder="000.000.000-00"
+                               maxlength="14" oninput="formatCPF(this)">
+                    </div>
+                    <div class="form-group" id="fisico-installments-group" style="display:none;">
+                        <label>Parcelamento</label>
+                        <select class="installments-select" id="fisico-card-installments"></select>
+                    </div>
+                    <div id="fisico-card-resultado" class="card-resultado"></div>
+                    <button type="button" class="btn-pagar-cartao" onclick="pagarCartaoFisico()">
+                        <i class="fas fa-lock"></i> Pagar com Cartão
+                    </button>
+                </div>
+            </form>
+
+            <div id="fisico-resultado"></div>
+        </div>
+    </div>
+
 
     <div id="feedback-toast" class="toast"> 
         <span class="toast-icon"><i class="fas fa-info-circle"></i></span>
