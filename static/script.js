@@ -455,7 +455,7 @@ async function activateSpotlightMode(id) {
         if (sb) {
             const { data } = await sb
                 .from('products')
-                .select('title, price, image_url, descricao, author, paginas, intro, sobre_autor')
+                .select('title, price, image_url, descricao, author, paginas, intro, sobre_autor, tipo, frete, peso, dimensoes, prazo_prod, specs, estoque')
                 .eq('id', id)
                 .single();
  
@@ -469,6 +469,13 @@ async function activateSpotlightMode(id) {
                     paginas:    data.paginas ? String(data.paginas) : '',
                     intro:      data.intro        || '',
                     sobreAutor: data.sobre_autor  || '',
+                    tipo:       data.tipo         || 'digital',
+                    frete:      data.frete        || 0,
+                    peso:       data.peso         || '',
+                    dimensoes:  data.dimensoes    || '',
+                    prazoProd:  data.prazo_prod   || '',
+                    specs:      data.specs        || '',
+                    estoque:    data.estoque      || 0,
                 };
             }
         }
@@ -539,6 +546,26 @@ async function activateSpotlightMode(id) {
             spotSobreAutorWrap.style.display = 'none';
         }
  
+        // Dados físicos do produto
+        const spotFisicoWrap = document.getElementById('spot-fisico-wrap');
+        if (spotFisicoWrap) {
+            if (produto.tipo === 'fisico') {
+                let fisicoHtml = '';
+                if (produto.peso)      fisicoHtml += `<div class="spot-fisico-item"><i class="fas fa-weight-hanging"></i> <span>${produto.peso}</span></div>`;
+                if (produto.dimensoes) fisicoHtml += `<div class="spot-fisico-item"><i class="fas fa-ruler-combined"></i> <span>${produto.dimensoes}</span></div>`;
+                if (produto.prazoProd) fisicoHtml += `<div class="spot-fisico-item"><i class="fas fa-clock"></i> <span>${produto.prazoProd}</span></div>`;
+                if (produto.estoque)   fisicoHtml += `<div class="spot-fisico-item"><i class="fas fa-boxes"></i> <span>${produto.estoque} em estoque</span></div>`;
+                if (produto.frete > 0) fisicoHtml += `<div class="spot-fisico-item"><i class="fas fa-truck"></i> <span>Frete: R$ ${parseFloat(produto.frete).toFixed(2).replace('.',',')}</span></div>`;
+                if (produto.specs) {
+                    fisicoHtml += `<div class="spot-specs"><strong>Especificações:</strong><p>${produto.specs}</p></div>`;
+                }
+                spotFisicoWrap.innerHTML = fisicoHtml;
+                spotFisicoWrap.style.display = 'block';
+            } else {
+                spotFisicoWrap.style.display = 'none';
+            }
+        }
+
         document.getElementById('spot-btn').onclick = () => {
             openCheckoutModalSmart(id, produto.name, produto.price, produto.tipo || 'digital', produto.frete || 0);
         };
