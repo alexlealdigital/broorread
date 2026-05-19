@@ -138,6 +138,34 @@
         }
         .spotlight-image img:hover { transform: scale(1.05) rotate(2deg); }
 
+        /* Dados físicos no spotlight */
+        #spot-fisico-wrap {
+            display: none;
+            margin: 1rem 0;
+            background: rgba(252,163,17,.07);
+            border: 1px solid rgba(252,163,17,.2);
+            border-radius: 10px;
+            padding: .9rem 1.1rem;
+        }
+        .spot-fisico-item {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            font-size: .88rem;
+            color: #ccc;
+            padding: .2rem 0;
+        }
+        .spot-fisico-item i { color: var(--orange-web); width: 16px; text-align: center; }
+        .spot-specs {
+            margin-top: .75rem;
+            padding-top: .75rem;
+            border-top: 1px solid rgba(255,255,255,.08);
+            font-size: .85rem;
+            color: #bbb;
+            line-height: 1.6;
+        }
+        .spot-specs strong { color: var(--orange-web); display: block; margin-bottom: .3rem; }
+
         /* Carrossel de fotos físico */
         .carrossel-wrap {
             width: 100%;
