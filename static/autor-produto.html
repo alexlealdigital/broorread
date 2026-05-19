@@ -770,7 +770,9 @@
 
     const SUPABASE_URL  = 'https://gyepvrzkwesohbagpgfa.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    // sb em escopo de módulo para ser acessível por todas as funções
+    window._sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const sb = window._sb;
 
     const params     = new URLSearchParams(window.location.search);
     const editId     = params.get('edit');
@@ -1152,6 +1154,7 @@
     }
 
     async function uploadFotosExtras(productId) {
+        const sbClient = window._sb || sb;
         const urls = [];
         for (let i = 0; i < fotosExtras.length; i++) {
             const foto = fotosExtras[i];
@@ -1161,14 +1164,14 @@
                 // Upload para Supabase Storage
                 const ext  = foto.file.name.split('.').pop();
                 const path = `${usuarioAtual.id}/${productId}/${Date.now()}_${i}.${ext}`;
-                const { error } = await sb.storage
+                const { error } = await sbClient.storage
                     .from('fotos-produto')
                     .upload(path, foto.file, { contentType: foto.file.type, upsert: false });
                 if (error) {
                     console.error('Erro upload foto:', error);
                     continue;
                 }
-                const { data } = sb.storage.from('fotos-produto').getPublicUrl(path);
+                const { data } = sbClient.storage.from('fotos-produto').getPublicUrl(path);
                 urls.push({ url: data.publicUrl, ordem: i });
             }
         }
@@ -1177,19 +1180,20 @@
 
         // Salva na tabela product_photos
         // Remove fotos antigas do produto primeiro
-        await sb.from('product_photos').delete().eq('product_id', productId);
+        await sbClient.from('product_photos').delete().eq('product_id', productId);
 
         const inserts = urls.map(u => ({
             product_id: productId,
             url:        u.url,
             ordem:      u.ordem,
         }));
-        const { error } = await sb.from('product_photos').insert(inserts);
+        const { error } = await sbClient.from('product_photos').insert(inserts);
         if (error) console.error('Erro ao salvar fotos:', error);
     }
 
     async function carregarFotosExtras(productId) {
-        const { data } = await sb.from('product_photos')
+        const sbClient = window._sb || sb;
+        const { data } = await sbClient.from('product_photos')
             .select('url, ordem')
             .eq('product_id', productId)
             .order('ordem');
