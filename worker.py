@@ -135,6 +135,89 @@ def registrar_venda_no_supabase(product_id, customer_email, amount, payment_id):
 # ============================================
 # FUNÇÃO: ENVIAR EMAIL DE CONFIRMAÇÃO
 # ============================================
+def enviar_email_produto_fisico(destinatario, nome_cliente, valor, nome_produto, cobranca):
+    """Envia email de confirmação de pedido para produto físico."""
+    try:
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
+        email_user  = os.environ["EMAIL_USER"]
+        email_pass  = os.environ["EMAIL_PASSWORD"]
+    except KeyError:
+        print("[WORKER] ERRO: Credenciais de email não configuradas.")
+        return False
+
+    assunto = f'BrooStore: Pedido "{nome_produto}" confirmado! 📦'
+
+    # Tenta recuperar endereço do campo observacoes ou metadados da cobrança
+    endereco_html = ""
+    try:
+        import json as _json
+        meta = _json.loads(cobranca.observacoes or "{}")
+        end = meta.get("endereco", {})
+        if end:
+            endereco_html = f"""
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:15px;margin:20px 0;">
+                <h3 style="margin:0 0 10px;color:#374151;">📍 Endereço de Entrega</h3>
+                <p style="margin:3px 0;color:#374151;">{end.get('rua','')} {end.get('numero','')}{', '+end.get('complemento','') if end.get('complemento') else ''}</p>
+                <p style="margin:3px 0;color:#374151;">{end.get('bairro','')} — {end.get('cidade','')} / {end.get('estado','')}</p>
+                <p style="margin:3px 0;color:#374151;">CEP: {end.get('cep','')}</p>
+            </div>"""
+    except Exception:
+        pass
+
+    instrucoes = f"""
+        <p>Agradecemos por escolher a <strong>BrooStore</strong>! Seu pagamento de <strong>R$ {valor:.2f}</strong> foi confirmado.</p>
+        <h2 style="color:#27ae60;">Pedido recebido com sucesso! 🎉</h2>
+        <p>Seu pedido de <strong>{nome_produto}</strong> foi confirmado e está sendo preparado.</p>
+        {endereco_html}
+        <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:15px;margin:20px 0;">
+            <p style="margin:0;color:#92400e;"><strong>⏱️ Próximos passos:</strong><br>
+            Entraremos em contato em breve para confirmar os detalhes do envio e o prazo de entrega.</p>
+        </div>
+        <p style="color:#6b7280;font-size:0.9em;">Em caso de dúvidas, responda este e-mail.</p>
+    """
+
+    corpo_html = f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+body{{font-family:Arial,sans-serif;line-height:1.6;color:#333;margin:0;padding:0;background:#f4f4f4;}}
+.container{{max-width:600px;margin:20px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,.1);}}
+.header{{background:#3B82F6;padding:30px;text-align:center;color:white;}}
+.content{{padding:30px;}}
+.footer{{background:#f9fafb;padding:20px;text-align:center;font-size:.9em;color:#6b7280;border-top:1px solid #e5e7eb;}}
+</style></head><body>
+<div class="container">
+  <div class="header"><h1>✅ Parabéns pela sua compra!</h1></div>
+  <div class="content">
+    <p>Olá, {nome_cliente},</p>
+    {instrucoes}
+  </div>
+  <div class="footer">
+    <strong>BrooStore</strong><br>
+    Pedido ID: {cobranca.id}<br>
+    Em caso de dúvidas, responda este e-mail.
+  </div>
+</div>
+</body></html>"""
+
+    try:
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = assunto
+        msg["From"]    = email_user
+        msg["To"]      = destinatario
+        msg.attach(MIMEText(corpo_html, "html"))
+        smtp_port = int(os.environ.get("SMTP_PORT", 465))
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+            server.login(email_user, email_pass)
+            server.sendmail(email_user, destinatario, msg.as_string())
+        print(f"[WORKER] Email físico enviado para {destinatario}")
+        return True
+    except Exception as e:
+        print(f"[WORKER] Erro ao enviar email físico: {e}")
+        return False
+
+
 def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, cobranca, nome_produto, chave_acesso=None):
     """Envia email de entrega do produto."""
     try:
@@ -323,15 +406,27 @@ def process_mercado_pago_webhook(payment_id):
                 raise Exception(f"Estoque esgotado: {produto.id}")
         
         # 6. Enviar email
-        sucesso = enviar_email_confirmacao(
-            destinatario=cobranca.cliente_email,
-            nome_cliente=cobranca.cliente_nome,
-            valor=cobranca.valor,
-            link_produto=link_entrega,
-            cobranca=cobranca,
-            nome_produto=produto.nome,
-            chave_acesso=chave_entregue
-        )
+        # Produto físico: envia confirmação de pedido com endereço (sem link de download)
+        tipo_produto = getattr(produto, 'tipo', 'digital') or 'digital'
+
+        if tipo_produto == 'fisico':
+            sucesso = enviar_email_produto_fisico(
+                destinatario=cobranca.cliente_email,
+                nome_cliente=cobranca.cliente_nome,
+                valor=cobranca.valor,
+                nome_produto=produto.nome,
+                cobranca=cobranca,
+            )
+        else:
+            sucesso = enviar_email_confirmacao(
+                destinatario=cobranca.cliente_email,
+                nome_cliente=cobranca.cliente_nome,
+                valor=cobranca.valor,
+                link_produto=link_entrega,
+                cobranca=cobranca,
+                nome_produto=produto.nome,
+                chave_acesso=chave_entregue
+            )
         
         # 7. Finalizar transação e registrar no Supabase
         if sucesso:
