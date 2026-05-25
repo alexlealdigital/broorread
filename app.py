@@ -158,6 +158,7 @@ class Cobranca(db.Model):
     
     cupom_id = db.Column(db.Integer, db.ForeignKey('cupons.id'), nullable=True)  # NOVO
     cupom = db.relationship('Cupom')
+    observacoes = db.Column(db.Text, nullable=True)  # JSON com endereco para produto fisico
  
     def to_dict(self):
         return {
@@ -456,6 +457,13 @@ def create_cobranca():
         qr_code_text = payment["point_of_interaction"]["transaction_data"]["qr_code"]
  
         # --- CRIAÇÃO DA COBRANÇA NO BANCO (USA O MESMO external_reference) ---
+        import json as _json_mod
+        _endereco  = dados.get("endereco") or {}
+        _frete     = float(dados.get("frete") or 0)
+        _obs       = {}
+        if _endereco: _obs["endereco"] = _endereco
+        if _frete:    _obs["frete"]    = _frete
+
         nova_cobranca = Cobranca(
             external_reference=external_reference,  # MESMO VALOR ENVIADO AO MP
             cliente_nome=nome_cliente,
@@ -466,7 +474,8 @@ def create_cobranca():
             status=payment["status"],
             product_id=produto.id,
             vendedor_codigo=vendedor_codigo_recebido,
-            cupom_id=cupom_obj.id if cupom_obj else None
+            cupom_id=cupom_obj.id if cupom_obj else None,
+            observacoes=_json_mod.dumps(_obs) if _obs else None,
         )
         
         cobranca_dict = nova_cobranca.to_dict()
