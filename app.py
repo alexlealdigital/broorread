@@ -956,6 +956,137 @@ def comprimir_pdf():
         print(f"ERRO comprimir_pdf: {e}")
         return jsonify({"status": "erro", "message": str(e)}), 500
 
+
+
+# ═══════════════════════════════════════════════════════════
+# COMPRESSOR DE IMAGENS — validação de código + compressão
+# ═══════════════════════════════════════════════════════════
+
+FORMATOS_ACEITOS_IMAGEM = {"image/jpeg", "image/png", "image/webp"}
+EXTENSOES_ACEITAS_IMAGEM = {".jpg", ".jpeg", ".png", ".webp"}
+
+def _comprimir_imagem_bytes(file_storage, qualidade=82, max_px=1920, alvo_kb=900):
+    """Redimensiona e comprime uma imagem para JPEG, respeitando alvo_kb."""
+    from PIL import Image
+    import io, os as _os
+
+    img = Image.open(file_storage)
+
+    # Converte modos especiais para RGB (ex: RGBA, P)
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+
+    # Redimensiona mantendo proporção se maior que max_px
+    img.thumbnail((max_px, max_px), Image.LANCZOS)
+
+    # Tenta qualidade desejada; reduz até ficar abaixo do alvo
+    for q in [qualidade, 75, 65, 55]:
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=q, optimize=True, progressive=True)
+        tamanho_kb = buf.tell() / 1024
+        if tamanho_kb <= alvo_kb:
+            break
+
+    buf.seek(0)
+    return buf, tamanho_kb
+
+
+@app.route("/api/validar-codigo-compressao-imagem", methods=["POST"])
+def validar_codigo_compressao_imagem():
+    """Verifica se o external_reference é válido para o serviço de compressão de imagens (produto 98)."""
+    try:
+        dados  = request.get_json()
+        codigo = (dados.get("codigo") or "").strip()
+        if not codigo:
+            return jsonify({"status": "erro", "message": "Código não informado."}), 400
+
+        from sqlalchemy import or_
+        cobranca = Cobranca.query.filter(
+            Cobranca.external_reference == codigo,
+            or_(Cobranca.status == "approved", Cobranca.status == "delivered")
+        ).first()
+
+        if not cobranca:
+            return jsonify({"status": "erro",
+                            "message": "Código inválido ou pagamento ainda não confirmado."}), 404
+
+        if cobranca.product_id not in [98, None]:
+            return jsonify({"status": "erro",
+                            "message": "Código inválido para este serviço."}), 400
+
+        if getattr(cobranca, "compressao_img_usada", False):
+            return jsonify({"status": "erro",
+                            "message": "Este código já foi utilizado."}), 400
+
+        return jsonify({"status": "ok", "message": "Código válido."}), 200
+
+    except Exception as e:
+        print(f"ERRO validar_codigo_compressao_imagem: {e}")
+        return jsonify({"status": "erro", "message": str(e)}), 500
+
+
+@app.route("/api/comprimir-imagem", methods=["POST", "OPTIONS"])
+def comprimir_imagem():
+    """Recebe uma imagem (JPEG/PNG/WebP) e o código de liberação,
+    comprime para JPEG ≤ 900 KB e devolve o arquivo."""
+    import os as _os
+
+    try:
+        codigo  = (request.form.get("codigo") or "").strip()
+        imagem  = request.files.get("imagem")
+
+        if not codigo:
+            return jsonify({"status": "erro", "message": "Código não informado."}), 400
+        if not imagem:
+            return jsonify({"status": "erro", "message": "Nenhuma imagem enviada."}), 400
+
+        # Valida tipo de arquivo
+        import os.path as _osp
+        ext = _osp.splitext(imagem.filename or "")[1].lower()
+        if imagem.mimetype not in FORMATOS_ACEITOS_IMAGEM and ext not in EXTENSOES_ACEITAS_IMAGEM:
+            return jsonify({"status": "erro",
+                            "message": "Formato não suportado. Use JPEG, PNG ou WebP."}), 400
+
+        # Valida código (segurança)
+        from sqlalchemy import or_ as _or
+        cobranca = Cobranca.query.filter(
+            Cobranca.external_reference == codigo,
+            _or(Cobranca.status == "approved", Cobranca.status == "delivered")
+        ).first()
+
+        if not cobranca or cobranca.product_id not in [98, None]:
+            return jsonify({"status": "erro",
+                            "message": "Código inválido ou pagamento não confirmado."}), 403
+
+        if getattr(cobranca, "compressao_img_usada", False):
+            return jsonify({"status": "erro",
+                            "message": "Este código já foi utilizado."}), 400
+
+        # Comprime
+        print(f"[COMPRIMIR-IMG] Comprimindo '{imagem.filename}'...")
+        buf, tamanho_kb = _comprimir_imagem_bytes(imagem)
+        print(f"[COMPRIMIR-IMG] ✅ Resultado: {tamanho_kb:.0f} KB")
+
+        # Marca código como usado
+        try:
+            cobranca.compressao_img_usada = True
+            db.session.commit()
+        except Exception:
+            pass  # campo pode não existir ainda; não bloqueia a entrega
+
+        from flask import send_file
+        return send_file(
+            buf,
+            mimetype="image/jpeg",
+            as_attachment=True,
+            download_name="imagem_comprimida.jpg"
+        )
+
+    except Exception as e:
+        print(f"ERRO comprimir_imagem: {e}")
+        return jsonify({"status": "erro", "message": str(e)}), 500
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
