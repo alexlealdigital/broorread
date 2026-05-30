@@ -53,6 +53,7 @@ class Cobranca(db.Model):
     status = db.Column(db.String(50), default="pending", nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
+    observacoes = db.Column(db.Text, nullable=True)  # JSON com endereco/frete do pedido fisico
     produto = db.relationship('Produto')
     chave_usada = db.relationship('ChaveLicenca', backref='cobranca_rel', uselist=False)
 
@@ -207,10 +208,16 @@ body{{font-family:Arial,sans-serif;line-height:1.6;color:#333;margin:0;padding:0
         msg["From"]    = email_user
         msg["To"]      = destinatario
         msg.attach(MIMEText(corpo_html, "html"))
-        smtp_port = int(os.environ.get("SMTP_PORT", 465))
-        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
-            server.login(email_user, email_pass)
-            server.sendmail(email_user, destinatario, msg.as_string())
+        smtp_port = int(os.environ.get("SMTP_PORT", 587))
+        if smtp_port == 465:
+            with smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=10) as server:
+                server.login(email_user, email_pass)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
+                server.starttls()
+                server.login(email_user, email_pass)
+                server.send_message(msg)
         print(f"[WORKER] Email físico enviado para {destinatario}")
         return True
     except Exception as e:
