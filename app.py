@@ -366,18 +366,24 @@ def create_cobranca():
             vendedor_codigo_recebido = None
  
         produto = db.session.get(Produto, int(product_id_recebido))
- 
+
+        # Valores autoritativos (fonte da verdade = Supabase). NUNCA confiar no cliente.
+        frete_autoritativo = None
+        tipo_autoritativo  = produto.tipo if produto else None
+
         # Sempre sincroniza preço e dados com o Supabase (evita cache desatualizado)
         try:
             sb_url  = os.environ.get("SUPABASE_URL", "https://gyepvrzkwesohbagpgfa.supabase.co")
             sb_key  = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA")
             resp = http_requests.get(
-                f"{sb_url}/rest/v1/products?id=eq.{product_id_recebido}&select=id,title,price,link_pdf",
+                f"{sb_url}/rest/v1/products?id=eq.{product_id_recebido}&select=id,title,price,link_pdf,frete,tipo",
                 headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}"}
             )
             rows = resp.json()
             if rows:
                 p = rows[0]
+                tipo_autoritativo  = (p.get("tipo") or "ebook").strip().lower()
+                frete_autoritativo = float(p.get("frete") or 0)
                 if not produto:
                     # Produto novo: cria localmente
                     produto = Produto(
@@ -385,14 +391,15 @@ def create_cobranca():
                         nome=p["title"],
                         preco=float(p["price"]),
                         link_download=p.get("link_pdf") or "",
-                        tipo="ebook"
+                        tipo=tipo_autoritativo
                     )
                     db.session.add(produto)
                 else:
-                    # Produto existente: sempre atualiza preço e link_pdf do Supabase
+                    # Produto existente: sempre atualiza preço/link/tipo do Supabase
                     produto.preco         = float(p["price"])
                     produto.nome          = p["title"]
                     produto.link_download = p.get("link_pdf") or produto.link_download
+                    produto.tipo          = tipo_autoritativo
                 db.session.commit()
         except Exception as e:
             print(f"Erro ao sincronizar produto com Supabase: {e}")
@@ -414,9 +421,19 @@ def create_cobranca():
                     cupom_obj.usos_atuais += 1
                     db.session.add(cupom_obj)
  
+        # --- FRETE AUTORITATIVO (calculado no servidor) ---
+        is_fisico = (tipo_autoritativo == "fisico")
+        if is_fisico and frete_autoritativo is None:
+            return jsonify({"status": "error", "message": "Não foi possível calcular o frete agora. Tente novamente em instantes."}), 503
+        frete_aplicado   = round(frete_autoritativo, 2) if (is_fisico and frete_autoritativo) else 0.0
+        subtotal_produto = round(valor_final, 2)
+        total_cobrado    = round(subtotal_produto + frete_aplicado, 2)
+
         descricao_correta = produto.nome
         if cupom_obj:
             descricao_correta += f" (Cupom: {cupom_obj.codigo})"
+        if frete_aplicado > 0:
+            descricao_correta += " + Frete"
  
         # --- GERAÇÃO DO EXTERNAL_REFERENCE (CORRIGIDA) ---
         import uuid
@@ -436,7 +453,7 @@ def create_cobranca():
         sdk = mercadopago.SDK(access_token)
  
         payment_data = {
-            "transaction_amount": round(valor_final, 2),
+            "transaction_amount": total_cobrado,
             "description": descricao_correta,
             "payment_method_id": "pix",
             "external_reference": external_reference,  # AGORA DEFINIDA
@@ -458,18 +475,20 @@ def create_cobranca():
  
         # --- CRIAÇÃO DA COBRANÇA NO BANCO (USA O MESMO external_reference) ---
         import json as _json_mod
-        _endereco  = dados.get("endereco") or {}
-        _frete     = float(dados.get("frete") or 0)
-        _obs       = {}
-        if _endereco: _obs["endereco"] = _endereco
-        if _frete:    _obs["frete"]    = _frete
+        _endereco = dados.get("endereco") or {}
+        _obs = {}
+        if _endereco:
+            _obs["endereco"] = _endereco
+        if frete_aplicado > 0:
+            _obs["frete"] = frete_aplicado
+        _obs["subtotal_produto"] = subtotal_produto
 
         nova_cobranca = Cobranca(
             external_reference=external_reference,  # MESMO VALOR ENVIADO AO MP
             cliente_nome=nome_cliente,
             cliente_email=email_cliente,
             cliente_telefone=telefone_cliente,
-            valor=round(valor_final, 2),
+            valor=total_cobrado,
             valor_original=round(valor_original, 2),
             status=payment["status"],
             product_id=produto.id,
@@ -490,7 +509,10 @@ def create_cobranca():
             "qr_code_base64": qr_code_base64,
             "qr_code_text": qr_code_text,
             "payment_id": payment["id"],
-            "cobranca": cobranca_dict
+            "cobranca": cobranca_dict,
+            "frete_aplicado": frete_aplicado,
+            "subtotal_produto": subtotal_produto,
+            "total_cobrado": total_cobrado
         }
         
         if cupom_obj:
@@ -614,6 +636,7 @@ def create_cobranca_cartao():
         product_id_rec  = dados.get("product_id")
         cupom_id_rec    = dados.get("cupom_id")
         issuer_id       = dados.get("issuer_id")
+        telefone_cliente = dados.get("telefone")
 
         if not token:
             return jsonify({"status": "error", "message": "Token do cartão é obrigatório."}), 400
@@ -624,24 +647,29 @@ def create_cobranca_cartao():
 
         # Busca/sincroniza produto
         produto = db.session.get(Produto, int(product_id_rec))
+        frete_autoritativo = None
+        tipo_autoritativo  = produto.tipo if produto else None
         try:
             sb_url = os.environ.get("SUPABASE_URL", "https://gyepvrzkwesohbagpgfa.supabase.co")
             sb_key = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA")
             resp = http_requests.get(
-                f"{sb_url}/rest/v1/products?id=eq.{product_id_rec}&select=id,title,price,link_pdf",
+                f"{sb_url}/rest/v1/products?id=eq.{product_id_rec}&select=id,title,price,link_pdf,frete,tipo",
                 headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}"}
             )
             rows = resp.json()
             if rows:
                 p = rows[0]
+                tipo_autoritativo  = (p.get("tipo") or "ebook").strip().lower()
+                frete_autoritativo = float(p.get("frete") or 0)
                 if not produto:
                     produto = Produto(id=p["id"], nome=p["title"], preco=float(p["price"]),
-                                      link_download=p.get("link_pdf") or "", tipo="ebook")
+                                      link_download=p.get("link_pdf") or "", tipo=tipo_autoritativo)
                     db.session.add(produto)
                 else:
                     produto.preco         = float(p["price"])
                     produto.nome          = p["title"]
                     produto.link_download = p.get("link_pdf") or produto.link_download
+                    produto.tipo          = tipo_autoritativo
                 db.session.commit()
         except Exception as e:
             print(f"[CARTAO] Erro ao sincronizar produto: {e}")
@@ -663,6 +691,14 @@ def create_cobranca_cartao():
                     cupom_obj.usos_atuais += 1
                     db.session.add(cupom_obj)
 
+        # --- FRETE AUTORITATIVO (calculado no servidor) ---
+        is_fisico = (tipo_autoritativo == "fisico")
+        if is_fisico and frete_autoritativo is None:
+            return jsonify({"status": "error", "message": "Não foi possível calcular o frete agora. Tente novamente em instantes."}), 503
+        frete_aplicado   = round(frete_autoritativo, 2) if (is_fisico and frete_autoritativo) else 0.0
+        subtotal_produto = round(valor_final, 2)
+        total_cobrado    = round(subtotal_produto + frete_aplicado, 2)
+
         import uuid
         external_reference = str(uuid.uuid4())
 
@@ -673,9 +709,9 @@ def create_cobranca_cartao():
         sdk = mercadopago.SDK(access_token)
 
         payment_data = {
-            "transaction_amount": round(valor_final, 2),
+            "transaction_amount": total_cobrado,
             "token":              token,
-            "description":        produto.nome,
+            "description":        (produto.nome + " + Frete") if frete_aplicado > 0 else produto.nome,
             "installments":       int(installments),
             "payment_method_id":  payment_method,
             "external_reference": external_reference,
@@ -715,16 +751,27 @@ def create_cobranca_cartao():
         status_mp  = payment.get("status")
         status_detail = payment.get("status_detail", "")
 
+        # Observações (endereço + frete para produto físico)
+        import json as _json_mod
+        _endereco = dados.get("endereco") or {}
+        _obs = {}
+        if _endereco:
+            _obs["endereco"] = _endereco
+        if frete_aplicado > 0:
+            _obs["frete"] = frete_aplicado
+        _obs["subtotal_produto"] = subtotal_produto
+
         nova_cobranca = Cobranca(
             external_reference=external_reference,
             cliente_nome=nome_cliente,
             cliente_email=email_cliente,
-            cliente_telefone=None,
-            valor=round(valor_final, 2),
+            cliente_telefone=telefone_cliente,
+            valor=total_cobrado,
             valor_original=round(valor_original, 2),
             status=status_mp,
             product_id=produto.id,
-            cupom_id=cupom_obj.id if cupom_obj else None
+            cupom_id=cupom_obj.id if cupom_obj else None,
+            observacoes=_json_mod.dumps(_obs) if _obs else None,
         )
         db.session.add(nova_cobranca)
         db.session.commit()
@@ -747,6 +794,9 @@ def create_cobranca_cartao():
             "status_detail": status_detail,
             "payment_id":    payment["id"],
             "mensagem":      mensagem,
+            "frete_aplicado": frete_aplicado,
+            "subtotal_produto": subtotal_produto,
+            "total_cobrado": total_cobrado,
         }
         if cupom_obj:
             resposta["desconto_aplicado"] = {
