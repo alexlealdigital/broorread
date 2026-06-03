@@ -1136,6 +1136,163 @@ def comprimir_imagem():
         print(f"ERRO comprimir_imagem: {e}")
         return jsonify({"status": "erro", "message": str(e)}), 500
 
+# ═══════════════════════════════════════════════════════════
+# COTAÇÃO DE FRETE — Melhor Envio (Fase 2)
+# ═══════════════════════════════════════════════════════════
+MELHOR_ENVIO_URL   = os.environ.get("MELHOR_ENVIO_URL", "https://www.melhorenvio.com.br/api/v2")
+MELHOR_ENVIO_TOKEN = os.environ.get("MELHOR_ENVIO_TOKEN", "")
+MELHOR_ENVIO_EMAIL = os.environ.get("MELHOR_ENVIO_EMAIL", "entrega.broo@zohomail.com")
+CEP_ORIGEM         = os.environ.get("CEP_ORIGEM", "")
+
+
+def _so_digitos(cep):
+    return "".join(filter(str.isdigit, cep or ""))
+
+
+def cotar_frete_melhor_envio(cep_destino, peso_kg, altura_cm, largura_cm,
+                             comprimento_cm, valor_segurado=0.0):
+    """Consulta o Melhor Envio e retorna (opcoes, erro).
+    opcoes = lista de {id, nome, empresa, preco, prazo}; erro = None ou mensagem."""
+    if not MELHOR_ENVIO_TOKEN:
+        return None, "MELHOR_ENVIO_TOKEN não configurado no servidor."
+    if not CEP_ORIGEM:
+        return None, "CEP_ORIGEM não configurado no servidor."
+
+    cep_o = _so_digitos(CEP_ORIGEM)
+    cep_d = _so_digitos(cep_destino)
+    if len(cep_d) != 8:
+        return None, "CEP de destino inválido."
+
+    payload = {
+        "from": {"postal_code": cep_o},
+        "to":   {"postal_code": cep_d},
+        "package": {
+            "weight": float(peso_kg or 0.3),
+            "width":  float(largura_cm or 11),
+            "height": float(altura_cm or 2),
+            "length": float(comprimento_cm or 16),
+        },
+        "options": {
+            "insurance_value": float(valor_segurado or 0),
+            "receipt": False,
+            "own_hand": False,
+        },
+    }
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {MELHOR_ENVIO_TOKEN}",
+        "User-Agent": f"BrooStore ({MELHOR_ENVIO_EMAIL})",
+    }
+
+    try:
+        resp = http_requests.post(
+            f"{MELHOR_ENVIO_URL}/me/shipment/calculate",
+            json=payload, headers=headers, timeout=15
+        )
+    except Exception as e:
+        return None, f"Falha ao consultar Melhor Envio: {e}"
+
+    if resp.status_code == 401:
+        return None, "Token do Melhor Envio inválido ou expirado (401)."
+    if resp.status_code == 403:
+        return None, "Token sem a permissão de cotação 'shipping-calculate' (403)."
+    if resp.status_code != 200:
+        return None, f"Melhor Envio respondeu {resp.status_code}: {resp.text[:200]}"
+
+    try:
+        dados = resp.json()
+    except Exception:
+        return None, "Resposta inválida do Melhor Envio."
+
+    opcoes = []
+    for item in dados:
+        # Pula serviços indisponíveis (vêm com 'error' e sem 'price')
+        if item.get("error") or not item.get("price"):
+            continue
+        try:
+            preco = round(float(item["price"]), 2)
+        except (TypeError, ValueError):
+            continue
+        opcoes.append({
+            "id":      item.get("id"),
+            "nome":    item.get("name", ""),
+            "empresa": (item.get("company") or {}).get("name", ""),
+            "preco":   preco,
+            "prazo":   item.get("delivery_time"),
+        })
+
+    # Log de depuração: peso real vs cúbico
+    try:
+        pk = payload["package"]
+        cubico = round((pk["height"] * pk["width"] * pk["length"]) / 6000.0, 3)
+        print(f"[FRETE] origem={cep_o} destino={cep_d} peso_real={pk['weight']}kg "
+              f"peso_cubico~{cubico}kg -> {len(opcoes)} opcoes")
+    except Exception:
+        pass
+
+    return opcoes, None
+
+
+@app.route("/api/cotar-frete", methods=["POST"])
+def cotar_frete():
+    try:
+        dados       = request.get_json() or {}
+        cep_destino = dados.get("cep_destino") or dados.get("cep")
+        product_id  = dados.get("product_id")
+
+        if not cep_destino:
+            return jsonify({"status": "error", "message": "CEP de destino obrigatório."}), 400
+        if not product_id:
+            return jsonify({"status": "error", "message": "product_id obrigatório."}), 400
+
+        # Busca dados físicos do produto no Supabase (fonte da verdade)
+        sb_url = os.environ.get("SUPABASE_URL", "https://gyepvrzkwesohbagpgfa.supabase.co")
+        sb_key = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA")
+        try:
+            resp = http_requests.get(
+                f"{sb_url}/rest/v1/products?id=eq.{product_id}"
+                f"&select=id,price,tipo,peso_kg,altura_cm,largura_cm,comprimento_cm",
+                headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}"},
+                timeout=10
+            )
+            rows = resp.json()
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Erro ao buscar produto: {e}"}), 500
+
+        if not rows:
+            return jsonify({"status": "error", "message": "Produto não encontrado."}), 404
+
+        p = rows[0]
+        if (p.get("tipo") or "").strip().lower() != "fisico":
+            return jsonify({"status": "error", "message": "Produto não é físico (não tem frete)."}), 400
+
+        faltando = [c for c in ("peso_kg", "altura_cm", "largura_cm", "comprimento_cm") if not p.get(c)]
+        if faltando:
+            return jsonify({"status": "error",
+                            "message": f"Produto sem medidas cadastradas: {', '.join(faltando)}."}), 422
+
+        opcoes, erro = cotar_frete_melhor_envio(
+            cep_destino=cep_destino,
+            peso_kg=p["peso_kg"],
+            altura_cm=p["altura_cm"],
+            largura_cm=p["largura_cm"],
+            comprimento_cm=p["comprimento_cm"],
+            valor_segurado=float(p.get("price") or 0),
+        )
+        if erro:
+            return jsonify({"status": "error", "message": erro}), 502
+        if not opcoes:
+            return jsonify({"status": "error",
+                            "message": "Nenhuma transportadora disponível para este CEP."}), 404
+
+        opcoes.sort(key=lambda o: o["preco"])  # mais barato primeiro
+        return jsonify({"status": "success", "opcoes": opcoes}), 200
+
+    except Exception as e:
+        print(f"ERRO (COTAR FRETE): {str(e)}")
+        return jsonify({"status": "error", "message": f"Erro ao cotar frete: {str(e)}"}), 500
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
