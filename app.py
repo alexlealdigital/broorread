@@ -370,13 +370,14 @@ def create_cobranca():
         # Valores autoritativos (fonte da verdade = Supabase). NUNCA confiar no cliente.
         frete_autoritativo = None
         tipo_autoritativo  = produto.tipo if produto else None
+        p_dados            = {}  # dados fisicos do Supabase para recotacao de frete
 
         # Sempre sincroniza preço e dados com o Supabase (evita cache desatualizado)
         try:
             sb_url  = os.environ.get("SUPABASE_URL", "https://gyepvrzkwesohbagpgfa.supabase.co")
             sb_key  = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA")
             resp = http_requests.get(
-                f"{sb_url}/rest/v1/products?id=eq.{product_id_recebido}&select=id,title,price,link_pdf,frete,tipo",
+                f"{sb_url}/rest/v1/products?id=eq.{product_id_recebido}&select=id,title,price,link_pdf,frete,tipo,peso_kg,altura_cm,largura_cm,comprimento_cm",
                 headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}"}
             )
             rows = resp.json()
@@ -384,6 +385,11 @@ def create_cobranca():
                 p = rows[0]
                 tipo_autoritativo  = (p.get("tipo") or "ebook").strip().lower()
                 frete_autoritativo = float(p.get("frete") or 0)
+                p_dados = {
+                    "price": float(p.get("price") or 0),
+                    "peso_kg": p.get("peso_kg"), "altura_cm": p.get("altura_cm"),
+                    "largura_cm": p.get("largura_cm"), "comprimento_cm": p.get("comprimento_cm"),
+                }
                 if not produto:
                     # Produto novo: cria localmente
                     produto = Produto(
@@ -421,11 +427,18 @@ def create_cobranca():
                     cupom_obj.usos_atuais += 1
                     db.session.add(cupom_obj)
  
-        # --- FRETE AUTORITATIVO (calculado no servidor) ---
+        # --- FRETE AUTORITATIVO (recotado no servidor; fallback = frete fixo) ---
         is_fisico = (tipo_autoritativo == "fisico")
         if is_fisico and frete_autoritativo is None:
             return jsonify({"status": "error", "message": "Não foi possível calcular o frete agora. Tente novamente em instantes."}), 503
-        frete_aplicado   = round(frete_autoritativo, 2) if (is_fisico and frete_autoritativo) else 0.0
+        frete_servico_desc = None
+        if is_fisico:
+            _cep_destino = (dados.get("endereco") or {}).get("cep") or dados.get("cep_destino")
+            _servico_id  = dados.get("frete_servico_id")
+            frete_aplicado, frete_servico_desc = resolver_frete_fisico(
+                p_dados, _cep_destino, _servico_id, frete_autoritativo)
+        else:
+            frete_aplicado = 0.0
         subtotal_produto = round(valor_final, 2)
         total_cobrado    = round(subtotal_produto + frete_aplicado, 2)
 
@@ -481,6 +494,8 @@ def create_cobranca():
             _obs["endereco"] = _endereco
         if frete_aplicado > 0:
             _obs["frete"] = frete_aplicado
+        if frete_servico_desc:
+            _obs["transportadora"] = frete_servico_desc
         _obs["subtotal_produto"] = subtotal_produto
 
         nova_cobranca = Cobranca(
@@ -649,11 +664,12 @@ def create_cobranca_cartao():
         produto = db.session.get(Produto, int(product_id_rec))
         frete_autoritativo = None
         tipo_autoritativo  = produto.tipo if produto else None
+        p_dados            = {}  # dados fisicos do Supabase para recotacao de frete
         try:
             sb_url = os.environ.get("SUPABASE_URL", "https://gyepvrzkwesohbagpgfa.supabase.co")
             sb_key = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5ZXB2cnprd2Vzb2hiYWdwZ2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMDk5OTAsImV4cCI6MjA3Njg4NTk5MH0.ePwzEE8FjikLiTyjbtJXUtIIwFRlaSf5RYe7iKMDnTA")
             resp = http_requests.get(
-                f"{sb_url}/rest/v1/products?id=eq.{product_id_rec}&select=id,title,price,link_pdf,frete,tipo",
+                f"{sb_url}/rest/v1/products?id=eq.{product_id_rec}&select=id,title,price,link_pdf,frete,tipo,peso_kg,altura_cm,largura_cm,comprimento_cm",
                 headers={"apikey": sb_key, "Authorization": f"Bearer {sb_key}"}
             )
             rows = resp.json()
@@ -661,6 +677,11 @@ def create_cobranca_cartao():
                 p = rows[0]
                 tipo_autoritativo  = (p.get("tipo") or "ebook").strip().lower()
                 frete_autoritativo = float(p.get("frete") or 0)
+                p_dados = {
+                    "price": float(p.get("price") or 0),
+                    "peso_kg": p.get("peso_kg"), "altura_cm": p.get("altura_cm"),
+                    "largura_cm": p.get("largura_cm"), "comprimento_cm": p.get("comprimento_cm"),
+                }
                 if not produto:
                     produto = Produto(id=p["id"], nome=p["title"], preco=float(p["price"]),
                                       link_download=p.get("link_pdf") or "", tipo=tipo_autoritativo)
@@ -691,11 +712,18 @@ def create_cobranca_cartao():
                     cupom_obj.usos_atuais += 1
                     db.session.add(cupom_obj)
 
-        # --- FRETE AUTORITATIVO (calculado no servidor) ---
+        # --- FRETE AUTORITATIVO (recotado no servidor; fallback = frete fixo) ---
         is_fisico = (tipo_autoritativo == "fisico")
         if is_fisico and frete_autoritativo is None:
             return jsonify({"status": "error", "message": "Não foi possível calcular o frete agora. Tente novamente em instantes."}), 503
-        frete_aplicado   = round(frete_autoritativo, 2) if (is_fisico and frete_autoritativo) else 0.0
+        frete_servico_desc = None
+        if is_fisico:
+            _cep_destino = (dados.get("endereco") or {}).get("cep") or dados.get("cep_destino")
+            _servico_id  = dados.get("frete_servico_id")
+            frete_aplicado, frete_servico_desc = resolver_frete_fisico(
+                p_dados, _cep_destino, _servico_id, frete_autoritativo)
+        else:
+            frete_aplicado = 0.0
         subtotal_produto = round(valor_final, 2)
         total_cobrado    = round(subtotal_produto + frete_aplicado, 2)
 
@@ -759,6 +787,8 @@ def create_cobranca_cartao():
             _obs["endereco"] = _endereco
         if frete_aplicado > 0:
             _obs["frete"] = frete_aplicado
+        if frete_servico_desc:
+            _obs["transportadora"] = frete_servico_desc
         _obs["subtotal_produto"] = subtotal_produto
 
         nova_cobranca = Cobranca(
@@ -1234,6 +1264,56 @@ def cotar_frete_melhor_envio(cep_destino, peso_kg, altura_cm, largura_cm,
     return opcoes, None
 
 
+def resolver_frete_fisico(p_supabase, cep_destino, servico_id, frete_fixo_fallback):
+    """Produto fisico: recota no Melhor Envio e devolve o preco do servico escolhido.
+    Cai no frete fixo (fallback) se nao der para cotar. Retorna (frete, descricao_servico)."""
+    fallback = round(float(frete_fixo_fallback or 0), 2)
+    dims_ok = all(p_supabase.get(c) for c in ("peso_kg", "altura_cm", "largura_cm", "comprimento_cm"))
+    if not (servico_id and cep_destino and dims_ok):
+        return fallback, None
+    opcoes, erro = cotar_frete_melhor_envio(
+        cep_destino=cep_destino,
+        peso_kg=p_supabase["peso_kg"], altura_cm=p_supabase["altura_cm"],
+        largura_cm=p_supabase["largura_cm"], comprimento_cm=p_supabase["comprimento_cm"],
+        valor_segurado=float(p_supabase.get("price") or 0),
+    )
+    if erro or not opcoes:
+        print(f"[FRETE] recotacao indisponivel ({erro}); usando frete fixo R$ {fallback}")
+        return fallback, None
+    escolhido = next((o for o in opcoes if str(o["id"]) == str(servico_id)), None)
+    if not escolhido:
+        print(f"[FRETE] servico_id {servico_id} nao encontrado; usando frete fixo R$ {fallback}")
+        return fallback, None
+    return round(float(escolhido["preco"]), 2), f"{escolhido['empresa']} {escolhido['nome']}"
+
+
+def curar_opcoes(opcoes):
+    """Seleciona ate 3 opcoes por custo-beneficio: mais barata, melhor equilibrio e mais rapida."""
+    if not opcoes:
+        return []
+    FATOR_DIA = 2.0
+    barata = min(opcoes, key=lambda o: (o["preco"], o["prazo"] or 999))
+    rapida = min(opcoes, key=lambda o: (o["prazo"] or 999, o["preco"]))
+    score  = lambda o: o["preco"] + (o["prazo"] or 0) * FATOR_DIA
+    ids = {barata["id"], rapida["id"]}
+    restantes = [o for o in opcoes if o["id"] not in ids]
+    equilibrio = min(restantes, key=score) if restantes else None
+    selecionadas = []
+    def _add(o, tag):
+        if o and all(x["id"] != o["id"] for x in selecionadas):
+            o2 = dict(o); o2["destaque"] = tag
+            selecionadas.append(o2)
+    _add(barata, "Mais barato")
+    _add(equilibrio, "Custo-beneficio")
+    _add(rapida, "Mais rapido")
+    for o in opcoes:
+        if len(selecionadas) >= 3:
+            break
+        _add(o, "")
+    selecionadas.sort(key=lambda o: o["preco"])
+    return selecionadas[:3]
+
+
 @app.route("/api/cotar-frete", methods=["POST"])
 def cotar_frete():
     try:
@@ -1286,8 +1366,11 @@ def cotar_frete():
             return jsonify({"status": "error",
                             "message": "Nenhuma transportadora disponível para este CEP."}), 404
 
-        opcoes.sort(key=lambda o: o["preco"])  # mais barato primeiro
-        return jsonify({"status": "success", "opcoes": opcoes}), 200
+        opcoes.sort(key=lambda o: o["preco"])
+        opcoes_curadas = curar_opcoes(opcoes)
+        return jsonify({"status": "success",
+                        "opcoes": opcoes_curadas,
+                        "total_disponivel": len(opcoes)}), 200
 
     except Exception as e:
         print(f"ERRO (COTAR FRETE): {str(e)}")
