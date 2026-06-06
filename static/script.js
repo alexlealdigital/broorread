@@ -3,6 +3,7 @@
 // =========================================================
 const API_URL = "https://mercadopago-final.onrender.com/api/cobrancas";
 const VALIDAR_CUPOM_URL = "https://mercadopago-final.onrender.com/api/validar-cupom";
+const COTAR_FRETE_URL = "https://mercadopago-final.onrender.com/api/cotar-frete";
  
 // Elementos do Modal de Checkout
 const checkoutModal = document.getElementById('checkout-modal');
@@ -843,8 +844,8 @@ let fisicoCupomAplicado = null;
 // ── Abre o modal físico ───────────────────────────────────
 function openCheckoutFisicoModal(productId, nome, preco, frete) {
     fisicoValorOriginal = parseFloat(preco)  || 0;
-    fisicoValorFrete    = parseFloat(frete)  || 0;
-    fisicoValorFinal    = fisicoValorOriginal + fisicoValorFrete;
+    fisicoValorFrete    = 0;                 // frete so e definido apos a cotacao por CEP
+    fisicoValorFinal    = fisicoValorOriginal;
     fisicoCupomAplicado = null;
 
     const precoFmt = fisicoValorOriginal.toFixed(2).replace('.', ',');
@@ -853,11 +854,20 @@ function openCheckoutFisicoModal(productId, nome, preco, frete) {
         <h3 style="margin:.5rem 0;color:#fff;">📦 ${nome}</h3>
         <p style="font-size:1.3rem;font-weight:bold;color:var(--orange-web,#fca311);">R$ ${precoFmt}</p>
         <p style="font-size:.82rem;color:#888;margin-top:.3rem;">
-            <i class="fas fa-truck"></i> Frete: R$ ${fisicoValorFrete.toFixed(2).replace('.', ',')}
+            <i class="fas fa-truck"></i> Frete calculado após o preenchimento do CEP
         </p>
     `;
 
     document.getElementById('fisico_product_id').value = productId;
+
+    // Reseta o seletor de frete
+    const _sel = document.getElementById('fisico-frete-selecao');
+    if (_sel) _sel.style.display = 'none';
+    const _op = document.getElementById('fisico-frete-opcoes');
+    if (_op) _op.innerHTML = '';
+    const _srv = document.getElementById('fisico_frete_servico_id');
+    if (_srv) _srv.value = '';
+
     atualizarResumoFisico();
     switchFisicoTab('pix');
 
@@ -913,8 +923,76 @@ async function buscarCEP(input) {
             document.getElementById('fisico_cidade').value = d.localidade || '';
             document.getElementById('fisico_estado').value = d.uf         || '';
             document.getElementById('fisico_numero').focus();
+            cotarFreteFisico(v);   // dispara a cotacao apos preencher o endereco
         }
     } catch(e) { console.warn('CEP não encontrado', e); }
+}
+
+// ── Cotacao de frete (Melhor Envio) ───────────────────────
+async function cotarFreteFisico(cep) {
+    const selWrap   = document.getElementById('fisico-frete-selecao');
+    const opcoesEl  = document.getElementById('fisico-frete-opcoes');
+    const statusEl  = document.getElementById('fisico-frete-status');
+    const servicoEl = document.getElementById('fisico_frete_servico_id');
+    const productId = document.getElementById('fisico_product_id').value;
+    if (!cep || cep.replace(/\D/g, '').length !== 8 || !productId) return;
+
+    selWrap.style.display = 'block';
+    opcoesEl.innerHTML = '';
+    servicoEl.value = '';
+    fisicoValorFrete = 0;
+    atualizarResumoFisico();
+    statusEl.style.color = '#888';
+    statusEl.textContent = 'Calculando frete...';
+
+    try {
+        const r = await fetch(COTAR_FRETE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cep_destino: cep, product_id: parseInt(productId) })
+        });
+        const d = await r.json();
+        if (!r.ok || d.status !== 'success' || !Array.isArray(d.opcoes) || !d.opcoes.length) {
+            statusEl.style.color = '#e74c3c';
+            statusEl.textContent = (d && d.message) ? d.message : 'Nenhuma opção de frete para este CEP.';
+            return;
+        }
+        statusEl.textContent = '';
+        d.opcoes.forEach((op) => {
+            const id  = `frete-op-${op.id}`;
+            const tag = op.destaque
+                ? `<span style="font-size:.7rem;background:#27ae60;color:#fff;padding:1px 7px;border-radius:10px;margin-left:6px;">${op.destaque}</span>`
+                : '';
+            const prazoTxt = op.prazo ? `${op.prazo} dia(s) úteis` : 'prazo a confirmar';
+            const label = document.createElement('label');
+            label.setAttribute('for', id);
+            label.style.cssText = 'display:flex;align-items:center;gap:.6rem;padding:.6rem .7rem;border:1px solid #444;border-radius:8px;margin-bottom:.5rem;cursor:pointer;';
+            label.innerHTML = `
+                <input type="radio" name="fisico_frete_op" id="${id}" value="${op.id}"
+                       data-preco="${op.preco}" style="accent-color:#27ae60;">
+                <span style="flex:1;">
+                    <strong style="color:#fff;">${op.empresa} ${op.nome}</strong>${tag}<br>
+                    <span style="font-size:.8rem;color:#aaa;">${prazoTxt}</span>
+                </span>
+                <strong style="color:var(--orange-web,#fca311);">R$ ${Number(op.preco).toFixed(2).replace('.', ',')}</strong>
+            `;
+            opcoesEl.appendChild(label);
+        });
+        opcoesEl.querySelectorAll('input[name="fisico_frete_op"]').forEach((radio) => {
+            radio.addEventListener('change', (e) => {
+                fisicoValorFrete = parseFloat(e.target.dataset.preco) || 0;
+                servicoEl.value = e.target.value;
+                atualizarResumoFisico();
+            });
+        });
+        // Pre-seleciona a primeira opcao (mais barata)
+        const primeiro = opcoesEl.querySelector('input[name="fisico_frete_op"]');
+        if (primeiro) { primeiro.checked = true; primeiro.dispatchEvent(new Event('change')); }
+    } catch (e) {
+        statusEl.style.color = '#e74c3c';
+        statusEl.textContent = 'Erro ao calcular o frete. Tente novamente.';
+        console.warn('cotarFreteFisico', e);
+    }
 }
 
 // ── Resumo de preços ──────────────────────────────────────
@@ -994,6 +1072,13 @@ function validarFormFisico() {
             el.style.borderColor = '';
         }
     });
+    // Exige a escolha de uma opcao de frete
+    const _srvFrete = document.getElementById('fisico_frete_servico_id');
+    if (!_srvFrete || !_srvFrete.value) {
+        const _st = document.getElementById('fisico-frete-status');
+        if (_st) { _st.style.color = '#e74c3c'; _st.textContent = 'Escolha uma opção de frete para continuar.'; }
+        ok = false;
+    }
     return ok;
 }
 
@@ -1024,6 +1109,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             ? parseInt(document.getElementById('fisico_cupom_id').value) : null,
                 endereco,
                 frete:      fisicoValorFrete,
+                frete_servico_id: document.getElementById('fisico_frete_servico_id').value || null,
+                cep_destino: document.getElementById('fisico_cep').value,
             };
 
             const btn = formFisico.querySelector('button[type=submit]');
@@ -1137,7 +1224,7 @@ async function pagarCartaoFisico() {
             estado:      document.getElementById('fisico_estado').value,
         };
 
-        const r = await fetch(API_URL_CARTAO, {
+        const r = await fetch(API_CARTAO_URL, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 token: tokenData.id, payment_method_id: paymentMethodId,
@@ -1150,6 +1237,8 @@ async function pagarCartaoFisico() {
                 cupom_id: document.getElementById('fisico_cupom_id').value
                           ? parseInt(document.getElementById('fisico_cupom_id').value) : null,
                 endereco, frete: fisicoValorFrete,
+                frete_servico_id: document.getElementById('fisico_frete_servico_id').value || null,
+                cep_destino: document.getElementById('fisico_cep').value,
             })
         });
         const result = await r.json();
