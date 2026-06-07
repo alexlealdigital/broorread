@@ -25,8 +25,9 @@ NETLIFY_ORIGIN_PROD  = "https://rread.netlify.app"
 RENDER_ORIGIN        = "https://mercadopago-final.onrender.com"
 NETLIFY_ORIGIN_TEST  = "https://rankedsale.netlify.app"
 BROOSTORE_ORIGIN     = "https://broostore.netlify.app"
+BROOSTOCK_ORIGIN     = "https://brootechstock.netlify.app"  # NOVO: app BrooStock (compra de chave no cadastro)
 CORS(app,
-     origins=[NETLIFY_ORIGIN_PROD, RENDER_ORIGIN, NETLIFY_ORIGIN_TEST, BROOSTORE_ORIGIN],
+     origins=[NETLIFY_ORIGIN_PROD, RENDER_ORIGIN, NETLIFY_ORIGIN_TEST, BROOSTORE_ORIGIN, BROOSTOCK_ORIGIN],
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      supports_credentials=False)
