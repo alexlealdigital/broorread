@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 # Cria o produto "Chave BrooStock" (tipo "app") e gera chaves de licença.
 #
-# Onde rodar: no painel do Render do serviço broorread, aba "Shell":
+# Onde rodar: painel do Render do serviço broorread, aba "Shell":
 #     python seed_chave_broostock.py
 # (ou como One-Off Job, com o mesmo comando)
 #
@@ -12,6 +12,7 @@
 # ---------------------------------------------------------------------------
 
 import uuid
+from sqlalchemy import text
 from app import app, db, Produto, ChaveLicenca
 
 NOME  = "Chave BrooStock — Licença de Uso"
@@ -25,6 +26,20 @@ def gerar_serial():
 
 
 with app.app_context():
+    # 0) Corrige a sequence do id de produtos.
+    #    (ela fica atrás do MAX(id) porque o backend insere produtos com id
+    #     explícito ao sincronizar com o Supabase. Sem isso, o INSERT abaixo
+    #     tentaria reusar um id já existente -> UniqueViolation.)
+    seq = db.session.execute(
+        text("SELECT pg_get_serial_sequence('produtos', 'id')")
+    ).scalar()
+    if seq:
+        db.session.execute(
+            text("SELECT setval(:seq, COALESCE((SELECT MAX(id) FROM produtos), 0) + 1, false)"),
+            {"seq": seq},
+        )
+        db.session.commit()
+
     # 1) Produto. tipo="app" faz o worker reservar uma chave e enviar por e-mail.
     produto = Produto(nome=NOME, preco=PRECO, link_download="", tipo="app")
     db.session.add(produto)
