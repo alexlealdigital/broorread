@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assinar BrooStock — Pagamento Seguro</title>
+  <style>
+    :root{
+      --bg:#0a1628; --card:#14213d; --line:#2a3b55; --txt:#e6edf5;
+      --muted:#9fb0c3; --accent:#48cae4; --accent2:#0096c7;
+      --ok:#27ae60; --err:#e74c3c; --proc:#f39c12;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:
+      radial-gradient(1200px 600px at 50% -10%, #16335a 0%, var(--bg) 60%);
+      color:var(--txt);min-height:100vh;display:flex;align-items:flex-start;
+      justify-content:center;padding:32px 16px;}
+    .card{width:100%;max-width:440px;background:var(--card);border:1px solid var(--line);
+      border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.45);}
+    .mp-head{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:14px;}
+    .mp-head img{height:40px;border-radius:6px;background:#fff;padding:4px;}
+    .mp-head span{font-weight:700;font-size:1.05rem;}
+    .produto{text-align:center;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:16px;}
+    .produto h3{margin:.2rem 0;font-size:1.05rem;}
+    .preco{font-size:1.7rem;font-weight:800;color:var(--accent);}
+    .preco small{display:block;font-size:.8rem;color:var(--muted);font-weight:500;margin-top:2px;}
+    label{display:block;font-size:.74rem;font-weight:700;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px;}
+    input,select{width:100%;padding:.7rem .9rem;background:rgba(255,255,255,.05);
+      border:1px solid var(--line);border-radius:8px;color:var(--txt);font-size:.92rem;outline:none;}
+    input:focus,select:focus{border-color:var(--accent);}
+    input:read-only{opacity:.7;cursor:not-allowed;}
+    .row{display:flex;gap:.6rem;}
+    .row > div{flex:1;}
+    .cupom-group{display:flex;gap:.5rem;}
+    .cupom-group input{flex:1;}
+    .btn-cupom{padding:.7rem 1rem;background:transparent;border:1px solid var(--accent);
+      color:var(--accent);border-radius:8px;font-weight:700;font-size:.82rem;cursor:pointer;white-space:nowrap;}
+    .cupom-status{font-size:.82rem;margin-top:6px;min-height:1em;}
+    .cupom-status.ok{color:var(--ok);} .cupom-status.err{color:var(--err);}
+    .resumo{display:none;background:rgba(255,255,255,.04);border:1px solid var(--line);
+      border-radius:8px;padding:10px 12px;margin-top:12px;font-size:.88rem;}
+    .resumo div{display:flex;justify-content:space-between;margin:3px 0;}
+    .resumo .final{font-weight:800;color:var(--accent);border-top:1px solid var(--line);padding-top:6px;margin-top:6px;}
+    .tabs{display:flex;gap:.5rem;margin-top:18px;}
+    .tab{flex:1;padding:.6rem;background:rgba(255,255,255,.05);border:1px solid var(--line);
+      border-radius:8px;color:var(--txt);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+    .tab.active{background:var(--accent);color:#04222e;border-color:var(--accent);}
+    .btn-main{width:100%;margin-top:16px;padding:.95rem;border:none;border-radius:10px;
+      font-weight:800;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+    .btn-pix{background:var(--ok);color:#fff;}
+    .btn-card{background:var(--accent2);color:#fff;}
+    .btn-main:disabled{opacity:.55;cursor:not-allowed;}
+    .result{margin-top:16px;text-align:center;}
+    .result textarea{width:100%;height:74px;margin-top:8px;border-radius:6px;color:#000;font-size:.78rem;padding:6px;}
+    .qrbox{background:#fff;display:inline-block;padding:10px;border-radius:8px;margin:8px 0;}
+    .qrbox img{max-width:230px;display:block;}
+    .msg{padding:.7rem 1rem;border-radius:8px;margin-top:10px;font-size:.88rem;display:none;}
+    .msg.ok{display:block;background:rgba(39,174,96,.15);border:1px solid var(--ok);color:#5be584;}
+    .msg.err{display:block;background:rgba(231,76,60,.15);border:1px solid var(--err);color:#ff8a7a;}
+    .msg.proc{display:block;background:rgba(243,156,18,.12);border:1px solid var(--proc);color:#f7c873;}
+    .voltar{display:block;text-align:center;margin-top:18px;color:var(--muted);font-size:.85rem;text-decoration:none;}
+    .nota{font-size:.78rem;color:var(--muted);margin-top:6px;}
+    .hidden{display:none;}
+    .spin{width:18px;height:18px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;
+      border-radius:50%;display:inline-block;animation:r .8s linear infinite;}
+    @keyframes r{to{transform:rotate(360deg);}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="mp-head">
+      <img src="https://i.imgur.com/ELacEEt.png" alt="Mercado Pago">
+      <span>Pagamento Seguro</span>
+    </div>
+
+    <div class="produto">
+      <h3 id="produto-nome">Carregando…</h3>
+      <div class="preco" id="produto-preco">—</div>
+    </div>
+
+    <div id="form-area">
+      <label>Nome Completo *</label>
+      <input type="text" id="nome" placeholder="Digite seu nome completo">
+
+      <label>E-mail * (a licença fica vinculada a este e-mail)</label>
+      <input type="email" id="email" placeholder="seu@email.com">
+      <p class="nota" id="email-nota"></p>
+
+      <label>Telefone *</label>
+      <input type="tel" id="telefone" placeholder="(11) 99999-9999" maxlength="15">
+
+      <label>Cupom de desconto (opcional)</label>
+      <div class="cupom-group">
+        <input type="text" id="cupom" placeholder="Digite seu cupom" maxlength="20">
+        <button type="button" class="btn-cupom" id="btn-cupom">Aplicar</button>
+      </div>
+      <div class="cupom-status" id="cupom-status"></div>
+
+      <div class="resumo" id="resumo">
+        <div><span>Preço original:</span><span id="r-original">R$ 0,00</span></div>
+        <div><span>Desconto:</span><span id="r-desconto">-R$ 0,00</span></div>
+        <div class="final"><span>Total:</span><span id="r-final">R$ 0,00</span></div>
+      </div>
+
+      <div class="tabs">
+        <button type="button" class="tab active" id="tab-pix" onclick="switchTab('pix')">PIX</button>
+        <button type="button" class="tab" id="tab-cartao" onclick="switchTab('cartao')">Cartão</button>
+      </div>
+
+      <div id="sec-pix">
+        <button type="button" class="btn-main btn-pix" id="btn-pix-gerar" onclick="gerarPix()">Gerar QR Code PIX</button>
+      </div>
+
+      <div id="sec-cartao" class="hidden">
+        <label>Número do cartão</label>
+        <input type="text" id="card-number" placeholder="0000 0000 0000 0000" maxlength="19" oninput="formatCardNumber(this)" autocomplete="cc-number">
+        <div class="row">
+          <div>
+            <label>Validade</label>
+            <input type="text" id="card-expiry" placeholder="MM/AA" maxlength="5" oninput="formatExpiry(this)" autocomplete="cc-exp">
+          </div>
+          <div>
+            <label>CVV</label>
+            <input type="text" id="card-cvv" placeholder="123" maxlength="4" autocomplete="cc-csc">
+          </div>
+        </div>
+        <label>Nome no cartão</label>
+        <input type="text" id="card-name" placeholder="NOME COMO ESTÁ NO CARTÃO" oninput="this.value=this.value.toUpperCase()" autocomplete="cc-name">
+        <label>CPF do titular</label>
+        <input type="text" id="card-cpf" placeholder="000.000.000-00" maxlength="14" oninput="formatCPF(this)">
+        <div id="installments-group" class="hidden">
+          <label>Parcelamento</label>
+          <select id="card-installments"></select>
+        </div>
+        <button type="button" class="btn-main btn-card" id="btn-card-pagar" onclick="pagarCartao()">Pagar com Cartão</button>
+      </div>
+
+      <div class="msg" id="msg"></div>
+    </div>
+
+    <div class="result" id="result"></div>
+
+    <a class="voltar" id="voltar-link" href="#">← Voltar</a>
+  </div>
+
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+  <script>
+    // ===== Configuração =====
+    const API = "https://mercadopago-final.onrender.com";
+    const MP_PUBLIC_KEY = "APP_USR-6361a062-ffe7-4bc6-9970-01767001aecb";
+
+    const params = new URLSearchParams(location.search);
+    const PRODUTO_ID = parseInt(params.get('produto'), 10);
+    const EMAIL_PARAM = (params.get('email') || '').trim();
+    const NOME_PARAM = (params.get('nome') || '').trim();
+    const RETURN_URL = params.get('return') || '';
+
+    let valorOriginal = 0, valorFinal = 0, cupomId = null;
+    let mpInstance = null, paymentMethodId = null, issuerId = null;
+
+    // ===== Helpers =====
+    const $ = id => document.getElementById(id);
+    const brl = v => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
+    function isEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+    function isTel(t){ const n=t.replace(/\D/g,''); return n.length>=10 && n.length<=11; }
+    function showMsg(text, type){ const m=$('msg'); m.textContent=text; m.className='msg '+type; }
+    function hideMsg(){ $('msg').className='msg'; }
+
+    function getMp(){
+      if(mpInstance) return mpInstance;
+      if(!window.MercadoPago) throw new Error('SDK do Mercado Pago não carregou.');
+      mpInstance = new MercadoPago(MP_PUBLIC_KEY, { locale:'pt-BR' });
+      return mpInstance;
+    }
+
+    // ===== Máscaras =====
+    function formatTel(input){
+      input.addEventListener('input', e=>{
+        let v=e.target.value.replace(/\D/g,'').slice(0,11);
+        if(v.length>7) v=`(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+        else if(v.length>2) v=`(${v.slice(0,2)}) ${v.slice(2)}`;
+        else if(v.length>0) v=`(${v}`;
+        e.target.value=v;
+      });
+    }
+    function formatCardNumber(input){
+      let v=input.value.replace(/\D/g,'').slice(0,19);
+      input.value=v.replace(/(.{4})/g,'$1 ').trim();
+      if(v.length>=6) atualizarDadosCartao(v.slice(0,6));
+    }
+    function formatExpiry(input){
+      let v=input.value.replace(/\D/g,'').slice(0,4);
+      if(v.length>=3) v=`${v.slice(0,2)}/${v.slice(2)}`;
+      input.value=v;
+    }
+    function formatCPF(input){
+      let v=input.value.replace(/\D/g,'').slice(0,11);
+      v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+      input.value=v;
+    }
+
+    // ===== Abas =====
+    function switchTab(tab){
+      const pix=$('sec-pix'), cartao=$('sec-cartao');
+      hideMsg();
+      if(tab==='cartao'){
+        pix.classList.add('hidden'); cartao.classList.remove('hidden');
+        $('tab-pix').classList.remove('active'); $('tab-cartao').classList.add('active');
+      } else {
+        cartao.classList.add('hidden'); pix.classList.remove('hidden');
+        $('tab-cartao').classList.remove('active'); $('tab-pix').classList.add('active');
+      }
+    }
+
+    // ===== Validação básica =====
+    function validarDados(){
+      const nome=$('nome').value.trim(), email=$('email').value.trim(), tel=$('telefone').value.trim();
+      if(nome.length<3){ showMsg('Informe seu nome completo.','err'); return null; }
+      if(!isEmail(email)){ showMsg('E-mail inválido.','err'); return null; }
+      if(!isTel(tel)){ showMsg('Telefone inválido.','err'); return null; }
+      return { nome, email, telefone: tel };
+    }
+
+    // ===== Cupom =====
+    async function aplicarCupom(){
+      const codigo=$('cupom').value.trim().toUpperCase();
+      if(!codigo){ setCupomStatus('Digite um cupom.','err'); return; }
+      const btn=$('btn-cupom'); btn.disabled=true; btn.textContent='...';
+      try{
+        const r=await fetch(API+'/api/validar-cupom',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ codigo, produto_id:PRODUTO_ID, valor_original:valorOriginal })
+        });
+        const res=await r.json();
+        if(r.ok && res.status==='success'){
+          cupomId=res.cupom.id; valorFinal=res.calculo.valor_final;
+          $('resumo').style.display='block';
+          $('r-original').textContent=brl(res.calculo.valor_original);
+          $('r-desconto').textContent='-'+brl(res.calculo.desconto);
+          $('r-final').textContent=brl(res.calculo.valor_final);
+          setCupomStatus('Cupom '+res.cupom.codigo+' aplicado!','ok');
+          $('cupom').disabled=true; btn.textContent='Aplicado'; btn.disabled=true;
+        } else {
+          setCupomStatus(res.message||'Cupom inválido.','err');
+          btn.textContent='Aplicar'; btn.disabled=false;
+        }
+      }catch(e){
+        setCupomStatus('Erro ao validar cupom.','err');
+        btn.textContent='Aplicar'; btn.disabled=false;
+      }
+    }
+    function setCupomStatus(t,k){ const s=$('cupom-status'); s.textContent=t; s.className='cupom-status '+k; }
+
+    // ===== PIX =====
+    async function gerarPix(){
+      hideMsg();
+      const d=validarDados(); if(!d) return;
+      const btn=$('btn-pix-gerar'); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Gerando…';
+      try{
+        const r=await fetch(API+'/api/cobrancas',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ ...d, product_id:PRODUTO_ID, cupom_id:cupomId })
+        });
+        const res=await r.json();
+        if(!r.ok) throw new Error(res.message||'Erro ao gerar PIX.');
+        $('form-area').style.display='none';
+        $('result').innerHTML=`
+          <h2 style="color:var(--ok);margin:.2rem 0;">Pague com PIX</h2>
+          <div class="qrbox"><img src="data:image/jpeg;base64,${res.qr_code_base64}" alt="QR Code PIX"></div>
+          <p style="margin:6px 0;font-weight:700;">PIX Copia e Cola:</p>
+          <textarea readonly onclick="this.select();document.execCommand('copy');">${res.qr_code_text}</textarea>
+          <p class="nota">Assim que o pagamento for confirmado, a licença é ativada e você recebe um e-mail. Pode levar alguns instantes.</p>`;
+      }catch(e){
+        showMsg(e.message,'err');
+        btn.disabled=false; btn.textContent='Gerar QR Code PIX';
+      }
+    }
+
+    // ===== Cartão =====
+    async function atualizarDadosCartao(bin){
+      try{
+        const mp=getMp();
+        const methods=await mp.getPaymentMethods({ bin });
+        const pm=methods?.results?.[0]; if(!pm) return;
+        paymentMethodId=pm.id;
+        const issuers=await mp.getIssuers({ paymentMethodId, bin });
+        issuerId=issuers?.[0]?.id || null;
+        const amount=String((valorFinal||valorOriginal||0).toFixed(2));
+        const inst=await mp.getInstallments({ amount, bin, paymentMethodId });
+        const costs=inst?.[0]?.payer_costs||[];
+        const sel=$('card-installments'), grp=$('installments-group');
+        if(sel && costs.length){
+          sel.innerHTML=costs.map(c=>{
+            const txt=c.recommended_message||`${c.installments}x de ${brl(c.installment_amount)}`;
+            return `<option value="${c.installments}">${txt}</option>`;
+          }).join('');
+          grp.classList.remove('hidden');
+        }
+      }catch(e){ console.warn('cartão:',e); }
+    }
+
+    function validarCartao(){
+      const numero=$('card-number').value.replace(/\D/g,'');
+      const validade=$('card-expiry').value;
+      const cvv=$('card-cvv').value.replace(/\D/g,'');
+      const nome=$('card-name').value.trim();
+      const cpf=$('card-cpf').value.replace(/\D/g,'');
+      if(numero.length<13) throw new Error('Número do cartão inválido.');
+      if(!/^\d{2}\/\d{2}$/.test(validade)) throw new Error('Validade inválida (MM/AA).');
+      if(cvv.length<3) throw new Error('CVV inválido.');
+      if(nome.length<3) throw new Error('Nome do titular inválido.');
+      if(cpf.length!==11) throw new Error('CPF inválido.');
+      const [mes,ano]=validade.split('/');
+      return { numero, mes, ano:`20${ano}`, cvv, nome, cpf };
+    }
+
+    async function pagarCartao(){
+      hideMsg();
+      const d=validarDados(); if(!d) return;
+      const btn=$('btn-card-pagar');
+      try{
+        const c=validarCartao();
+        const mp=getMp();
+        btn.disabled=true; btn.innerHTML='<span class="spin"></span> Processando…';
+        if(!paymentMethodId) await atualizarDadosCartao(c.numero.slice(0,6));
+        if(!paymentMethodId) throw new Error('Não foi possível identificar a bandeira do cartão.');
+        const tok=await mp.createCardToken({
+          cardNumber:c.numero, cardholderName:c.nome,
+          cardExpirationMonth:c.mes, cardExpirationYear:c.ano,
+          securityCode:c.cvv, identificationType:'CPF', identificationNumber:c.cpf
+        });
+        if(!tok?.id) throw new Error('Não foi possível gerar o token do cartão.');
+        const parcelas=$('card-installments')?.value||1;
+        const r=await fetch(API+'/api/cobrancas-cartao',{
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            token:tok.id, payment_method_id:paymentMethodId, issuer_id:issuerId,
+            installments:parseInt(parcelas,10)||1,
+            email:d.email, nome:d.nome, cpf:c.cpf,
+            product_id:PRODUTO_ID, cupom_id:cupomId
+          })
+        });
+        const res=await r.json();
+        if(!r.ok) throw new Error(res.message||res.mensagem||'Pagamento recusado.');
+        if(res.status==='approved'){
+          $('form-area').style.display='none';
+          $('result').innerHTML=`<h2 style="color:var(--ok);">Pagamento aprovado!</h2>
+            <p class="nota">${res.mensagem||'Sua licença foi ativada. Você receberá um e-mail de confirmação.'}</p>`;
+        } else if(res.status==='in_process'){
+          showMsg(res.mensagem||'Pagamento em análise.','proc');
+          btn.disabled=false; btn.textContent='Pagar com Cartão';
+        } else {
+          showMsg(res.mensagem||'Pagamento não aprovado. Verifique os dados.','err');
+          btn.disabled=false; btn.textContent='Pagar com Cartão';
+        }
+      }catch(e){
+        showMsg(e.message,'err');
+        btn.disabled=false; btn.textContent='Pagar com Cartão';
+      }
+    }
+
+    // ===== Init =====
+    async function init(){
+      formatTel($('telefone'));
+      $('btn-cupom').addEventListener('click', aplicarCupom);
+
+      // Voltar
+      if(RETURN_URL){ $('voltar-link').href=RETURN_URL; }
+      else { $('voltar-link').style.display='none'; }
+
+      // Pré-preenche nome/email
+      if(NOME_PARAM) $('nome').value=NOME_PARAM;
+      if(EMAIL_PARAM){
+        $('email').value=EMAIL_PARAM;
+        $('email').readOnly=true;
+        $('email-nota').textContent='Vinculado à sua conta BrooStock.';
+      } else {
+        $('email-nota').textContent='Use o mesmo e-mail da sua conta BrooStock.';
+      }
+
+      if(!PRODUTO_ID){
+        $('produto-nome').textContent='Produto não informado';
+        $('produto-preco').textContent='—';
+        return;
+      }
+
+      try{
+        const r=await fetch(API+'/api/produto/'+PRODUTO_ID);
+        const p=await r.json();
+        if(!r.ok) throw new Error(p.message||'Produto não encontrado.');
+        valorOriginal=Number(p.preco); valorFinal=valorOriginal;
+        $('produto-nome').textContent=p.nome;
+        $('produto-preco').textContent=brl(valorOriginal);
+      }catch(e){
+        $('produto-nome').textContent='Erro ao carregar o produto';
+        $('produto-preco').textContent='—';
+        showMsg(e.message,'err');
+      }
+    }
+    init();
+  </script>
+</body>
+</html>
