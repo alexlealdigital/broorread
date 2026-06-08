@@ -196,6 +196,28 @@ class ChaveLicenca(db.Model):
     cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), unique=True, nullable=True) 
     cliente_email = db.Column(db.String(200), nullable=True)
     ativa_no_app = db.Column(db.Boolean, default=False, nullable=False) 
+
+
+# ---------- ASSINATURA / LICENÇA (BrooStock) ----------
+# Tabelas NOVAS — criadas pelo db.create_all() abaixo, sem ALTER em tabela existente.
+class PlanoAssinatura(db.Model):
+    __tablename__ = "planos_assinatura"
+    produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), primary_key=True)
+    dias = db.Column(db.Integer, nullable=False)            # 30, 365...
+    rotulo = db.Column(db.String(50), nullable=True)        # 'mensal' / 'anual'
+
+
+class Licenca(db.Model):
+    __tablename__ = "licencas"
+    id = db.Column(db.Integer, primary_key=True)
+    cliente_email = db.Column(db.String(200), nullable=False, index=True)
+    plano = db.Column(db.String(50), nullable=True)
+    status = db.Column(db.String(30), default="ativa", nullable=False)
+    inicia_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    expira_em = db.Column(db.DateTime, nullable=False)
+    ultimo_pagamento_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), nullable=True)
+    produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
  
  
 # Criação das tabelas
@@ -253,6 +275,26 @@ def index():
 @app.route("/<path:path>")
 def serve_static(path):
     return send_from_directory('static', path)
+
+
+# NOVO: detalhes de um produto (usado pela página de checkout comprar.html)
+@app.route("/api/produto/<int:produto_id>", methods=["GET"])
+def get_produto(produto_id):
+    try:
+        produto = db.session.get(Produto, produto_id)
+        if not produto:
+            return jsonify({"status": "error", "message": "Produto não encontrado."}), 404
+        return jsonify({
+            "status": "success",
+            "id": produto.id,
+            "nome": produto.nome,
+            "preco": produto.preco,
+            "tipo": produto.tipo,
+        }), 200
+    except Exception as e:
+        print(f"ERRO (GET PRODUTO): {str(e)}")
+        return jsonify({"status": "error", "message": "Falha ao carregar o produto."}), 500
+ 
  
  
 # ROTA DE GAMIFICAÇÃO
