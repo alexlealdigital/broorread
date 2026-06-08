@@ -13,7 +13,7 @@ import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from rq import Worker, Queue 
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
@@ -83,6 +83,28 @@ class Sale(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+# ============================================
+# ASSINATURA / LICENÇA (BrooStock)
+# Tabelas NOVAS — criadas pelo db.create_all() no deploy, sem ALTER.
+# ============================================
+class PlanoAssinatura(db.Model):
+    __tablename__ = "planos_assinatura"
+    produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), primary_key=True)
+    dias = db.Column(db.Integer, nullable=False)            # 30, 365...
+    rotulo = db.Column(db.String(50), nullable=True)        # 'mensal' / 'anual'
+
+class Licenca(db.Model):
+    __tablename__ = "licencas"
+    id = db.Column(db.Integer, primary_key=True)
+    cliente_email = db.Column(db.String(200), nullable=False, index=True)
+    plano = db.Column(db.String(50), nullable=True)         # 'mensal' / 'anual'
+    status = db.Column(db.String(30), default="ativa", nullable=False)
+    inicia_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    expira_em = db.Column(db.DateTime, nullable=False)
+    ultimo_pagamento_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), nullable=True)
+    produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
 
 # ============================================
 # FUNÇÃO: REGISTRAR VENDA NO SUPABASE
@@ -321,6 +343,102 @@ def enviar_email_confirmacao(destinatario, nome_cliente, valor, link_produto, co
         return False
 
 # ============================================
+# E-MAIL DE CONFIRMAÇÃO DE LICENÇA (ASSINATURA)
+# ============================================
+def enviar_email_licenca(destinatario, nome_cliente, rotulo_plano, expira_em):
+    """Envia e-mail confirmando a ativação/renovação da licença do BrooStock."""
+    try:
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
+        email_user = os.environ["EMAIL_USER"]
+        email_pass = os.environ["EMAIL_PASSWORD"]
+    except KeyError:
+        print("[WORKER] ERRO: Credenciais de email não configuradas.")
+        return False
+
+    validade_str = expira_em.strftime("%d/%m/%Y")
+    plano_str = (rotulo_plano or "assinatura").capitalize()
+    assunto = "BrooStock: Sua licença está ativa! 🚀"
+    corpo_html = f"""<!DOCTYPE html>
+<html><body style="font-family:Arial,sans-serif;background:#0d1b2a;color:#e0e6ed;padding:24px;">
+  <div style="max-width:560px;margin:0 auto;background:#14213d;border-radius:12px;padding:28px;">
+    <h2 style="color:#48cae4;margin-top:0;">Licença BrooStock ativada ✅</h2>
+    <p>Olá, {nome_cliente or 'cliente'}!</p>
+    <p>Recebemos seu pagamento e sua licença do <strong>BrooStock</strong> já está ativa.</p>
+    <div style="background:#0d1b2a;border:1px solid #2a3b55;border-radius:8px;padding:16px;margin:16px 0;">
+      <p style="margin:4px 0;">Plano: <strong>{plano_str}</strong></p>
+      <p style="margin:4px 0;">Válida até: <strong>{validade_str}</strong></p>
+    </div>
+    <p>Acesse o BrooStock com o <strong>mesmo e-mail desta compra</strong> ({destinatario}) para usar a ferramenta liberada.</p>
+    <p style="font-size:0.85em;color:#9fb0c3;">Quando a licença estiver perto de expirar, avisaremos por e-mail para você renovar.</p>
+  </div>
+</body></html>"""
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = assunto
+    msg["From"] = email_user
+    msg["To"] = destinatario
+    msg.attach(MIMEText(corpo_html, "html"))
+
+    try:
+        smtp_port = int(os.environ.get("SMTP_PORT", 587))
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
+            server.starttls()
+            server.login(email_user, email_pass)
+            server.send_message(msg)
+        print(f"[WORKER] Email de licença enviado para {destinatario}")
+        return True
+    except Exception as exc:
+        print(f"[WORKER] Falha no envio SMTP (licença): {exc}")
+        return False
+
+
+def ativar_ou_renovar_licenca(produto, cobranca):
+    """Cria ou estende a licença do cliente (renovação manual).
+    Retorna (licenca, rotulo_plano) ou (None, None) se não houver plano configurado."""
+    plano = db.session.get(PlanoAssinatura, produto.id)
+    if not plano:
+        print(f"[WORKER] ERRO: produto {produto.id} é 'assinatura' mas não tem plano em planos_assinatura.")
+        return None, None
+
+    email = (cobranca.cliente_email or "").strip().lower()
+    agora = datetime.utcnow()
+
+    licenca = (Licenca.query
+               .filter_by(cliente_email=email)
+               .order_by(Licenca.id.desc())
+               .first())
+
+    # Renovação: se ainda está válida, soma a partir da data de expiração;
+    # caso contrário, conta a partir de agora.
+    base = licenca.expira_em if (licenca and licenca.expira_em and licenca.expira_em > agora) else agora
+    nova_expira = base + timedelta(days=plano.dias)
+
+    if licenca:
+        licenca.plano = plano.rotulo
+        licenca.status = "ativa"
+        licenca.expira_em = nova_expira
+        licenca.ultimo_pagamento_em = agora
+        licenca.cobranca_id = cobranca.id
+        licenca.produto_id = produto.id
+    else:
+        licenca = Licenca(
+            cliente_email=email,
+            plano=plano.rotulo,
+            status="ativa",
+            inicia_em=agora,
+            expira_em=nova_expira,
+            ultimo_pagamento_em=agora,
+            cobranca_id=cobranca.id,
+            produto_id=produto.id,
+        )
+        db.session.add(licenca)
+
+    db.session.flush()
+    print(f"[WORKER] Licença {plano.rotulo} de {email} válida até {nova_expira.date()}")
+    return licenca, plano.rotulo
+
+
+# ============================================
 # JOB PRINCIPAL: PROCESSAR WEBHOOK
 # ============================================
 def process_mercado_pago_webhook(payment_id):
@@ -386,11 +504,20 @@ def process_mercado_pago_webhook(payment_id):
         # 5. Gerenciar estoque
         link_entrega = produto.link_download
         chave_entregue = None
+        licenca_ativa = None
+        rotulo_plano = None
 
         # Produto 99 = Compressão de PDF: envia o external_reference como código de liberação
         if produto.id == 99:
             chave_entregue = cobranca.external_reference
             print(f"[WORKER] Produto PDF Compressão — enviando código: {chave_entregue}")
+
+        elif produto.tipo == "assinatura":
+            print(f"[WORKER] Ativando/renovando licença para {produto.nome}...")
+            licenca_ativa, rotulo_plano = ativar_ou_renovar_licenca(produto, cobranca)
+            if not licenca_ativa:
+                db.session.rollback()
+                raise Exception(f"Plano de assinatura não configurado para produto {produto.id}")
 
         elif produto.tipo in ["game", "app"]:
             print(f"[WORKER] Reservando chave para {produto.nome}...")
@@ -423,6 +550,13 @@ def process_mercado_pago_webhook(payment_id):
                 valor=cobranca.valor,
                 nome_produto=produto.nome,
                 cobranca=cobranca,
+            )
+        elif tipo_produto == 'assinatura':
+            sucesso = enviar_email_licenca(
+                destinatario=cobranca.cliente_email,
+                nome_cliente=cobranca.cliente_nome,
+                rotulo_plano=rotulo_plano,
+                expira_em=licenca_ativa.expira_em,
             )
         else:
             sucesso = enviar_email_confirmacao(
