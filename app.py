@@ -46,7 +46,10 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "asdf#FGSgvasgf$5$WGT")
  
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True, 
-    "pool_recycle": 3600
+    "pool_recycle": 3600,
+    # Desliga prepared statements automáticos do psycopg (compatível com
+    # pooler de conexão em modo "transaction" — PgBouncer/Supabase/Render).
+    "connect_args": {"prepare_threshold": None},
 }
  
 db = SQLAlchemy(app)
