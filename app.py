@@ -298,6 +298,31 @@ def get_produto(produto_id):
         print(f"ERRO (GET PRODUTO): {str(e)}")
         return jsonify({"status": "error", "message": "Falha ao carregar o produto."}), 500
  
+
+# NOVO: status da licença por e-mail (consultado pelo BrooStock no login)
+@app.route("/api/licenca/status", methods=["GET"])
+def licenca_status():
+    email = (request.args.get("email") or "").strip().lower()
+    if not email:
+        return jsonify({"ativa": False, "motivo": "email_ausente"}), 400
+    try:
+        licenca = (Licenca.query
+                   .filter_by(cliente_email=email)
+                   .order_by(Licenca.expira_em.desc())
+                   .first())
+        if not licenca:
+            return jsonify({"ativa": False, "plano": None, "expira_em": None}), 200
+        agora = datetime.utcnow()
+        ativa = bool(licenca.expira_em and licenca.expira_em > agora)
+        return jsonify({
+            "ativa": ativa,
+            "plano": licenca.plano,
+            "status": licenca.status,
+            "expira_em": licenca.expira_em.isoformat() if licenca.expira_em else None,
+        }), 200
+    except Exception as e:
+        print(f"ERRO (LICENCA STATUS): {str(e)}")
+        return jsonify({"ativa": False, "motivo": "erro_interno"}), 500
  
  
 # ROTA DE GAMIFICAÇÃO
