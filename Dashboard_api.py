@@ -24,14 +24,14 @@ import json
 import hmac
 from datetime import datetime, timedelta
 
-from flask import Blueprint, jsonify, request, make_response
+from flask import Blueprint, jsonify, request
 from sqlalchemy import create_engine, text
 
 # ----------------------------------------------------------------------
 # Configuração
 # ----------------------------------------------------------------------
-ADMIN_TOKEN      = os.environ.get("ADMIN_TOKEN", "")
-DASHBOARD_ORIGIN = os.environ.get("DASHBOARD_ORIGIN", "*")
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
+# O CORS (origem do painel + header X-Admin-Token) é configurado no app.py.
 
 # Status que contam como venda paga (faturamento real).
 STATUS_PAGOS = ("approved", "delivered")
@@ -63,21 +63,10 @@ dashboard_bp = Blueprint("dashboard_admin", __name__)
 
 
 # ----------------------------------------------------------------------
-# CORS + Autenticação
+# Autenticação
 # ----------------------------------------------------------------------
-def _cors(resp):
-    resp.headers["Access-Control-Allow-Origin"]  = DASHBOARD_ORIGIN
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Admin-Token"
-    resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    resp.headers["Vary"] = "Origin"
-    return resp
-
-
-@dashboard_bp.route("/api/admin/dashboard", methods=["OPTIONS"])
-def _preflight():
-    return _cors(make_response("", 204))
-
-
+# Obs.: o CORS é tratado pelo flask-cors no app.py (origem do painel +
+# header X-Admin-Token liberados lá). Não duplicamos headers aqui.
 def _token_ok():
     enviado = request.headers.get("X-Admin-Token", "")
     if not ADMIN_TOKEN or not enviado:
@@ -147,7 +136,7 @@ def _intervalo(periodo):
 @dashboard_bp.route("/api/admin/dashboard", methods=["GET"])
 def dashboard():
     if not _token_ok():
-        return _cors(jsonify({"erro": "Não autorizado"})), 401
+        return jsonify({"erro": "Não autorizado"}), 401
 
     periodo = request.args.get("periodo", "30d")
     inicio, fim, inicio_ant, fim_ant = _intervalo(periodo)
@@ -179,7 +168,7 @@ def dashboard():
         with get_engine().connect() as conn:
             rows = [dict(r._mapping) for r in conn.execute(text(sql), params)]
     except Exception as e:
-        return _cors(jsonify({"erro": f"Falha ao consultar o banco: {e}"})), 500
+        return jsonify({"erro": f"Falha ao consultar o banco: {e}"}), 500
 
     # ---- Separa período atual x anterior ---------------------------------
     def no_periodo(r, ini, fi):
@@ -325,4 +314,4 @@ def dashboard():
         "ultimas_vendas": ultimas,
         "envios_pendentes": envios,
     }
-    return _cors(jsonify(payload)), 200
+    return jsonify(payload), 200
