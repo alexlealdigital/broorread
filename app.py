@@ -34,8 +34,14 @@ CORS(app,
      supports_credentials=False)
 
 # ---------- CENTRAL FINANCEIRA (dashboard admin) ----------
-# Endpoint protegido de leitura para o painel financeiro. Arquivo: dashboard_api.py
-from dashboard_api import dashboard_bp
+# Endpoint protegido de leitura para o painel financeiro.
+# Importa o blueprint aceitando o arquivo com qualquer caixa no nome
+# (dashboard_api.py ou Dashboard_api.py) — o Render roda em Linux, que
+# diferencia maiúsculas/minúsculas.
+try:
+    from dashboard_api import dashboard_bp
+except ModuleNotFoundError:
+    from Dashboard_api import dashboard_bp
 app.register_blueprint(dashboard_bp)
  
 # ---------- CONFIGURAÇÃO DO BANCO DE DADOS E EXTENSÕES ----------
