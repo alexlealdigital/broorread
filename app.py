@@ -26,11 +26,17 @@ RENDER_ORIGIN        = "https://mercadopago-final.onrender.com"
 NETLIFY_ORIGIN_TEST  = "https://rankedsale.netlify.app"
 BROOSTORE_ORIGIN     = "https://broostore.netlify.app"
 BROOSTOCK_ORIGIN     = "https://brootechstock.netlify.app"  # NOVO: app BrooStock (compra de chave no cadastro)
+DASHBOARD_ORIGIN     = "https://broodash.netlify.app"        # NOVO: Central Financeira (dashboard admin)
 CORS(app,
-     origins=[NETLIFY_ORIGIN_PROD, RENDER_ORIGIN, NETLIFY_ORIGIN_TEST, BROOSTORE_ORIGIN, BROOSTOCK_ORIGIN],
+     origins=[NETLIFY_ORIGIN_PROD, RENDER_ORIGIN, NETLIFY_ORIGIN_TEST, BROOSTORE_ORIGIN, BROOSTOCK_ORIGIN, DASHBOARD_ORIGIN],
      methods=["GET", "POST", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-Admin-Token"],
      supports_credentials=False)
+
+# ---------- CENTRAL FINANCEIRA (dashboard admin) ----------
+# Endpoint protegido de leitura para o painel financeiro. Arquivo: dashboard_api.py
+from dashboard_api import dashboard_bp
+app.register_blueprint(dashboard_bp)
  
 # ---------- CONFIGURAÇÃO DO BANCO DE DADOS E EXTENSÕES ----------
 db_url = os.environ.get("DATABASE_URL", "sqlite:///cobrancas.db")
