@@ -571,37 +571,43 @@ def process_mercado_pago_webhook(payment_id):
         
         # 7. Finalizar transação e registrar no Supabase
         if sucesso:
+            # 7a. PRIMEIRO commit o essencial: cobrança entregue + licença
+            #     (a licença já foi adicionada/flushada na ativação). Isso NÃO
+            #     pode depender do registro de venda.
             try:
-                # Salva localmente
                 cobranca.status = "delivered"
                 db.session.add(cobranca)
-                
-                # Salva na tabela local (backup)
-                nova_venda = Sale(
-                    product_id=produto.id,
-                    amount=cobranca.valor
-                )
-                db.session.add(nova_venda)
                 db.session.commit()
-                
-                print(f"[WORKER] ✅ Venda salva no banco local.")
-                
-                # REGISTRA NO SUPABASE (para o dashboard)
+                print(f"[WORKER] ✅ Cobrança/licença salvas.")
+            except Exception as e:
+                print(f"[WORKER] ERRO ao salvar cobrança/licença: {e}")
+                db.session.rollback()
+                return
+
+            # 7b. Registro de venda — best-effort, NÃO derruba a licença.
+            #     Assinatura: os planos vivem em 'produtos', não em 'products'
+            #     (a FK de 'sales' aponta para 'products'), então pulamos.
+            if produto.tipo == "assinatura":
+                print(f"[WORKER] (assinatura) registro em 'sales' ignorado.")
+            else:
+                try:
+                    db.session.add(Sale(product_id=produto.id, amount=cobranca.valor))
+                    db.session.commit()
+                    print(f"[WORKER] ✅ Venda salva no banco local.")
+                except Exception as e:
+                    print(f"[WORKER] ⚠️ Não foi possível salvar em 'sales': {e}")
+                    db.session.rollback()
+
                 supabase_ok = registrar_venda_no_supabase(
                     product_id=produto.id,
                     customer_email=cobranca.cliente_email,
                     amount=cobranca.valor,
                     payment_id=payment_id
                 )
-                
                 if supabase_ok:
-                    print(f"[WORKER] ✅ SUCESSO TOTAL: Email + Dashboard atualizado!")
+                    print(f"[WORKER] ✅ Dashboard atualizado!")
                 else:
-                    print(f"[WORKER] ⚠️ Email enviado, mas dashboard NÃO atualizado.")
-                
-            except Exception as e:
-                print(f"[WORKER] ERRO ao salvar: {e}")
-                db.session.rollback()
+                    print(f"[WORKER] ⚠️ Dashboard NÃO atualizado.")
         else:
             print(f"[WORKER] ERRO: Falha no envio de email.")
             db.session.rollback()
