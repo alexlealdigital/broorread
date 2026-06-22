@@ -105,6 +105,7 @@ class Licenca(db.Model):
     ultimo_pagamento_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), nullable=True)
     produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
+    ultimo_aviso = db.Column(db.String(20), nullable=True)  # '7d' | '2d' | 'expirado' | None
 
 # ============================================
 # FUNÇÃO: REGISTRAR VENDA NO SUPABASE
@@ -420,6 +421,7 @@ def ativar_ou_renovar_licenca(produto, cobranca):
         licenca.ultimo_pagamento_em = agora
         licenca.cobranca_id = cobranca.id
         licenca.produto_id = produto.id
+        licenca.ultimo_aviso = None  # rearma os avisos de expiração para o novo período
     else:
         licenca = Licenca(
             cliente_email=email,
@@ -430,6 +432,7 @@ def ativar_ou_renovar_licenca(produto, cobranca):
             ultimo_pagamento_em=agora,
             cobranca_id=cobranca.id,
             produto_id=produto.id,
+            ultimo_aviso=None,
         )
         db.session.add(licenca)
 
