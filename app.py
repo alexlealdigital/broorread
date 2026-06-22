@@ -2,7 +2,7 @@
 from flask import Flask, jsonify, request, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 import mercadopago
 import smtplib
@@ -26,23 +26,11 @@ RENDER_ORIGIN        = "https://mercadopago-final.onrender.com"
 NETLIFY_ORIGIN_TEST  = "https://rankedsale.netlify.app"
 BROOSTORE_ORIGIN     = "https://broostore.netlify.app"
 BROOSTOCK_ORIGIN     = "https://brootechstock.netlify.app"  # NOVO: app BrooStock (compra de chave no cadastro)
-DASHBOARD_ORIGIN     = "https://broodash.netlify.app"        # NOVO: Central Financeira (dashboard admin)
 CORS(app,
-     origins=[NETLIFY_ORIGIN_PROD, RENDER_ORIGIN, NETLIFY_ORIGIN_TEST, BROOSTORE_ORIGIN, BROOSTOCK_ORIGIN, DASHBOARD_ORIGIN],
+     origins=[NETLIFY_ORIGIN_PROD, RENDER_ORIGIN, NETLIFY_ORIGIN_TEST, BROOSTORE_ORIGIN, BROOSTOCK_ORIGIN],
      methods=["GET", "POST", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-Admin-Token"],
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
      supports_credentials=False)
-
-# ---------- CENTRAL FINANCEIRA (dashboard admin) ----------
-# Endpoint protegido de leitura para o painel financeiro.
-# Importa o blueprint aceitando o arquivo com qualquer caixa no nome
-# (dashboard_api.py ou Dashboard_api.py) — o Render roda em Linux, que
-# diferencia maiúsculas/minúsculas.
-try:
-    from dashboard_api import dashboard_bp
-except ModuleNotFoundError:
-    from Dashboard_api import dashboard_bp
-app.register_blueprint(dashboard_bp)
  
 # ---------- CONFIGURAÇÃO DO BANCO DE DADOS E EXTENSÕES ----------
 db_url = os.environ.get("DATABASE_URL", "sqlite:///cobrancas.db")
@@ -233,6 +221,7 @@ class Licenca(db.Model):
     ultimo_pagamento_em = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     cobranca_id = db.Column(db.Integer, db.ForeignKey('cobrancas.id'), nullable=True)
     produto_id = db.Column(db.Integer, db.ForeignKey('produtos.id'), nullable=True)
+    ultimo_aviso = db.Column(db.String(20), nullable=True)  # '7d' | '2d' | 'expirado' | None
  
  
 # Criação das tabelas
@@ -323,18 +312,64 @@ def licenca_status():
                    .order_by(Licenca.expira_em.desc())
                    .first())
         if not licenca:
-            return jsonify({"ativa": False, "plano": None, "expira_em": None}), 200
+            # Nunca teve licença -> elegível ao teste grátis
+            return jsonify({"ativa": False, "plano": None, "status": None,
+                            "expira_em": None, "is_trial": False,
+                            "pode_testar": True, "dias_restantes": 0}), 200
         agora = datetime.utcnow()
-        ativa = bool(licenca.expira_em and licenca.expira_em > agora)
+        ativa = bool(licenca.status in ("ativa", "trial") and licenca.expira_em and licenca.expira_em > agora)
+        is_trial = (licenca.status == "trial")
+        dias = 0
+        if licenca.expira_em and licenca.expira_em > agora:
+            dias = (licenca.expira_em - agora).days
         return jsonify({
             "ativa": ativa,
             "plano": licenca.plano,
             "status": licenca.status,
             "expira_em": licenca.expira_em.isoformat() if licenca.expira_em else None,
+            "is_trial": is_trial,
+            "pode_testar": False,
+            "dias_restantes": dias,
         }), 200
     except Exception as e:
         print(f"ERRO (LICENCA STATUS): {str(e)}")
         return jsonify({"ativa": False, "motivo": "erro_interno"}), 500
+
+
+# NOVO: ativa um teste grátis de 7 dias (somente se o e-mail nunca teve licença)
+TRIAL_DIAS = 7
+
+@app.route("/api/licenca/trial", methods=["POST"])
+def licenca_trial():
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or request.args.get("email") or "").strip().lower()
+    if not email:
+        return jsonify({"ok": False, "motivo": "email_ausente"}), 400
+    try:
+        existente = Licenca.query.filter_by(cliente_email=email).first()
+        if existente:
+            ativa = bool(existente.status in ("ativa", "trial") and existente.expira_em and existente.expira_em > datetime.utcnow())
+            return jsonify({"ok": False, "motivo": "ja_utilizado", "ativa": ativa}), 409
+
+        agora = datetime.utcnow()
+        expira = agora + timedelta(days=TRIAL_DIAS)
+        nova = Licenca(
+            cliente_email=email,
+            plano="trial",
+            status="trial",
+            inicia_em=agora,
+            expira_em=expira,
+            ultimo_pagamento_em=agora,  # coluna NOT NULL; sem significado no trial
+            ultimo_aviso=None,
+        )
+        db.session.add(nova)
+        db.session.commit()
+        print(f"[TRIAL] Teste de {TRIAL_DIAS} dias criado para {email} (expira {expira.date()})")
+        return jsonify({"ok": True, "status": "trial", "expira_em": expira.isoformat(), "dias_restantes": TRIAL_DIAS}), 201
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERRO (TRIAL): {str(e)}")
+        return jsonify({"ok": False, "motivo": "erro_interno"}), 500
  
  
 # ROTA DE GAMIFICAÇÃO
