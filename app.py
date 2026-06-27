@@ -339,6 +339,56 @@ def licenca_status():
 # NOVO: ativa um teste grátis de 7 dias (somente se o e-mail nunca teve licença)
 TRIAL_DIAS = 7
 
+
+def _enviar_boas_vindas(destinatario, expira_em):
+    """E-mail de boas-vindas do teste grátis. Best-effort: nunca derruba o cadastro.
+    Reaproveita o mesmo SMTP (Zoho) usado pelo worker/avisos de expiração."""
+    try:
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.zoho.com")
+        email_user = os.environ["EMAIL_USER"]
+        email_pass = os.environ["EMAIL_PASSWORD"]
+    except KeyError:
+        print("[TRIAL] Boas-vindas NÃO enviada: SMTP (EMAIL_USER/EMAIL_PASSWORD) não configurado no serviço.")
+        return False
+
+    expira_str = expira_em.strftime("%d/%m/%Y")
+    html = f"""<!DOCTYPE html>
+<html><body style="font-family:Arial,sans-serif;background:#0d1b2a;color:#e0e6ed;padding:24px;">
+  <div style="max-width:560px;margin:0 auto;background:#14213d;border-radius:12px;padding:28px;">
+    <h2 style="color:#48cae4;margin-top:0;">Bem-vindo ao BrooStock! 🎉</h2>
+    <p>Seu <strong>teste grátis de 7 dias</strong> está ativo. Você pode usar o sistema completo
+       até <strong>{expira_str}</strong>, sem cartão e sem compromisso.</p>
+    <p style="margin-top:18px;"><strong>Comece por aqui:</strong></p>
+    <ol style="color:#cdd7e3;line-height:1.7;padding-left:18px;">
+      <li>Cadastre seu primeiro produto (custo, preço e estoque mínimo).</li>
+      <li>Registre uma venda em Movimentações.</li>
+      <li>Veja seu lucro e sua margem no Painel.</li>
+    </ol>
+    <p style="text-align:center;margin:26px 0;">
+      <a href="{BROOSTOCK_ORIGIN}/painel" style="background:#15bcd6;color:#012;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:8px;display:inline-block;">Abrir o BrooStock</a>
+    </p>
+    <p style="font-size:0.85em;color:#9fb0c3;">Quando quiser, é só assinar para continuar usando depois do teste. Qualquer dúvida, estamos por aqui.</p>
+  </div>
+</body></html>"""
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Bem-vindo ao BrooStock — seus 7 dias grátis começaram 🎉"
+        msg["From"] = email_user
+        msg["To"] = destinatario
+        msg.attach(MIMEText(html, "html"))
+        port = int(os.environ.get("SMTP_PORT", 587))
+        with smtplib.SMTP(smtp_server, port, timeout=15) as server:
+            server.starttls()
+            server.login(email_user, email_pass)
+            server.send_message(msg)
+        print(f"[TRIAL] Boas-vindas enviada para {destinatario}.")
+        return True
+    except Exception as e:
+        print(f"[TRIAL] Falha ao enviar boas-vindas para {destinatario}: {e}")
+        return False
+
+
 @app.route("/api/licenca/trial", methods=["POST"])
 def licenca_trial():
     data = request.get_json(silent=True) or {}
@@ -365,6 +415,11 @@ def licenca_trial():
         db.session.add(nova)
         db.session.commit()
         print(f"[TRIAL] Teste de {TRIAL_DIAS} dias criado para {email} (expira {expira.date()})")
+        # E-mail de boas-vindas (best-effort: não derruba a ativação se falhar)
+        try:
+            _enviar_boas_vindas(email, expira)
+        except Exception as e:
+            print(f"[TRIAL] Boas-vindas (best-effort) falhou: {e}")
         return jsonify({"ok": True, "status": "trial", "expira_em": expira.isoformat(), "dias_restantes": TRIAL_DIAS}), 201
     except Exception as e:
         db.session.rollback()
